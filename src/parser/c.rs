@@ -47,7 +47,7 @@ impl<'a> Scanner<'a> {
 
         while let Some(token) = self.peek() {
             match token.kind {
-                Kind::Ident("CYCLONE_MODEL") => {
+                Kind::Ident("FOMOXA_MODEL") => {
                     let line = token.line;
                     if pending.line == 0 {
                         pending.line = line;
@@ -56,7 +56,7 @@ impl<'a> Scanner<'a> {
                     self.bump();
                 }
 
-                Kind::Ident("CYCLONE_CODEC") => {
+                Kind::Ident("FOMOXA_CODEC") => {
                     self.codec_directive(&mut pending)?;
                 }
 
@@ -185,11 +185,11 @@ impl<'a> Scanner<'a> {
         while self.at < close {
             let token = self.tokens[self.at];
 
-            if token.kind == Kind::Ident("CYCLONE_CODEC") {
+            if token.kind == Kind::Ident("FOMOXA_CODEC") {
                 self.codec_directive(&mut pending)?;
                 continue;
             }
-            if token.kind == Kind::Ident("CYCLONE_FIELD") {
+            if token.kind == Kind::Ident("FOMOXA_FIELD") {
                 self.field_directive(&mut pending)?;
                 continue;
             }
@@ -204,7 +204,7 @@ impl<'a> Scanner<'a> {
                     if !pending.is_empty() {
                         return Err(self.error(
                             pending.line,
-                            "a CYCLONE_FIELD or CYCLONE_CODEC marker is not on a field",
+                            "a FOMOXA_FIELD or FOMOXA_CODEC marker is not on a field",
                         ));
                     }
                     self.skip_balanced('(', ')');
@@ -220,7 +220,7 @@ impl<'a> Scanner<'a> {
                             Some(None) => {
                                 return Err(self.error(
                                     line,
-                                    "CYCLONE_FIELD() requires a wire type: CYCLONE_FIELD(...)",
+                                    "FOMOXA_FIELD() requires a wire type: FOMOXA_FIELD(...)",
                                 ));
                             }
                             Some(Some(network_type)) => fields.push(Field {
@@ -232,7 +232,7 @@ impl<'a> Scanner<'a> {
                             None if !pending.codecs.is_empty() => {
                                 return Err(self.error(
                                     line,
-                                    "CYCLONE_CODEC(...) on a field with no CYCLONE_FIELD(...) \
+                                    "FOMOXA_CODEC(...) on a field with no FOMOXA_FIELD(...) \
                                      has nothing to route: give the field a wire type",
                                 ));
                             }
@@ -612,16 +612,16 @@ mod tests {
     fn reads_a_model_its_codecs_and_its_fields() {
         let models = models(
             r#"
-            CYCLONE_MODEL
-            CYCLONE_CODEC("edge", "unity")
+            FOMOXA_MODEL
+            FOMOXA_CODEC("edge", "unity")
             struct Player
             {
-                CYCLONE_FIELD(u32)
-                CYCLONE_CODEC("edge", "unity")
+                FOMOXA_FIELD(u32)
+                FOMOXA_CODEC("edge", "unity")
                 uint32_t Id;
 
-                CYCLONE_FIELD(f32)
-                CYCLONE_CODEC("edge")
+                FOMOXA_FIELD(f32)
+                FOMOXA_CODEC("edge")
                 float X;
 
                 /* Not on the wire at all. */
@@ -647,7 +647,7 @@ mod tests {
     fn a_field_without_a_wire_type_is_an_error() {
         let error = parse(
             Path::new("test.h"),
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD()\n    uint32_t id;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD()\n    uint32_t id;\n};",
         )
         .expect_err("no wire type");
 
@@ -657,15 +657,15 @@ mod tests {
 
     #[test]
     fn a_model_in_a_comment_or_a_string_is_not_a_model() {
-        assert!(models("// CYCLONE_MODEL struct Ghost { };").is_empty());
-        assert!(models("/* CYCLONE_MODEL\nstruct Ghost { }; */").is_empty());
-        assert!(models("const char* s = \"CYCLONE_MODEL struct Ghost { };\";").is_empty());
+        assert!(models("// FOMOXA_MODEL struct Ghost { };").is_empty());
+        assert!(models("/* FOMOXA_MODEL\nstruct Ghost { }; */").is_empty());
+        assert!(models("const char* s = \"FOMOXA_MODEL struct Ghost { };\";").is_empty());
     }
 
     #[test]
     fn a_composite_wire_type_keeps_its_spelling() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(Array<u32>)\n    CYCLONE_CODEC(\"edge\")\n    CycloneArray_u32 xs;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(Array<u32>)\n    FOMOXA_CODEC(\"edge\")\n    FomoxaArray_u32 xs;\n};",
         );
         assert_eq!(models[0].fields[0].network_type, "Array<u32>");
     }
@@ -673,23 +673,23 @@ mod tests {
     #[test]
     fn markers_do_not_leak_past_another_declaration() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nenum Kind { A };\nstruct After { uint32_t id; };",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nenum Kind { A };\nstruct After { uint32_t id; };",
         );
         assert!(models.is_empty());
     }
 
     #[test]
     fn a_model_carries_its_source_and_line() {
-        let models = models("\n\nCYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct Player {};");
+        let models = models("\n\nFOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct Player {};");
         assert_eq!(models[0].source, Path::new("test.h"));
         assert_eq!(models[0].line, 3);
     }
 
     #[test]
-    fn a_function_may_not_carry_a_cyclone_marker() {
+    fn a_function_may_not_carry_a_fomoxa_marker() {
         let error = parse(
             Path::new("test.h"),
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(u32)\n    uint32_t GetId();\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(u32)\n    uint32_t GetId();\n};",
         )
         .expect_err("not a field");
         assert!(error.message.contains("not on a field"));
@@ -698,7 +698,7 @@ mod tests {
     #[test]
     fn a_field_may_carry_a_c_array_suffix() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(u32)\n    CYCLONE_CODEC(\"edge\")\n    uint32_t values[4];\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(u32)\n    FOMOXA_CODEC(\"edge\")\n    uint32_t values[4];\n};",
         );
         assert_eq!(models[0].fields[0].name, "values");
     }
@@ -706,7 +706,7 @@ mod tests {
     #[test]
     fn a_field_with_no_codec_belongs_to_none_but_is_not_an_error() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(u32)\n    uint32_t unrouted;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(u32)\n    uint32_t unrouted;\n};",
         );
         assert_eq!(models[0].fields.len(), 1);
         assert!(models[0].fields[0].codecs.is_empty());
@@ -716,7 +716,7 @@ mod tests {
     fn a_codec_with_no_field_marker_is_an_error() {
         let error = parse(
             Path::new("test.h"),
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_CODEC(\"edge\")\n    uint32_t id;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_CODEC(\"edge\")\n    uint32_t id;\n};",
         )
         .expect_err("nothing to route");
         assert!(error.message.contains("has nothing to route"));
@@ -726,19 +726,19 @@ mod tests {
     fn the_devicestate_example_from_the_brief_parses() {
         let models = models(
             r#"
-            CYCLONE_MODEL
-            CYCLONE_CODEC("edge", "unity")
+            FOMOXA_MODEL
+            FOMOXA_CODEC("edge", "unity")
             struct DeviceState {
-                CYCLONE_FIELD(u32)
-                CYCLONE_CODEC("edge", "unity")
+                FOMOXA_FIELD(u32)
+                FOMOXA_CODEC("edge", "unity")
                 uint32_t Id;
 
-                CYCLONE_FIELD(f32)
-                CYCLONE_CODEC("unity")
+                FOMOXA_FIELD(f32)
+                FOMOXA_CODEC("unity")
                 float Temperature;
 
-                CYCLONE_FIELD(string)
-                CYCLONE_CODEC("edge")
+                FOMOXA_FIELD(string)
+                FOMOXA_CODEC("edge")
                 const char *DisplayName;
             };
             "#,
@@ -754,8 +754,8 @@ mod tests {
     #[test]
     fn typedef_struct_name_name_is_read_the_same_as_a_bare_struct() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\ntypedef struct Player {\n    \
-             CYCLONE_FIELD(u32)\n    CYCLONE_CODEC(\"edge\")\n    uint32_t Id;\n} Player;",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\ntypedef struct Player {\n    \
+             FOMOXA_FIELD(u32)\n    FOMOXA_CODEC(\"edge\")\n    uint32_t Id;\n} Player;",
         );
         assert_eq!(models.len(), 1);
         assert_eq!(models[0].name, "Player");

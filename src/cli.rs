@@ -2,38 +2,38 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 pub const USAGE: &str = "\
-cyclonec - the official Cyclone source generator
+fomoxac - the official Fomoxa source generator
 
-Reads Cyclone attributes from Rust, Go, C#, GDScript, C++, C, TypeScript or
+Reads Fomoxa attributes from Rust, Go, C#, GDScript, C++, C, TypeScript or
 JavaScript sources - never more than one language in one run - and writes one
 codec file per model per codec, plus the schema, fingerprints and build graph
 that go with them.
 
 USAGE:
-    cyclonec generate [--src <PATH>]... [--out <PATH>] [--check] [--watch] [-q]
-    cyclonec compat --base <SCHEMA> [--head <SCHEMA>] [--src <PATH>]...
-    cyclonec ci --base-ref <REF> [--src <PATH>]... [--out <PATH>]
+    fomoxac generate [--src <PATH>]... [--out <PATH>] [--check] [--watch] [-q]
+    fomoxac compat --base <SCHEMA> [--head <SCHEMA>] [--src <PATH>]...
+    fomoxac ci --base-ref <REF> [--src <PATH>]... [--out <PATH>]
 
 COMMANDS:
-    generate    Read source, write the tree, .cyclone/schema.json and
-                .cyclone/build-graph.json. Warns about schema changes; never
+    generate    Read source, write the tree, .fomoxa/schema.json and
+                .fomoxa/build-graph.json. Warns about schema changes; never
                 fails because of one.
     compat      Compare a base schema against the current source (or against
                 --head). Exits 1 on a BREAKING change.
-    ci          Verify .cyclone/schema.json matches source, then compare it
+    ci          Verify .fomoxa/schema.json matches source, then compare it
                 against the target branch's. Exits 1 on either problem.
 
 OPTIONS:
         --src <PATH>     A directory to scan recursively, or a single file.
-                         Repeatable. Default: cyclone.toml's `src`, else `src`.
+                         Repeatable. Default: fomoxa.toml's `src`, else `src`.
                          Every file found must be one language - `.rs`, `.go`,
                          `.cs`, `.gd`, `.hpp`/`.cpp`/`.cc`/`.cxx` (C++),
                          `.c`/`.h` (C), or `.ts`/`.js` (TypeScript/
                          JavaScript) - never a mix; separate projects sharing
                          one schema each get their own `--src`/`--out` (and
-                         usually their own cyclone.toml).
+                         usually their own fomoxa.toml).
     -o, --out <PATH>     Where generated source goes.
-                         Default: cyclone.toml's `out`, else `generated`.
+                         Default: fomoxa.toml's `out`, else `generated`.
         --model-path <PATH>
                          Where a generated codec reaches your models.
                          Rust: a module path, e.g. `crate::models` - default is
@@ -73,8 +73,8 @@ OPTIONS:
                          annotation is reported and watched past, not a
                          reason to stop:
 
-                             [cyclonec] error: failed to parse src/models/player.rs
-                             [cyclonec] watching for changes...
+                             [fomoxac] error: failed to parse src/models/player.rs
+                             [fomoxac] watching for changes...
 
                          Never watches --out, and never regenerates because
                          of a file this generator wrote itself.
@@ -89,12 +89,12 @@ OPTIONS:
     -V, --version        Print the version
 
 EXAMPLES:
-    cyclonec generate --src src --out generated
-    cyclonec generate --check
-    cyclonec --src src --out generated --watch
-    cyclonec --watch
-    cyclonec compat --base .cyclone/schema.json
-    cyclonec ci --base-ref origin/${GITHUB_BASE_REF}
+    fomoxac generate --src src --out generated
+    fomoxac generate --check
+    fomoxac --src src --out generated --watch
+    fomoxac --watch
+    fomoxac compat --base .fomoxa/schema.json
+    fomoxac ci --base-ref origin/${GITHUB_BASE_REF}
 
 A model declares which codecs to generate; there is no flag for it. Rust:
 
@@ -110,13 +110,13 @@ A model declares which codecs to generate; there is no flag for it. Rust:
         x: f32,
     }
 
-Go has no attributes, so a `//cyclone:model` comment directive and
-`cyclone:\"...\"` / `codec:\"...\"` struct tags say the same thing:
+Go has no attributes, so a `//fomoxa:model` comment directive and
+`fomoxa:\"...\"` / `codec:\"...\"` struct tags say the same thing:
 
-    //cyclone:model codec=edge,unity
+    //fomoxa:model codec=edge,unity
     type Player struct {
-        ID uint32  `cyclone:\"u32\" codec:\"edge,unity\"`
-        X  float32 `cyclone:\"f32\" codec:\"edge\"`
+        ID uint32  `fomoxa:\"u32\" codec:\"edge,unity\"`
+        X  float32 `fomoxa:\"f32\" codec:\"edge\"`
     }
 
 C# spells the same declaration with attributes, the same shape as Rust's:
@@ -135,33 +135,33 @@ C# spells the same declaration with attributes, the same shape as Rust's:
     }
 
 GDScript has no attributes either, and an unrecognized `@name` is a parse
-error in Godot itself - so, like Go, a `# cyclone:` comment directive says it
+error in Godot itself - so, like Go, a `# fomoxa:` comment directive says it
 instead:
 
-    # cyclone:model codec=edge,unity
+    # fomoxa:model codec=edge,unity
     class_name Player
 
-    # cyclone:u32 codec=edge,unity
+    # fomoxa:u32 codec=edge,unity
     var id: int
 
-    # cyclone:f32 codec=edge
+    # fomoxa:f32 codec=edge
     var x: float
 
 C++ has no attributes either, and no comment-directive syntax to fall back
 on - it spells the same declaration with three macros a small header (see
-`cyclone.h` in the brief) defines to expand to nothing, so an annotated
-struct compiles unchanged whether or not cyclonec ever runs over it:
+`fomoxa.h` in the brief) defines to expand to nothing, so an annotated
+struct compiles unchanged whether or not fomoxac ever runs over it:
 
-    CYCLONE_MODEL
-    CYCLONE_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
+    FOMOXA_MODEL
+    FOMOXA_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
     struct Player
     {
-        CYCLONE_FIELD(u32)
-        CYCLONE_CODEC(\"edge\", \"unity\")  ->  in both
+        FOMOXA_FIELD(u32)
+        FOMOXA_CODEC(\"edge\", \"unity\")  ->  in both
         uint32_t Id;
 
-        CYCLONE_FIELD(f32)
-        CYCLONE_CODEC(\"edge\")             ->  in the edge codec only
+        FOMOXA_FIELD(f32)
+        FOMOXA_CODEC(\"edge\")             ->  in the edge codec only
         float X;
     };
 
@@ -169,16 +169,16 @@ C reads the same three macros, from the same header - a `string` field's
 host type is always `const char *` (heap-owned once decoded; see the C
 section of the README for why), and there is no `namespace` to open at all:
 
-    CYCLONE_MODEL
-    CYCLONE_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
+    FOMOXA_MODEL
+    FOMOXA_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
     struct Player
     {
-        CYCLONE_FIELD(u32)
-        CYCLONE_CODEC(\"edge\", \"unity\")  ->  in both
+        FOMOXA_FIELD(u32)
+        FOMOXA_CODEC(\"edge\", \"unity\")  ->  in both
         uint32_t Id;
 
-        CYCLONE_FIELD(string)
-        CYCLONE_CODEC(\"edge\")             ->  in the edge codec only
+        FOMOXA_FIELD(string)
+        FOMOXA_CODEC(\"edge\")             ->  in the edge codec only
         const char *Name;
     };
 
@@ -187,21 +187,21 @@ runtime dependency, so - like Go and GDScript - a comment directive says it,
 read the same way for both languages (`.ts` and `.js`) and requiring no
 decorator and no package to install:
 
-    // CYCLONE_MODEL
-    // CYCLONE_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
+    // FOMOXA_MODEL
+    // FOMOXA_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
     class Player {
-        // CYCLONE_FIELD(u32)
-        // CYCLONE_CODEC(\"edge\", \"unity\")  ->  in both
+        // FOMOXA_FIELD(u32)
+        // FOMOXA_CODEC(\"edge\", \"unity\")  ->  in both
         Id: number;
 
-        // CYCLONE_FIELD(f32)
-        // CYCLONE_CODEC(\"edge\")             ->  in the edge codec only
+        // FOMOXA_FIELD(f32)
+        // FOMOXA_CODEC(\"edge\")             ->  in the edge codec only
         X: number;
     }
 
 The TypeScript host type (`number`, above) is never consulted - `number`
 cannot say whether a field is `u32`, `i32`, `f32` or `f64` - only
-CYCLONE_FIELD's own argument is. A JavaScript model writes the identical
+FOMOXA_FIELD's own argument is. A JavaScript model writes the identical
 directives with no type annotation at all (`Id;` in place of `Id: number;`)
 and means exactly the same thing.
 ";

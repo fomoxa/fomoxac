@@ -55,10 +55,10 @@ pub fn run(
 fn regenerate(options: &Options, quiet: bool) {
     let outcome = generate::plan(options).and_then(|plan| generate::apply(&plan, false, quiet));
     if let Err(error) = outcome {
-        eprintln!("[cyclonec] error: {error}");
+        eprintln!("[fomoxac] error: {error}");
     }
     if !quiet {
-        eprintln!("[cyclonec] watching for changes...");
+        eprintln!("[fomoxac] watching for changes...");
     }
 }
 

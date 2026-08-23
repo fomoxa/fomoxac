@@ -1,7 +1,7 @@
 # Build output.
 /target
 
-# `tests/fixtures/generated/` and `tests/fixtures/.cyclone/` are deliberately
+# `tests/fixtures/generated/` and `tests/fixtures/.fomoxa/` are deliberately
 # committed: tests/generated.rs compiles that tree, and tests/cli.rs checks it
 # is still what the generator writes today.
 # Logs

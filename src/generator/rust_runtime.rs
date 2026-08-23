@@ -1,13 +1,13 @@
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated tree is self-contained -
+// fomoxac generates for. It is here so the generated tree is self-contained -
 // nothing to add to Cargo.toml, nothing to import.
 // ==========================================================================
 
-/// A byte stream that does not satisfy the Cyclone Specification.
+/// A byte stream that does not satisfy the Fomoxa Specification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum DecodeError {
@@ -88,7 +88,7 @@ impl Default for Limits {
     }
 }
 
-/// Appends Cyclone-encoded values to a growable buffer.
+/// Appends Fomoxa-encoded values to a growable buffer.
 ///
 /// Every multi-byte value is Little Endian, with no padding, no alignment and
 /// no metadata between values.
@@ -229,12 +229,12 @@ impl Writer {
 
     fn write_len(&mut self, len: usize) {
         let len = u32::try_from(len)
-            .expect("cyclone: length exceeds u32::MAX and cannot be represented on the wire");
+            .expect("fomoxa: length exceeds u32::MAX and cannot be represented on the wire");
         self.write_u32(len);
     }
 }
 
-/// Reads Cyclone-encoded values from a borrowed buffer.
+/// Reads Fomoxa-encoded values from a borrowed buffer.
 ///
 /// Malformed input is always a [`DecodeError`], never a panic, and a failed
 /// read leaves the cursor where it was.

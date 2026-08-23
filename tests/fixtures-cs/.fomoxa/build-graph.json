@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "generator": "fomoxac 0.2.0",
+  "schema_fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
+  "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
+  "sources": {
+    "src/models/Player.cs": {
+      "models": [
+        "Player",
+        "PlayerInfo",
+        "Team"
+      ],
+      "outputs": [
+        {
+          "path": "src/generated/PlayerEdgeCodec.cs",
+          "model": "Player",
+          "codec": "edge",
+          "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
+          "sha256": "6c27cbad7ace54945456e24c653d1a984b750e9380ac6ba28b391d8893bc1c88"
+        },
+        {
+          "path": "src/generated/PlayerUnityCodec.cs",
+          "model": "Player",
+          "codec": "unity",
+          "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
+          "sha256": "b7dc900620cbff443d62a290350f6e7a2d75953f692757e9674b6a9bdbbb189c"
+        },
+        {
+          "path": "src/generated/PlayerInfoEdgeCodec.cs",
+          "model": "PlayerInfo",
+          "codec": "edge",
+          "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+          "sha256": "74f045d94806d46f4cabb3b597ba5a08566f6c811a7104da83cb1ec7f242fd2f"
+        },
+        {
+          "path": "src/generated/TeamEdgeCodec.cs",
+          "model": "Team",
+          "codec": "edge",
+          "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+          "sha256": "7ab12356fadf27d062bf33500871c12c646e7d1cb201ed7e14e277aaeccef1a5"
+        }
+      ]
+    }
+  },
+  "shared": [
+    {
+      "path": "src/generated/Runtime.cs",
+      "kind": "runtime",
+      "sha256": "4120585f9d72408b909af332258fbd1c360a491fae083d8a08899946ab55f8c3"
+    },
+    {
+      "path": "src/generated/Handshake.cs",
+      "kind": "handshake",
+      "sha256": "1465adf3f23f73983d1e02f35917151783daac33e776c77db7e3f8b37f158144"
+    }
+  ]
+}

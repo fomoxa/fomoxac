@@ -41,7 +41,7 @@ pub fn handshake_file(
          /// everything.\n",
     );
     out.push_str(&format!(
-        "inline constexpr std::uint64_t CYCLONE_SCHEMA_FINGERPRINT = {}ULL;\n\n",
+        "inline constexpr std::uint64_t FOMOXA_SCHEMA_FINGERPRINT = {}ULL;\n\n",
         hex64(schema.fingerprint.u64())
     ));
 
@@ -105,11 +105,11 @@ pub fn handshake_file(
     messages.sort_by_key(|message| message.id);
 
     out.push_str("/// Every message this schema declares, sorted by id.\n");
-    out.push_str("inline const std::vector<CycloneMessage> CYCLONE_MESSAGES = {\n");
+    out.push_str("inline const std::vector<FomoxaMessage> FOMOXA_MESSAGES = {\n");
     for message in &messages {
         let constant = message_constant(&message.model, &message.codec);
         out.push_str(&format!(
-            "    CycloneMessage{{{constant}_MESSAGE_ID, {:?}, {constant}_FINGERPRINT, \
+            "    FomoxaMessage{{{constant}_MESSAGE_ID, {:?}, {constant}_FINGERPRINT, \
              {constant}_PREFIXES, {constant}_PREFIX_COUNT}},\n",
             message.name
         ));
@@ -120,7 +120,7 @@ pub fn handshake_file(
 
     out.push_str(&format!(
         "\n/// Whether this schema was generated with `validate_message_fingerprint`.\n\
-         inline constexpr bool CYCLONE_VALIDATE_MESSAGE_FINGERPRINT = {validate_message_fingerprint};\n"
+         inline constexpr bool FOMOXA_VALIDATE_MESSAGE_FINGERPRINT = {validate_message_fingerprint};\n"
     ));
     if validate_message_fingerprint {
         out.push_str(ENVELOPE);
@@ -166,7 +166,7 @@ fn check_constant_names(schema: &Schema) -> Result<(), String> {
 
 const TYPES: &str = "\
 /// One message: its id, its name, and the fingerprint of its wire contract.
-struct CycloneMessage {
+struct FomoxaMessage {
     /// Stable across schema changes; derived from the name alone.
     std::uint32_t id;
     /// `Model.codec`.
@@ -184,7 +184,7 @@ struct CycloneMessage {
 
 const HANDSHAKE: &str = r####"
 /// What a peer's fingerprints mean for this one.
-enum class CycloneHandshake {
+enum class FomoxaHandshake {
     /// The same schema, exactly.
     Current,
     /// A different schema, but every message both ends know agrees on the
@@ -194,13 +194,13 @@ enum class CycloneHandshake {
     /// nothing to negotiate: disconnect.
     Reject,
     /// Not decidable from the peer's table alone - at least one message needs
-    /// the extra exchange described on `CycloneMessageCheck::NeedPrefix`.
+    /// the extra exchange described on `FomoxaMessageCheck::NeedPrefix`.
     NeedMore,
 };
 
 /// What one of the peer's messages means for this schema's message of the
 /// same id.
-enum class CycloneMessageCheck {
+enum class FomoxaMessageCheck {
     /// Either this schema does not declare the message at all, or the fields
     /// both ends carry agree. Nothing to do.
     Match,
@@ -209,32 +209,32 @@ enum class CycloneMessageCheck {
     /// Undecidable from what the peer sent: the peer has more fields than this
     /// schema, so the answer lives at an index only the peer can produce. Ask
     /// it for its prefix fingerprint at the reported field count, then compare
-    /// the reply against `cyclone_prefix` for the same id.
+    /// the reply against `fomoxa_prefix` for the same id.
     NeedPrefix,
 };
 
 /// One entry of a peer's `(id, field count, fingerprint)` table - what
-/// `CYCLONE_MESSAGES` is on its side.
-struct CyclonePeerMessage {
+/// `FOMOXA_MESSAGES` is on its side.
+struct FomoxaPeerMessage {
     std::uint32_t id;
     std::uint32_t field_count;
     std::uint64_t fingerprint;
 };
 
 /// The message with this id, or `nullptr` if this schema does not declare it.
-inline const CycloneMessage* cyclone_message(std::uint32_t id) {
+inline const FomoxaMessage* fomoxa_message(std::uint32_t id) {
     std::size_t low = 0;
-    std::size_t high = CYCLONE_MESSAGES.size();
+    std::size_t high = FOMOXA_MESSAGES.size();
     while (low < high) {
         std::size_t middle = (low + high) / 2;
-        if (CYCLONE_MESSAGES[middle].id < id) {
+        if (FOMOXA_MESSAGES[middle].id < id) {
             low = middle + 1;
         } else {
             high = middle;
         }
     }
-    if (low < CYCLONE_MESSAGES.size() && CYCLONE_MESSAGES[low].id == id) {
-        return &CYCLONE_MESSAGES[low];
+    if (low < FOMOXA_MESSAGES.size() && FOMOXA_MESSAGES[low].id == id) {
+        return &FOMOXA_MESSAGES[low];
     }
     return nullptr;
 }
@@ -243,8 +243,8 @@ inline const CycloneMessage* cyclone_message(std::uint32_t id) {
 /// or `std::nullopt` if it does not declare that message or does not have that
 /// many fields. `field_count` counts from 1; 0 is the empty prefix and has no
 /// fingerprint because it always matches.
-inline std::optional<std::uint64_t> cyclone_prefix(std::uint32_t id, std::uint32_t field_count) {
-    const CycloneMessage* message = cyclone_message(id);
+inline std::optional<std::uint64_t> fomoxa_prefix(std::uint32_t id, std::uint32_t field_count) {
+    const FomoxaMessage* message = fomoxa_message(id);
     if (message == nullptr || field_count == 0 ||
         static_cast<std::size_t>(field_count) > message->prefix_count) {
         return std::nullopt;
@@ -252,10 +252,10 @@ inline std::optional<std::uint64_t> cyclone_prefix(std::uint32_t id, std::uint32
     return message->prefixes[field_count - 1];
 }
 
-/// What `cyclone_check_message` decided, and which field count to ask the peer
-/// about. `ask_for` is only meaningful for `CycloneMessageCheck::NeedPrefix`.
-struct CycloneMessageOutcome {
-    CycloneMessageCheck check;
+/// What `fomoxa_check_message` decided, and which field count to ask the peer
+/// about. `ask_for` is only meaningful for `FomoxaMessageCheck::NeedPrefix`.
+struct FomoxaMessageOutcome {
+    FomoxaMessageCheck check;
     std::uint32_t ask_for;
 };
 
@@ -265,67 +265,67 @@ struct CycloneMessageOutcome {
 /// this id. This is RFC-0002 §9.1's prefix test: the two are compatible when
 /// the shorter field list is an exact prefix of the longer one, so the
 /// comparison happens at the smaller of the two field counts.
-inline CycloneMessageOutcome cyclone_check_message(std::uint32_t id,
+inline FomoxaMessageOutcome fomoxa_check_message(std::uint32_t id,
                                                    std::uint32_t peer_field_count,
                                                    std::uint64_t peer_fingerprint) {
-    const CycloneMessage* known = cyclone_message(id);
+    const FomoxaMessage* known = fomoxa_message(id);
     if (known == nullptr) {
         // Not a message this schema declares, so it is never exchanged.
-        return {CycloneMessageCheck::Match, 0};
+        return {FomoxaMessageCheck::Match, 0};
     }
     const auto local_field_count = static_cast<std::uint32_t>(known->prefix_count);
 
     if (peer_fingerprint == known->fingerprint) {
-        return {CycloneMessageCheck::Match, 0};
+        return {FomoxaMessageCheck::Match, 0};
     }
     if (peer_field_count == 0 || local_field_count == 0) {
         // The empty field list is a prefix of everything.
-        return {CycloneMessageCheck::Match, 0};
+        return {FomoxaMessageCheck::Match, 0};
     }
     if (peer_field_count == local_field_count) {
         // Same length, different content - a prefix of equal length would have
         // to be equality, and it is not.
-        return {CycloneMessageCheck::Reject, 0};
+        return {FomoxaMessageCheck::Reject, 0};
     }
     if (peer_field_count < local_field_count) {
         // The peer's own fingerprint already is the value at the shared index.
         return {known->prefixes[peer_field_count - 1] == peer_fingerprint
-                    ? CycloneMessageCheck::Match
-                    : CycloneMessageCheck::Reject,
+                    ? FomoxaMessageCheck::Match
+                    : FomoxaMessageCheck::Reject,
                 0};
     }
-    return {CycloneMessageCheck::NeedPrefix, local_field_count};
+    return {FomoxaMessageCheck::NeedPrefix, local_field_count};
 }
 
 /// Compares a peer's whole message table against this schema's.
 ///
 /// `peer_messages` is the peer's `(id, field count, fingerprint)` table - what
-/// `CYCLONE_MESSAGES` is on its side. A `NeedMore` result means at least one
-/// message needs the extra round; walk the table with `cyclone_check_message`
+/// `FOMOXA_MESSAGES` is on its side. A `NeedMore` result means at least one
+/// message needs the extra round; walk the table with `fomoxa_check_message`
 /// to find which ones.
-inline CycloneHandshake cyclone_handshake(
+inline FomoxaHandshake fomoxa_handshake(
     std::uint64_t peer_schema_fingerprint,
-    const std::vector<CyclonePeerMessage>& peer_messages) {
-    if (peer_schema_fingerprint == CYCLONE_SCHEMA_FINGERPRINT) {
-        return CycloneHandshake::Current;
+    const std::vector<FomoxaPeerMessage>& peer_messages) {
+    if (peer_schema_fingerprint == FOMOXA_SCHEMA_FINGERPRINT) {
+        return FomoxaHandshake::Current;
     }
 
     bool need_more = false;
     for (const auto& peer : peer_messages) {
-        switch (cyclone_check_message(peer.id, peer.field_count, peer.fingerprint).check) {
-            case CycloneMessageCheck::Reject:
+        switch (fomoxa_check_message(peer.id, peer.field_count, peer.fingerprint).check) {
+            case FomoxaMessageCheck::Reject:
                 // One mismatch decides the whole session. Every other message
                 // could agree and it would still be unsafe to speak.
-                return CycloneHandshake::Reject;
-            case CycloneMessageCheck::NeedPrefix:
+                return FomoxaHandshake::Reject;
+            case FomoxaMessageCheck::NeedPrefix:
                 need_more = true;
                 break;
-            case CycloneMessageCheck::Match:
+            case FomoxaMessageCheck::Match:
                 break;
         }
     }
 
-    return need_more ? CycloneHandshake::NeedMore : CycloneHandshake::Outdated;
+    return need_more ? FomoxaHandshake::NeedMore : FomoxaHandshake::Outdated;
 }
 "####;
 
@@ -343,7 +343,7 @@ const ENVELOPE: &str = r####"
 // ==========================================================================
 
 /// A frame whose envelope did not describe a message this schema can decode.
-struct CycloneEnvelopeError {
+struct FomoxaEnvelopeError {
     enum class Kind {
         /// The envelope itself could not be read.
         Malformed,
@@ -386,7 +386,7 @@ struct CycloneEnvelopeError {
 };
 
 /// Writes `[MessageId][MessageFingerprint]`, immediately before the payload.
-inline void cyclone_write_envelope(Writer& writer, const CycloneMessage& message) {
+inline void fomoxa_write_envelope(Writer& writer, const FomoxaMessage& message) {
     writer.write_u32(message.id);
     writer.write_u64(message.fingerprint);
 }
@@ -395,29 +395,29 @@ inline void cyclone_write_envelope(Writer& writer, const CycloneMessage& message
 /// is left pointing at the resolved message and the reader is positioned at
 /// the payload; on failure `error` describes what went wrong and `out` is
 /// untouched.
-inline bool cyclone_read_envelope(Reader& reader, const CycloneMessage*& out,
-                                   CycloneEnvelopeError& error) {
+inline bool fomoxa_read_envelope(Reader& reader, const FomoxaMessage*& out,
+                                   FomoxaEnvelopeError& error) {
     std::uint32_t id = 0;
     if (DecodeError decode_error = reader.read_u32(id); !decode_error.ok()) {
-        error.kind = CycloneEnvelopeError::Kind::Malformed;
+        error.kind = FomoxaEnvelopeError::Kind::Malformed;
         error.malformed = decode_error;
         return false;
     }
     std::uint64_t fingerprint = 0;
     if (DecodeError decode_error = reader.read_u64(fingerprint); !decode_error.ok()) {
-        error.kind = CycloneEnvelopeError::Kind::Malformed;
+        error.kind = FomoxaEnvelopeError::Kind::Malformed;
         error.malformed = decode_error;
         return false;
     }
 
-    const CycloneMessage* message = cyclone_message(id);
+    const FomoxaMessage* message = fomoxa_message(id);
     if (message == nullptr) {
-        error.kind = CycloneEnvelopeError::Kind::UnknownMessage;
+        error.kind = FomoxaEnvelopeError::Kind::UnknownMessage;
         error.id = id;
         return false;
     }
     if (message->fingerprint != fingerprint) {
-        error.kind = CycloneEnvelopeError::Kind::FingerprintMismatch;
+        error.kind = FomoxaEnvelopeError::Kind::FingerprintMismatch;
         error.id = id;
         error.expected = message->fingerprint;
         error.received = fingerprint;
@@ -431,12 +431,12 @@ inline bool cyclone_read_envelope(Reader& reader, const CycloneMessage*& out,
 
 const ENVELOPE_OFF: &str = "\
 // Per-frame message validation is off, so no envelope is generated and no
-// frame carries one. Turn it on in cyclone.toml:
+// frame carries one. Turn it on in fomoxa.toml:
 //
 //     validate_message_fingerprint = true
 //
 // and every frame gains [MessageId: u32][MessageFingerprint: u64] in front of
-// its payload, with cyclone_write_envelope / cyclone_read_envelope to match.
+// its payload, with fomoxa_write_envelope / fomoxa_read_envelope to match.
 ";
 
 #[cfg(test)]
@@ -472,7 +472,7 @@ mod tests {
 
         assert!(text.contains("namespace generated {\n"), "{text}");
         assert!(
-            text.contains("inline constexpr std::uint64_t CYCLONE_SCHEMA_FINGERPRINT = 0x"),
+            text.contains("inline constexpr std::uint64_t FOMOXA_SCHEMA_FINGERPRINT = 0x"),
             "{text}"
         );
         assert!(
@@ -492,7 +492,7 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("inline const std::vector<CycloneMessage> CYCLONE_MESSAGES ="),
+            text.contains("inline const std::vector<FomoxaMessage> FOMOXA_MESSAGES ="),
             "{text}"
         );
     }
@@ -506,7 +506,7 @@ mod tests {
 
         let lines: Vec<&str> = text
             .lines()
-            .filter(|line| line.trim_start().starts_with("CycloneMessage{"))
+            .filter(|line| line.trim_start().starts_with("FomoxaMessage{"))
             .collect();
         assert_eq!(lines.len(), 3, "{text}");
 
@@ -532,19 +532,19 @@ mod tests {
     fn the_envelope_is_off_unless_asked_for() {
         let off = generated(&[model("Player", &["edge"])]);
         assert!(
-            off.contains("CYCLONE_VALIDATE_MESSAGE_FINGERPRINT = false;"),
+            off.contains("FOMOXA_VALIDATE_MESSAGE_FINGERPRINT = false;"),
             "{off}"
         );
-        assert!(!off.contains("inline void cyclone_write_envelope"), "{off}");
+        assert!(!off.contains("inline void fomoxa_write_envelope"), "{off}");
 
         let schema = Schema::build(&[model("Player", &["edge"])]).expect("build");
         let on = handshake_file(&schema, "generated", true).expect("render");
         assert!(
-            on.contains("CYCLONE_VALIDATE_MESSAGE_FINGERPRINT = true;"),
+            on.contains("FOMOXA_VALIDATE_MESSAGE_FINGERPRINT = true;"),
             "{on}"
         );
-        assert!(on.contains("inline void cyclone_write_envelope"), "{on}");
-        assert!(on.contains("inline bool cyclone_read_envelope"), "{on}");
+        assert!(on.contains("inline void fomoxa_write_envelope"), "{on}");
+        assert!(on.contains("inline bool fomoxa_read_envelope"), "{on}");
         assert!(on.contains("#include \"runtime.hpp\"\n"), "{on}");
     }
 

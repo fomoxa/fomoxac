@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "generator": "fomoxac 0.2.0",
+  "fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
+  "fingerprint_u64": "0x34446BE035271024",
+  "models": {
+    "Player": {
+      "source": "src/models/Player.cs",
+      "fingerprint": "sha256:43f94578898a5992a1b0655c3e4a86ee15103c28a0d11066e94b9173b267757a",
+      "codecs": [
+        "edge",
+        "unity"
+      ],
+      "fields": [
+        {
+          "name": "Id",
+          "type": "u32",
+          "codecs": [
+            "edge",
+            "unity"
+          ]
+        },
+        {
+          "name": "X",
+          "type": "f32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "Y",
+          "type": "f32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "Unrouted",
+          "type": "u32",
+          "codecs": []
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0x5AD3FC4F",
+          "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
+          "fingerprint_u64": "0x19D8F679A9BB419F",
+          "prefixes": [
+            "sha256:9ed3aea54bc5cbd40865209360f5c45597dfd49423a7be8b7cf9194c9e3233dd",
+            "sha256:6962e00c99b909423ecb4cd3d5e8f1e6305752395cca4d244090352b71c8710a",
+            "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa"
+          ],
+          "prefixes_u64": [
+            "0x9ED3AEA54BC5CBD4",
+            "0x6962E00C99B90942",
+            "0x19D8F679A9BB419F"
+          ],
+          "fields": [
+            {
+              "name": "Id",
+              "type": "u32"
+            },
+            {
+              "name": "X",
+              "type": "f32"
+            },
+            {
+              "name": "Y",
+              "type": "f32"
+            }
+          ]
+        },
+        "unity": {
+          "id": "0x48AE5CB2",
+          "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
+          "fingerprint_u64": "0x3A09927A6D1A81F1",
+          "prefixes": [
+            "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6"
+          ],
+          "prefixes_u64": [
+            "0x3A09927A6D1A81F1"
+          ],
+          "fields": [
+            {
+              "name": "Id",
+              "type": "u32"
+            }
+          ]
+        }
+      }
+    },
+    "PlayerInfo": {
+      "source": "src/models/Player.cs",
+      "fingerprint": "sha256:16c91cab6596e852a98c85c7bf1e55b07334dd687c02626b1dcc4e38de73ed71",
+      "codecs": [
+        "edge"
+      ],
+      "fields": [
+        {
+          "name": "Level",
+          "type": "u32",
+          "codecs": [
+            "edge"
+          ]
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0xC396A399",
+          "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+          "fingerprint_u64": "0xB87A1C88C5B6E0DD",
+          "prefixes": [
+            "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd"
+          ],
+          "prefixes_u64": [
+            "0xB87A1C88C5B6E0DD"
+          ],
+          "fields": [
+            {
+              "name": "Level",
+              "type": "u32"
+            }
+          ]
+        }
+      }
+    },
+    "Team": {
+      "source": "src/models/Player.cs",
+      "fingerprint": "sha256:75660c480fc1252fed456c7597adf79d345060aeaedef08c092483d5f2fcc61b",
+      "codecs": [
+        "edge"
+      ],
+      "fields": [
+        {
+          "name": "Captain",
+          "type": "PlayerInfo",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "Tags",
+          "type": "Array<string>",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "Scores",
+          "type": "Array<u32>",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "Roster",
+          "type": "Array<PlayerInfo>",
+          "codecs": [
+            "edge"
+          ]
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0x7AEF5FF1",
+          "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+          "fingerprint_u64": "0xF79FA59BF3400D19",
+          "prefixes": [
+            "sha256:1a86435942d0b7cd4597f5b4ed3000b41bc22784ef4f77f8ba278c5fa5c21939",
+            "sha256:d42fd55dd56c0355b926cd866553ab95964f9bf55dd2a05b41d9b3c6008e01a3",
+            "sha256:76e108bd0347fae6c051f9831b185af2f806c230bf95b46c9dd9254b9950330a",
+            "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b"
+          ],
+          "prefixes_u64": [
+            "0x1A86435942D0B7CD",
+            "0xD42FD55DD56C0355",
+            "0x76E108BD0347FAE6",
+            "0xF79FA59BF3400D19"
+          ],
+          "fields": [
+            {
+              "name": "Captain",
+              "type": "PlayerInfo"
+            },
+            {
+              "name": "Tags",
+              "type": "Array<string>"
+            },
+            {
+              "name": "Scores",
+              "type": "Array<u32>"
+            },
+            {
+              "name": "Roster",
+              "type": "Array<PlayerInfo>"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -13,7 +13,7 @@ pub fn file_name(model: &str, codec: &str) -> String {
 }
 
 pub fn free_file_name(model: &str) -> String {
-    format!("{}_cyclone.h", snake_case(model))
+    format!("{}_fomoxa.h", snake_case(model))
 }
 
 pub struct ModelLocation {
@@ -42,69 +42,57 @@ pub fn check_no_nested_arrays(model: &Model) -> Result<(), String> {
 fn primitive(ty: &WireType) -> Option<(&'static str, &'static str, &'static str)> {
     Some(match ty {
         WireType::Bool => (
-            "cyclone_writer_write_bool",
-            "cyclone_reader_read_bool",
+            "fomoxa_writer_write_bool",
+            "fomoxa_reader_read_bool",
             "bool",
         ),
-        WireType::I8 => (
-            "cyclone_writer_write_i8",
-            "cyclone_reader_read_i8",
-            "int8_t",
-        ),
-        WireType::U8 => (
-            "cyclone_writer_write_u8",
-            "cyclone_reader_read_u8",
-            "uint8_t",
-        ),
+        WireType::I8 => ("fomoxa_writer_write_i8", "fomoxa_reader_read_i8", "int8_t"),
+        WireType::U8 => ("fomoxa_writer_write_u8", "fomoxa_reader_read_u8", "uint8_t"),
         WireType::I16 => (
-            "cyclone_writer_write_i16",
-            "cyclone_reader_read_i16",
+            "fomoxa_writer_write_i16",
+            "fomoxa_reader_read_i16",
             "int16_t",
         ),
         WireType::U16 => (
-            "cyclone_writer_write_u16",
-            "cyclone_reader_read_u16",
+            "fomoxa_writer_write_u16",
+            "fomoxa_reader_read_u16",
             "uint16_t",
         ),
         WireType::I32 => (
-            "cyclone_writer_write_i32",
-            "cyclone_reader_read_i32",
+            "fomoxa_writer_write_i32",
+            "fomoxa_reader_read_i32",
             "int32_t",
         ),
         WireType::U32 => (
-            "cyclone_writer_write_u32",
-            "cyclone_reader_read_u32",
+            "fomoxa_writer_write_u32",
+            "fomoxa_reader_read_u32",
             "uint32_t",
         ),
         WireType::I64 => (
-            "cyclone_writer_write_i64",
-            "cyclone_reader_read_i64",
+            "fomoxa_writer_write_i64",
+            "fomoxa_reader_read_i64",
             "int64_t",
         ),
         WireType::U64 => (
-            "cyclone_writer_write_u64",
-            "cyclone_reader_read_u64",
+            "fomoxa_writer_write_u64",
+            "fomoxa_reader_read_u64",
             "uint64_t",
         ),
-        WireType::F32 => (
-            "cyclone_writer_write_f32",
-            "cyclone_reader_read_f32",
-            "float",
-        ),
+        WireType::F32 => ("fomoxa_writer_write_f32", "fomoxa_reader_read_f32", "float"),
         WireType::F64 => (
-            "cyclone_writer_write_f64",
-            "cyclone_reader_read_f64",
+            "fomoxa_writer_write_f64",
+            "fomoxa_reader_read_f64",
             "double",
         ),
         WireType::Str => (
-            "cyclone_writer_write_string",
-            "cyclone_reader_read_string",
+            "fomoxa_writer_write_string",
+            "fomoxa_reader_read_string",
             "const char *",
         ),
         WireType::Bytes => (
-            "cyclone_writer_write_bytes",
-            "cyclone_reader_read_bytes",
-            "CycloneBytes",
+            "fomoxa_writer_write_bytes",
+            "fomoxa_reader_read_bytes",
+            "FomoxaBytes",
         ),
         WireType::Array(_) | WireType::Model(_) => return None,
     })
@@ -125,8 +113,8 @@ fn zero(ty: &WireType) -> &'static str {
 
 pub fn array_type_name(element: &WireType) -> String {
     match element {
-        WireType::Model(name) => format!("CycloneArray_{name}"),
-        other => format!("CycloneArray_{}", array_element_key(other)),
+        WireType::Model(name) => format!("FomoxaArray_{name}"),
+        other => format!("FomoxaArray_{}", array_element_key(other)),
     }
 }
 
@@ -188,7 +176,7 @@ pub fn codec_file(model: &Model, message: &Message, imports: &Imports<'_>) -> St
     let model_type = struct_type(&model.name);
 
     out.push_str(&format!(
-        "// The {:?} codec for {}, generated from its Cyclone markers.\n",
+        "// The {:?} codec for {}, generated from its Fomoxa markers.\n",
         message.codec, model.name
     ));
     if message.fields.is_empty() {
@@ -225,7 +213,7 @@ pub fn codec_file(model: &Model, message: &Message, imports: &Imports<'_>) -> St
         message.codec
     ));
     out.push_str(&format!(
-        "static inline bool {name}_encode(CycloneWriter *writer, const {model_type} *value) {{\n"
+        "static inline bool {name}_encode(FomoxaWriter *writer, const {model_type} *value) {{\n"
     ));
     if message.fields.is_empty() {
         out.push_str("    (void)writer;\n    (void)value;\n    return true;\n");
@@ -252,15 +240,15 @@ pub fn codec_file(model: &Model, message: &Message, imports: &Imports<'_>) -> St
         message.codec
     ));
     out.push_str(&format!(
-        "static inline CycloneDecodeError {name}_decode(CycloneReader *reader, {model_type} *value) {{\n"
+        "static inline FomoxaDecodeError {name}_decode(FomoxaReader *reader, {model_type} *value) {{\n"
     ));
     if message.fields.is_empty() {
-        out.push_str("    (void)reader;\n    (void)value;\n    return cyclone_decode_ok();\n");
+        out.push_str("    (void)reader;\n    (void)value;\n    return fomoxa_decode_ok();\n");
     } else {
         for field in &message.fields {
             decode_field(&mut out, field, &message.codec);
         }
-        out.push_str("    return cyclone_decode_ok();\n");
+        out.push_str("    return fomoxa_decode_ok();\n");
     }
     out.push_str("}\n");
 
@@ -327,7 +315,7 @@ fn encode_field(out: &mut String, field: &Field, codec: &str) {
 
     if let WireType::Array(element_type) = &field.ty {
         out.push_str(&format!(
-            "    if (!cyclone_writer_write_array_count(writer, {place}.count)) return false;\n"
+            "    if (!fomoxa_writer_write_array_count(writer, {place}.count)) return false;\n"
         ));
         out.push_str(&format!(
             "    for (size_t i = 0; i < {place}.count; ++i) {{\n"
@@ -371,8 +359,8 @@ fn decode_field(out: &mut String, field: &Field, codec: &str) {
     if let Some(name) = as_model(&field.ty) {
         let nested = codec_type_name(name, codec);
         out.push_str(&format!(
-            "    {{\n        CycloneDecodeError error = {nested}_decode(reader, &{place});\n        \
-             if (!cyclone_decode_error_ok(&error)) return error;\n    }}\n"
+            "    {{\n        FomoxaDecodeError error = {nested}_decode(reader, &{place});\n        \
+             if (!fomoxa_decode_error_ok(&error)) return error;\n    }}\n"
         ));
         return;
     }
@@ -383,26 +371,26 @@ fn decode_field(out: &mut String, field: &Field, codec: &str) {
     }
 
     if matches!(field.ty, WireType::Bytes) {
-        out.push_str("    if (cyclone_reader_field_absent(reader)) {\n");
+        out.push_str("    if (fomoxa_reader_field_absent(reader)) {\n");
         out.push_str(&format!(
             "        {place}.data = NULL;\n        {place}.len = 0;\n"
         ));
         out.push_str("    } else {\n");
         out.push_str(&format!(
-            "        CycloneDecodeError error = cyclone_reader_read_bytes(reader, &{place});\n        \
-             if (!cyclone_decode_error_ok(&error)) return error;\n"
+            "        FomoxaDecodeError error = fomoxa_reader_read_bytes(reader, &{place});\n        \
+             if (!fomoxa_decode_error_ok(&error)) return error;\n"
         ));
         out.push_str("    }\n");
         return;
     }
 
     let (_, reader_fn, _) = primitive(&field.ty).expect("models, arrays and bytes handled above");
-    out.push_str("    if (cyclone_reader_field_absent(reader)) {\n");
+    out.push_str("    if (fomoxa_reader_field_absent(reader)) {\n");
     out.push_str(&format!("        {place} = {};\n", zero(&field.ty)));
     out.push_str("    } else {\n");
     out.push_str(&format!(
-        "        CycloneDecodeError error = {reader_fn}(reader, &{place});\n        \
-         if (!cyclone_decode_error_ok(&error)) return error;\n"
+        "        FomoxaDecodeError error = {reader_fn}(reader, &{place});\n        \
+         if (!fomoxa_decode_error_ok(&error)) return error;\n"
     ));
     out.push_str("    }\n");
 }
@@ -413,10 +401,10 @@ fn decode_array_field(out: &mut String, place: &str, element_type: &WireType, co
 
     out.push_str("    {\n");
     out.push_str("        size_t count = 0;\n");
-    out.push_str("        if (!cyclone_reader_field_absent(reader)) {\n");
+    out.push_str("        if (!fomoxa_reader_field_absent(reader)) {\n");
     out.push_str(
-        "            CycloneDecodeError error = cyclone_reader_read_array_count(reader, \
-         &count);\n            if (!cyclone_decode_error_ok(&error)) return error;\n",
+        "            FomoxaDecodeError error = fomoxa_reader_read_array_count(reader, \
+         &count);\n            if (!fomoxa_decode_error_ok(&error)) return error;\n",
     );
     out.push_str("        }\n");
     out.push_str(&format!("        {array_type} array;\n"));
@@ -428,8 +416,8 @@ fn decode_array_field(out: &mut String, place: &str, element_type: &WireType, co
     ));
     out.push_str("            if (array.items == NULL) {\n");
     out.push_str(
-        "                CycloneDecodeError error = cyclone_decode_ok();\n                \
-         error.kind = CYCLONE_DECODE_OUT_OF_MEMORY;\n                return error;\n",
+        "                FomoxaDecodeError error = fomoxa_decode_ok();\n                \
+         error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;\n                return error;\n",
     );
     out.push_str("            }\n");
     out.push_str("            array.count = count;\n");
@@ -446,17 +434,17 @@ fn decode_element_into(out: &mut String, ty: &WireType, element_place: &str, cod
         Some(name) => {
             let nested = codec_type_name(name, codec);
             out.push_str(&format!(
-                "            CycloneDecodeError error = {nested}_decode(reader, &{element_place});\n"
+                "            FomoxaDecodeError error = {nested}_decode(reader, &{element_place});\n"
             ));
         }
         None => {
             let (_, reader_fn, _) = primitive(ty).expect("models handled above");
             out.push_str(&format!(
-                "            CycloneDecodeError error = {reader_fn}(reader, &{element_place});\n"
+                "            FomoxaDecodeError error = {reader_fn}(reader, &{element_place});\n"
             ));
         }
     }
-    out.push_str("            if (!cyclone_decode_error_ok(&error)) {\n");
+    out.push_str("            if (!fomoxa_decode_error_ok(&error)) {\n");
     free_array_value(out, ty, "array", "                ");
     out.push_str("                return error;\n");
     out.push_str("            }\n");
@@ -544,7 +532,7 @@ fn free_field_stmt(out: &mut String, field: &Field) {
             ));
         }
         WireType::Bytes => {
-            out.push_str(&format!("    cyclone_bytes_free(&{place});\n"));
+            out.push_str(&format!("    fomoxa_bytes_free(&{place});\n"));
         }
         WireType::Array(element) => {
             free_array_value(out, element, &place, "    ");
@@ -674,7 +662,7 @@ pub fn arrays_file(schema: &Schema, _imports: &Imports<'_>) -> String {
             WireType::Bytes => {
                 out.push_str(
                     "    for (size_t i = 0; i < array->count; ++i) {\n        \
-                     cyclone_bytes_free(&array->items[i]);\n    }\n",
+                     fomoxa_bytes_free(&array->items[i]);\n    }\n",
                 );
             }
             _ => {}
@@ -763,15 +751,15 @@ mod tests {
     fn a_primitive_reads_and_writes_through_the_pointer() {
         let text = generated(&[("Id", "u32")]);
         assert!(
-            text.contains("if (!cyclone_writer_write_u32(writer, value->Id)) return false;"),
+            text.contains("if (!fomoxa_writer_write_u32(writer, value->Id)) return false;"),
             "{text}"
         );
         assert!(
-            text.contains("if (cyclone_reader_field_absent(reader)) {\n        value->Id = 0;"),
+            text.contains("if (fomoxa_reader_field_absent(reader)) {\n        value->Id = 0;"),
             "{text}"
         );
         assert!(
-            text.contains("cyclone_reader_read_u32(reader, &value->Id);"),
+            text.contains("fomoxa_reader_read_u32(reader, &value->Id);"),
             "{text}"
         );
     }
@@ -781,14 +769,14 @@ mod tests {
         let text = generated(&[("Id", "u32"), ("Name", "string")]);
         assert!(
             text.contains(
-                "static inline bool PlayerEdgeCodec_encode(CycloneWriter *writer, const struct \
+                "static inline bool PlayerEdgeCodec_encode(FomoxaWriter *writer, const struct \
                  Player *value)"
             ),
             "{text}"
         );
         assert!(
             text.contains(
-                "static inline CycloneDecodeError PlayerEdgeCodec_decode(CycloneReader *reader, \
+                "static inline FomoxaDecodeError PlayerEdgeCodec_decode(FomoxaReader *reader, \
                  struct Player *value)"
             ),
             "{text}"
@@ -807,12 +795,12 @@ mod tests {
     fn a_string_field_is_a_const_char_star_zeroing_to_null() {
         let text = generated(&[("Name", "string")]);
         assert!(
-            text.contains("cyclone_writer_write_string(writer, value->Name)"),
+            text.contains("fomoxa_writer_write_string(writer, value->Name)"),
             "{text}"
         );
         assert!(text.contains("value->Name = NULL;"), "{text}");
         assert!(
-            text.contains("cyclone_reader_read_string(reader, &value->Name);"),
+            text.contains("fomoxa_reader_read_string(reader, &value->Name);"),
             "{text}"
         );
     }
@@ -821,7 +809,7 @@ mod tests {
     fn a_bytes_field_is_passed_by_address() {
         let text = generated(&[("Payload", "bytes")]);
         assert!(
-            text.contains("cyclone_writer_write_bytes(writer, &value->Payload)"),
+            text.contains("fomoxa_writer_write_bytes(writer, &value->Payload)"),
             "{text}"
         );
         assert!(
@@ -839,7 +827,7 @@ mod tests {
         );
         assert!(
             text.contains(
-                "CycloneDecodeError error = PlayerInfoEdgeCodec_decode(reader, &value->Info);"
+                "FomoxaDecodeError error = PlayerInfoEdgeCodec_decode(reader, &value->Info);"
             ),
             "{text}"
         );
@@ -850,7 +838,7 @@ mod tests {
         let text = generated(&[("Tags", "Array<string>")]);
         assert!(
             text.contains(
-                "if (!cyclone_writer_write_array_count(writer, value->Tags.count)) return false;"
+                "if (!fomoxa_writer_write_array_count(writer, value->Tags.count)) return false;"
             ),
             "{text}"
         );
@@ -859,10 +847,10 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("cyclone_writer_write_string(writer, value->Tags.items[i])"),
+            text.contains("fomoxa_writer_write_string(writer, value->Tags.items[i])"),
             "{text}"
         );
-        assert!(text.contains("CycloneArray_string array;"), "{text}");
+        assert!(text.contains("FomoxaArray_string array;"), "{text}");
         assert!(
             text.contains("array.items = (const char * *)calloc(count, sizeof(const char *));"),
             "{text}"
@@ -883,7 +871,7 @@ mod tests {
             text.contains("PlayerInfoEdgeCodec_decode(reader, &array.items[i]);"),
             "{text}"
         );
-        assert!(!text.contains("CycloneArray_PlayerInfo_free"), "{text}");
+        assert!(!text.contains("FomoxaArray_PlayerInfo_free"), "{text}");
         assert!(text.contains("PlayerInfo_free(&array.items[j]);"), "{text}");
     }
 
@@ -913,7 +901,7 @@ mod tests {
             file_name("PlayerInfo", "orange_pi"),
             "player_info_orange_pi.h"
         );
-        assert_eq!(free_file_name("Player"), "player_cyclone.h");
+        assert_eq!(free_file_name("Player"), "player_fomoxa.h");
     }
 
     #[test]
@@ -921,13 +909,13 @@ mod tests {
         let text = generated(&[]);
         assert!(
             text.contains(
-                "static inline bool PlayerEdgeCodec_encode(CycloneWriter *writer, const struct \
+                "static inline bool PlayerEdgeCodec_encode(FomoxaWriter *writer, const struct \
                  Player *value) {\n    (void)writer;\n    (void)value;\n    return true;\n}"
             ),
             "{text}"
         );
         assert!(
-            text.contains("(void)reader;\n    (void)value;\n    return cyclone_decode_ok();"),
+            text.contains("(void)reader;\n    (void)value;\n    return fomoxa_decode_ok();"),
             "{text}"
         );
     }
@@ -936,7 +924,7 @@ mod tests {
     fn the_file_carries_the_headers_the_brief_asks_for() {
         let text = generated(&[("Id", "u32")]);
         assert!(
-            text.starts_with("// GENERATED BY cyclonec\n// DO NOT EDIT MANUALLY\n"),
+            text.starts_with("// GENERATED BY fomoxac\n// DO NOT EDIT MANUALLY\n"),
             "{text}"
         );
         assert!(text.contains("// source: models/player.h\n"), "{text}");
@@ -1039,7 +1027,7 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("cyclone_bytes_free(&value->Payload);"),
+            text.contains("fomoxa_bytes_free(&value->Payload);"),
             "{text}"
         );
     }
@@ -1066,17 +1054,14 @@ mod tests {
                 locations: &locations,
             },
         );
-        assert!(text.contains("typedef struct CycloneArray_u32"), "{text}");
+        assert!(text.contains("typedef struct FomoxaArray_u32"), "{text}");
         assert!(
-            text.contains("static inline void CycloneArray_u32_free"),
+            text.contains("static inline void FomoxaArray_u32_free"),
             "{text}"
         );
+        assert!(text.contains("typedef struct FomoxaArray_string"), "{text}");
         assert!(
-            text.contains("typedef struct CycloneArray_string"),
-            "{text}"
-        );
-        assert!(
-            text.contains("static inline void CycloneArray_string_free"),
+            text.contains("static inline void FomoxaArray_string_free"),
             "{text}"
         );
     }

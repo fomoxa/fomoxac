@@ -1,6 +1,6 @@
 //! The committed test vectors, checked against this implementation.
 //!
-//! `tests/vectors/cyclone-vectors.json` is the cross-SDK artifact: fixed bytes
+//! `tests/vectors/fomoxa-vectors.json` is the cross-SDK artifact: fixed bytes
 //! and fixed digests that a Go, C# or C++ implementation is expected to
 //! reproduce from the same schema. This is the Rust side of that promise.
 //!
@@ -10,7 +10,7 @@
 //!   here means the canonical form or the digest changed - every SDK's
 //!   fingerprints just changed with it, and every deployed peer stops
 //!   recognising every other one. That is a deliberate, coordinated, versioned
-//!   act (`cyclone-fingerprint/2`), never a refactor.
+//!   act (`fomoxa-fingerprint/2`), never a refactor.
 //! - **the bytes**, through the real generated codecs. A failure here means the
 //!   wire format moved.
 //!
@@ -28,7 +28,7 @@
 // path the fixture's own layout implies.
 // Through a macro, for one reason: `cargo fmt` follows a `mod` declaration into
 // the file it names, and reformatting the committed generated tree would leave
-// it disagreeing with what `cyclonec` writes - a permanent, self-inflicted
+// it disagreeing with what `fomoxac` writes - a permanent, self-inflicted
 // "stale" that no amount of regenerating fixes. rustfmt works on the AST before
 // expansion, so it cannot see these; the compiler expands them into two
 // ordinary modules and nothing else about the test changes.
@@ -48,24 +48,24 @@ use models::device_state::*;
 use models::every_primitive::*;
 use models::player::*;
 
-use cyclonec::json::Json;
+use fomoxac::json::Json;
 
 fn vectors() -> Json {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/tests/vectors/cyclone-vectors.json"
+        "/tests/vectors/fomoxa-vectors.json"
     );
     let text = std::fs::read_to_string(path).expect("read the vectors");
-    cyclonec::json::parse(&text).expect("parse the vectors")
+    fomoxac::json::parse(&text).expect("parse the vectors")
 }
 
-fn schema() -> cyclonec::ir::Schema {
+fn schema() -> fomoxac::ir::Schema {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/.cyclone/schema.json"
+        "/tests/fixtures/.fomoxa/schema.json"
     );
     let text = std::fs::read_to_string(path).expect("read the fixture schema");
-    cyclonec::schema::from_json(&text).expect("read the fixture schema")
+    fomoxac::schema::from_json(&text).expect("read the fixture schema")
 }
 
 fn hex(text: &str) -> Vec<u8> {
@@ -156,9 +156,9 @@ fn the_fingerprints_are_unchanged() {
 fn the_generated_constants_carry_the_same_digests() {
     let schema = schema();
 
-    assert_eq!(CYCLONE_SCHEMA_FINGERPRINT, schema.fingerprint.u64());
+    assert_eq!(FOMOXA_SCHEMA_FINGERPRINT, schema.fingerprint.u64());
     for message in schema.messages() {
-        let generated = cyclone_message(message.id)
+        let generated = fomoxa_message(message.id)
             .unwrap_or_else(|| panic!("{} is missing from handshake.rs", message.name));
         assert_eq!(generated.name, message.name);
         assert_eq!(generated.fingerprint, message.fingerprint.u64());

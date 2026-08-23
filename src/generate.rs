@@ -198,7 +198,7 @@ pub fn plan(options: &Options) -> Result<Plan, String> {
     if found.len() > 1 {
         return Err(format!(
             "found {} models under {} - each backend needs its own `--src` / `--out` (and \
-             usually its own cyclone.toml); point this run at one language at a time",
+             usually its own fomoxa.toml); point this run at one language at a time",
             found.join(", "),
             options
                 .src
@@ -356,8 +356,8 @@ fn plan_rust(
 fn runtime_file() -> String {
     let mut out = generator::Header {
         note: Some(
-            "The Cyclone runtime - Writer, Reader, DecodeError, Limits - carried\n\
-             verbatim from RFC-0002. Identical in every project cyclonec generates\n\
+            "The Fomoxa runtime - Writer, Reader, DecodeError, Limits - carried\n\
+             verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
         ..generator::Header::default()
@@ -386,7 +386,7 @@ fn plan_go(
     if module_root != options.root {
         return Err(format!(
             "go.mod is at {}, not {} - the Go backend only looks for one in the project root \
-             (where cyclone.toml lives); run cyclonec from there",
+             (where fomoxa.toml lives); run fomoxac from there",
             display(&module_root),
             display(&options.root),
         ));
@@ -501,8 +501,8 @@ fn plan_go(
 fn go_runtime_file(package: &str) -> String {
     let mut out = generator::Header {
         note: Some(
-            "The Cyclone runtime - Writer, Reader, DecodeError, Limits - carried\n\
-             verbatim from RFC-0002. Identical in every project cyclonec generates\n\
+            "The Fomoxa runtime - Writer, Reader, DecodeError, Limits - carried\n\
+             verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
         ..generator::Header::default()
@@ -622,8 +622,8 @@ fn plan_csharp(
 fn csharp_runtime_file(namespace: &str) -> String {
     let mut out = generator::Header {
         note: Some(
-            "The Cyclone runtime - Writer, Reader, DecodeException, Limits - carried\n\
-             verbatim from RFC-0002. Identical in every project cyclonec generates\n\
+            "The Fomoxa runtime - Writer, Reader, DecodeException, Limits - carried\n\
+             verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
         ..generator::Header::default()
@@ -719,14 +719,14 @@ fn plan_gdscript(options: &Options, schema: &Schema) -> Result<BackendPlan, Stri
 fn gdscript_runtime_file() -> String {
     let mut out = generator::gdscript::Header {
         note: Some(
-            "The Cyclone runtime - Writer, Reader, DecodeError, Limits - carried\n\
-             verbatim from RFC-0002. Identical in every project cyclonec generates\n\
+            "The Fomoxa runtime - Writer, Reader, DecodeError, Limits - carried\n\
+             verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
         ..generator::gdscript::Header::default()
     }
     .render();
-    out.push_str("class_name CycloneRuntime\n");
+    out.push_str("class_name FomoxaRuntime\n");
     out.push_str(generator::gdscript_runtime::RUNTIME);
     out
 }
@@ -841,8 +841,8 @@ fn plan_cpp(
 fn cpp_runtime_file(namespace: &str) -> String {
     let mut out = generator::Header {
         note: Some(
-            "The Cyclone runtime - Writer, Reader, DecodeError, Limits - carried\n\
-             verbatim from RFC-0002. Identical in every project cyclonec generates\n\
+            "The Fomoxa runtime - Writer, Reader, DecodeError, Limits - carried\n\
+             verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
         ..generator::Header::default()
@@ -976,9 +976,9 @@ fn plan_c(options: &Options, schema: &Schema) -> Result<BackendPlan, String> {
 fn c_runtime_file() -> String {
     let mut out = generator::Header {
         note: Some(
-            "The Cyclone runtime - CycloneWriter, CycloneReader, CycloneDecodeError,\n\
-             CycloneLimits, CycloneBytes - carried verbatim from RFC-0002. Identical in\n\
-             every project cyclonec generates for: nothing in it is derived from your\n\
+            "The Fomoxa runtime - FomoxaWriter, FomoxaReader, FomoxaDecodeError,\n\
+             FomoxaLimits, FomoxaBytes - carried verbatim from RFC-0002. Identical in\n\
+             every project fomoxac generates for: nothing in it is derived from your\n\
              models.",
         ),
         ..generator::Header::default()
@@ -1087,8 +1087,8 @@ fn plan_typescript(options: &Options, schema: &Schema) -> Result<BackendPlan, St
 fn typescript_runtime_file() -> String {
     let mut out = generator::Header {
         note: Some(
-            "The Cyclone runtime - Writer, Reader, DecodeError, Limits - carried\n\
-             verbatim from RFC-0002. Identical in every project cyclonec generates\n\
+            "The Fomoxa runtime - Writer, Reader, DecodeError, Limits - carried\n\
+             verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
         ..generator::Header::default()
@@ -1192,8 +1192,8 @@ fn plan_javascript(options: &Options, schema: &Schema) -> Result<BackendPlan, St
 fn javascript_runtime_file() -> String {
     let mut out = generator::Header {
         note: Some(
-            "The Cyclone runtime - Writer, Reader, DecodeError, Limits - carried\n\
-             verbatim from RFC-0002. Identical in every project cyclonec generates\n\
+            "The Fomoxa runtime - Writer, Reader, DecodeError, Limits - carried\n\
+             verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
         ..generator::Header::default()
@@ -1273,7 +1273,7 @@ pub fn apply(plan: &Plan, check: bool, quiet: bool) -> Result<bool, String> {
         std::fs::remove_file(path)
             .map_err(|error| format!("cannot remove {}: {error}", display(path)))?;
         if !quiet {
-            eprintln!("cyclonec: removed {}", display(path));
+            eprintln!("fomoxac: removed {}", display(path));
         }
     }
 
@@ -1311,7 +1311,7 @@ pub fn apply(plan: &Plan, check: bool, quiet: bool) -> Result<bool, String> {
         std::fs::write(&file.path, &file.contents)
             .map_err(|error| format!("cannot write {}: {error}", display(&file.path)))?;
         if !quiet {
-            eprintln!("cyclonec: {}", display(&file.path));
+            eprintln!("fomoxac: {}", display(&file.path));
         }
     }
 

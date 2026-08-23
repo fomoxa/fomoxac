@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "generator": "fomoxac 0.2.0",
+  "schema_fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
+  "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
+  "sources": {
+    "src/models/player.go": {
+      "models": [
+        "Player",
+        "PlayerInfo",
+        "Team"
+      ],
+      "outputs": [
+        {
+          "path": "src/generated/player_edge.go",
+          "model": "Player",
+          "codec": "edge",
+          "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
+          "sha256": "abadc151f220c022697206a76be490fbe0ac8756e8dd568acc3b5416d10c8975"
+        },
+        {
+          "path": "src/generated/player_unity.go",
+          "model": "Player",
+          "codec": "unity",
+          "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
+          "sha256": "fa2159d29cd7756d6493422c20fd506bbd77ff3ad209d5f186984de19d4bd713"
+        },
+        {
+          "path": "src/generated/player_info_edge.go",
+          "model": "PlayerInfo",
+          "codec": "edge",
+          "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+          "sha256": "245799e86b20fb014e3fed589b546f8edcc47caacfecafdbb61dd94dc4d32603"
+        },
+        {
+          "path": "src/generated/team_edge.go",
+          "model": "Team",
+          "codec": "edge",
+          "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+          "sha256": "0502885dc37ca9da565add5ed9588cd357edabeddbe880326879fcf13159e109"
+        }
+      ]
+    }
+  },
+  "shared": [
+    {
+      "path": "src/generated/runtime.go",
+      "kind": "runtime",
+      "sha256": "a6e783ae9e8976e7c1bb0d48005b977a0e0212f126c50391f94e2afc95ee40d9"
+    },
+    {
+      "path": "src/generated/handshake.go",
+      "kind": "handshake",
+      "sha256": "6d0456731666cef9507a5e6504d295ae4a9545634f97fbbbc416003ec6ffa937"
+    }
+  ]
+}

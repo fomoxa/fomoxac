@@ -1,0 +1,233 @@
+{
+  "vectors_version": 1,
+  "generator": "fomoxac 0.2.0",
+  "about": [
+    "Fixed test vectors for the Fomoxa wire format and for fomoxac's schema",
+    "fingerprints. Every SDK - Rust, Go, C#, C++ - is expected to reproduce",
+    "these exact bytes and these exact digests from the schema in",
+    "tests/fixtures/schema/. If an SDK disagrees with this file, the SDK is",
+    "wrong; if this file has to change, every SDK changes with it, which is why",
+    "it is committed rather than computed.",
+    "",
+    "hex        the payload, as written by the named message's encoder",
+    "reencode   the payload the decoder produces when the value it decoded is",
+    "           encoded again. It differs from `hex` only for the version-skew",
+    "           vectors, where absent fields come back as zeroes (RFC-0002 9.1).",
+    "reject     byte streams that MUST fail, and the error each one is"
+  ],
+  "fingerprint_algorithm": {
+    "digest": "SHA-256 over a canonical UTF-8 text; see SPEC-FINGERPRINT.md",
+    "u64": "the first 8 bytes of the digest, big endian",
+    "message_id": "the first 4 bytes of SHA-256 of 'fomoxa-message-id/1\\n<name>\\n', big endian",
+    "canonical_example": "fomoxa-fingerprint/2\nmessage Player.edge\nfield 0 id u32\nfield 1 x f32\nfield 2 y f32\nend\n",
+    "prefix": "the k-th prefix fingerprint of a message is the fingerprint of that same message truncated to its first k fields; the last one equals `fingerprint`"
+  },
+  "schema_fingerprint": "sha256:9622e96b1c562c0c0e2f36c250555a86aa93f005eb03c91bd8d68137bdc6db88",
+  "messages": {
+    "DeviceState.edge": {
+      "id": "0x2796F8AC",
+      "fingerprint": "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91",
+      "prefixes": [
+        "sha256:33123a29c6e2c60bd186ffde59b0eae5f30c6fc3d61edb694d5f99117fc7e8ff",
+        "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91"
+      ]
+    },
+    "DeviceState.unity": {
+      "id": "0x9AF41CDE",
+      "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
+      "prefixes": [
+        "sha256:68807466c873e0a6f99aa4783ccbdd6e431506b03ee2f563555e6ef824ba473d",
+        "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae"
+      ]
+    },
+    "EveryPrimitive.edge": {
+      "id": "0x19FCABFF",
+      "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
+      "prefixes": [
+        "sha256:4d6dc9844a18ddff961a988fc3c63e4c0acb231f7a38eca773c2cf933e3d5e04",
+        "sha256:fc215272ffcafdb8a357599a0dd0aa88d5a18bc49c581e5a1321ec84c9647cba",
+        "sha256:f1a864bb7177e8e0978a775dbea2215a4b53dbd54ea3c8c24c4eb261f90b1eea",
+        "sha256:1dd4756dcead61608ee0f4cb2425d9fdf23a0289148537d30f8dec739350342f",
+        "sha256:903eb21e7301e9ede912a52d07985d2b917337b7ce3409872f19adf7f84ee36f",
+        "sha256:6fa7e2cac6e1f0dfca6a4ac9dfedccc50dd2654e134380e43186ed4596922e86",
+        "sha256:ee0244490a2409e9c80c194daf4579e40a4a1f0ea82d1133caf509403e3046a7",
+        "sha256:30f8d7167aebc19da63c9060e03bd350d6e8de3e6313b6043bec1b369188cec6",
+        "sha256:ab2adfabc128e75f38f90f5fc0ca034c85fb062757152fecbb969b0de3038a9e",
+        "sha256:7922b5e2aa14fd8ccbd9254f79d090a5b35d4a39edc00567a133bc81fcb14985",
+        "sha256:55aa80dcc57258513b0bb2d8c5fc8837accf3bf0c8c03f96c4a48d3615f585be",
+        "sha256:19e805517eeac40609727d5e3bc776cdbb096d7a7de671dcf83ecd7d51e640a1",
+        "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512"
+      ]
+    },
+    "Player.edge": {
+      "id": "0x5AD3FC4F",
+      "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
+      "prefixes": [
+        "sha256:9ed3aea54bc5cbd40865209360f5c45597dfd49423a7be8b7cf9194c9e3233dd",
+        "sha256:6962e00c99b909423ecb4cd3d5e8f1e6305752395cca4d244090352b71c8710a",
+        "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa"
+      ]
+    },
+    "PlayerInfo.edge": {
+      "id": "0xC396A399",
+      "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+      "prefixes": [
+        "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd"
+      ]
+    },
+    "Team.edge": {
+      "id": "0x7AEF5FF1",
+      "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+      "prefixes": [
+        "sha256:1a86435942d0b7cd4597f5b4ed3000b41bc22784ef4f77f8ba278c5fa5c21939",
+        "sha256:d42fd55dd56c0355b926cd866553ab95964f9bf55dd2a05b41d9b3c6008e01a3",
+        "sha256:76e108bd0347fae6c051f9831b185af2f806c230bf95b46c9dd9254b9950330a",
+        "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b"
+      ]
+    },
+    "Telemetry.edge": {
+      "id": "0x2EBD5DCD",
+      "fingerprint": "sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5",
+      "prefixes": [
+        "sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5"
+      ]
+    },
+    "Telemetry.orange_pi": {
+      "id": "0x451F06EE",
+      "fingerprint": "sha256:795e4aaf9379b5fef010061b70469a498b522a0856b080be6dfa6cde562b3998",
+      "prefixes": [
+        "sha256:795e4aaf9379b5fef010061b70469a498b522a0856b080be6dfa6cde562b3998"
+      ]
+    }
+  },
+  "accept": [
+    {
+      "name": "player",
+      "message": "Player.edge",
+      "note": "id = 100, x = 10.5, y = 20.0 - little endian, no padding, no tags",
+      "hex": "64000000 00002841 0000a041",
+      "reencode": "64000000 00002841 0000a041"
+    },
+    {
+      "name": "player-negative-zero",
+      "message": "Player.edge",
+      "note": "-0.0 keeps its sign bit: the bit pattern is written unmodified",
+      "hex": "00000000 00000080 00000000",
+      "reencode": "00000000 00000080 00000000"
+    },
+    {
+      "name": "player-skew-missing-tail",
+      "message": "Player.edge",
+      "note": "an older writer sent two fields; y is absent and reads as zero",
+      "hex": "64000000 00002841",
+      "reencode": "64000000 00002841 00000000"
+    },
+    {
+      "name": "player-skew-empty",
+      "message": "Player.edge",
+      "note": "every field absent - a valid message of zeroes",
+      "hex": "",
+      "reencode": "00000000 00000000 00000000"
+    },
+    {
+      "name": "player-skew-trailing",
+      "message": "Player.edge",
+      "note": "a newer writer appended a field; the extra bytes are ignored",
+      "hex": "64000000 00002841 0000a041 2a000000",
+      "reencode": "64000000 00002841 0000a041"
+    },
+    {
+      "name": "device-state-edge",
+      "message": "DeviceState.edge",
+      "note": "id = 42, temperature = 21.5 - display_name belongs to the other codec",
+      "hex": "2a000000 0000ac41",
+      "reencode": "2a000000 0000ac41"
+    },
+    {
+      "name": "device-state-unity",
+      "message": "DeviceState.unity",
+      "note": "id = 42, display_name = \"sensor-1\" - a u32 byte length, then the bytes",
+      "hex": "2a000000 08000000 73656e736f722d31",
+      "reencode": "2a000000 08000000 73656e736f722d31"
+    },
+    {
+      "name": "string-length-counts-bytes",
+      "message": "DeviceState.unity",
+      "note": "\"h\u00e9llo\" is 5 characters and 6 bytes; the length is 6",
+      "hex": "00000000 06000000 68c3a96c6c6f",
+      "reencode": "00000000 06000000 68c3a96c6c6f"
+    },
+    {
+      "name": "every-primitive",
+      "message": "EveryPrimitive.edge",
+      "note": "true, -2, 255, -300, 8080, -1, 4294967295, -2, 1, 1.0, 2.0, \"ok\", DEAD",
+      "hex": "01 fe ff d4fe 901f ffffffff ffffffff feffffffffffffff 0100000000000000 0000803f 0000000000000040 020000006f6b 02000000dead",
+      "reencode": "01 fe ff d4fe 901f ffffffff ffffffff feffffffffffffff 0100000000000000 0000803f 0000000000000040 020000006f6b 02000000dead"
+    },
+    {
+      "name": "team-nested-and-arrays",
+      "message": "Team.edge",
+      "note": "captain.level = 9, tags = [\"a\"], scores = [7], roster = [1, 2] - a nested model is inline, an array is a u32 count then its elements",
+      "hex": "09000000 01000000 0100000061 01000000 07000000 02000000 01000000 02000000",
+      "reencode": "09000000 01000000 0100000061 01000000 07000000 02000000 01000000 02000000"
+    },
+    {
+      "name": "team-empty-arrays",
+      "message": "Team.edge",
+      "note": "an empty array is a count of zero, not an absent field",
+      "hex": "00000000 00000000 00000000 00000000",
+      "reencode": "00000000 00000000 00000000 00000000"
+    },
+    {
+      "name": "team-skew-after-captain",
+      "message": "Team.edge",
+      "note": "the stream ends on a field boundary: the three arrays are absent, and absent is empty",
+      "hex": "09000000",
+      "reencode": "09000000 00000000 00000000 00000000"
+    }
+  ],
+  "reject": [
+    {
+      "name": "truncated-u32",
+      "message": "Player.edge",
+      "note": "the stream ended inside x - a partial field is corruption, never a zero",
+      "hex": "64000000 0000",
+      "error": "UnexpectedEof"
+    },
+    {
+      "name": "truncated-by-one-byte",
+      "message": "Player.edge",
+      "note": "one byte into y is still inside a field",
+      "hex": "64000000 00002841 00",
+      "error": "UnexpectedEof"
+    },
+    {
+      "name": "invalid-bool",
+      "message": "EveryPrimitive.edge",
+      "note": "RFC-0002 2.4 - a bool is 0x00 or 0x01, and nothing else is true",
+      "hex": "02",
+      "error": "InvalidBool"
+    },
+    {
+      "name": "invalid-utf8",
+      "message": "DeviceState.unity",
+      "note": "a string region that is not valid UTF-8",
+      "hex": "2a000000 01000000 ff",
+      "error": "InvalidUtf8"
+    },
+    {
+      "name": "length-past-the-end",
+      "message": "DeviceState.unity",
+      "note": "RFC-0002 10.1 - a length the stream itself cannot satisfy, rejected before allocating",
+      "hex": "2a000000 ffffffff",
+      "error": "UnexpectedEof"
+    },
+    {
+      "name": "array-count-past-the-end",
+      "message": "Team.edge",
+      "note": "two elements promised, one delivered - a count is not version skew",
+      "hex": "00000000 02000000 0100000061",
+      "error": "UnexpectedEof"
+    }
+  ]
+}

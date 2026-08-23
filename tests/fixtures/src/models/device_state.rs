@@ -1,6 +1,6 @@
 use cyclone_attributes::*;
 
-// A model a user writes, annotated in place. This is the type `cyclonec` scans
+// A model a user writes, annotated in place. This is the type `fomoxac` scans
 // *and* the type its generated codec encodes and decodes - there is no second
 // copy of it, and none is generated.
 

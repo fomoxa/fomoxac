@@ -65,7 +65,7 @@ impl<'a> Scanner<'a> {
                     if pending.marker.is_some() {
                         return Err(self.error(
                             token.line,
-                            "CYCLONE_MODEL must be immediately followed by a `class` \
+                            "FOMOXA_MODEL must be immediately followed by a `class` \
                              declaration"
                                 .to_owned(),
                         ));
@@ -78,7 +78,7 @@ impl<'a> Scanner<'a> {
         if pending.marker.is_some() {
             return Err(self.error(
                 pending.line,
-                "CYCLONE_MODEL must be immediately followed by a `class` declaration".to_owned(),
+                "FOMOXA_MODEL must be immediately followed by a `class` declaration".to_owned(),
             ));
         }
 
@@ -102,7 +102,7 @@ impl<'a> Scanner<'a> {
 
         let Some(name) = name else {
             if is_model {
-                return Err(self.error(line, "CYCLONE_MODEL requires a named class".to_owned()));
+                return Err(self.error(line, "FOMOXA_MODEL requires a named class".to_owned()));
             }
             if let Some(open) = body {
                 self.at = self.matching(open, '{', '}') + 1;
@@ -120,7 +120,7 @@ impl<'a> Scanner<'a> {
         let Some(open) = body else {
             return Err(self.error(
                 line,
-                format!("CYCLONE_MODEL marks `{name}`, which has no class body"),
+                format!("FOMOXA_MODEL marks `{name}`, which has no class body"),
             ));
         };
 
@@ -193,7 +193,7 @@ impl<'a> Scanner<'a> {
                 (Some(None), _) => {
                     return Err(self.error(
                         line,
-                        "CYCLONE_FIELD requires a wire type in parentheses".to_owned(),
+                        "FOMOXA_FIELD requires a wire type in parentheses".to_owned(),
                     ));
                 }
                 (Some(Some(network_type)), _) => fields.push(Field {
@@ -205,7 +205,7 @@ impl<'a> Scanner<'a> {
                 (None, false) => {
                     return Err(self.error(
                         line,
-                        format!("field '{name}' has CYCLONE_CODEC but no CYCLONE_FIELD wire type"),
+                        format!("field '{name}' has FOMOXA_CODEC but no FOMOXA_FIELD wire type"),
                     ));
                 }
                 (None, true) => {}
@@ -221,7 +221,7 @@ impl<'a> Scanner<'a> {
         if pending.marker.is_some() || !pending.codecs.is_empty() {
             return Err(self.error(
                 pending.line,
-                "CYCLONE_FIELD must be immediately followed by a field declaration".to_owned(),
+                "FOMOXA_FIELD must be immediately followed by a field declaration".to_owned(),
             ));
         }
         Ok(())
@@ -231,18 +231,18 @@ impl<'a> Scanner<'a> {
         let (name, args) = split_directive(text);
 
         match name {
-            "CYCLONE_MODEL" => {
+            "FOMOXA_MODEL" => {
                 if pending.marker.is_some() {
-                    return Err(self.error(line, "duplicate CYCLONE_MODEL annotation".to_owned()));
+                    return Err(self.error(line, "duplicate FOMOXA_MODEL annotation".to_owned()));
                 }
                 if pending.line == 0 {
                     pending.line = line;
                 }
                 pending.marker = Some(None);
             }
-            "CYCLONE_FIELD" => {
+            "FOMOXA_FIELD" => {
                 if pending.marker.is_some() {
-                    return Err(self.error(line, "duplicate CYCLONE_FIELD annotation".to_owned()));
+                    return Err(self.error(line, "duplicate FOMOXA_FIELD annotation".to_owned()));
                 }
                 if pending.line == 0 {
                     pending.line = line;
@@ -251,14 +251,14 @@ impl<'a> Scanner<'a> {
                     Args::Malformed => {
                         return Err(self.error(
                             line,
-                            "malformed CYCLONE_FIELD: missing closing parenthesis".to_owned(),
+                            "malformed FOMOXA_FIELD: missing closing parenthesis".to_owned(),
                         ))
                     }
                     Args::Some(body) if !body.trim().is_empty() => Some(body.trim().to_owned()),
                     _ => None,
                 });
             }
-            "CYCLONE_CODEC" => {
+            "FOMOXA_CODEC" => {
                 if pending.line == 0 {
                     pending.line = line;
                 }
@@ -271,13 +271,13 @@ impl<'a> Scanner<'a> {
                     Args::Malformed => {
                         return Err(self.error(
                             line,
-                            "malformed CYCLONE_CODEC: missing closing parenthesis".to_owned(),
+                            "malformed FOMOXA_CODEC: missing closing parenthesis".to_owned(),
                         ))
                     }
                     Args::None => {
                         return Err(self.error(
                             line,
-                            "malformed CYCLONE_CODEC: expected CYCLONE_CODEC(\"name\", ...)"
+                            "malformed FOMOXA_CODEC: expected FOMOXA_CODEC(\"name\", ...)"
                                 .to_owned(),
                         ))
                     }
@@ -501,11 +501,11 @@ fn parse_codec_args(body: &str) -> Result<Vec<String>, String> {
             });
         let Some(name) = quoted else {
             return Err(format!(
-                "malformed CYCLONE_CODEC: `{item}` is not a quoted codec name"
+                "malformed FOMOXA_CODEC: `{item}` is not a quoted codec name"
             ));
         };
         if name.is_empty() {
-            return Err("malformed CYCLONE_CODEC: a codec name cannot be empty".to_owned());
+            return Err("malformed FOMOXA_CODEC: a codec name cannot be empty".to_owned());
         }
         if seen.iter().any(|kept| kept == name) {
             continue;
@@ -592,7 +592,7 @@ fn lex(text: &str) -> Vec<Token<'_>> {
                 at += 1;
             }
             let content = text[content_start..at].trim();
-            if content.starts_with("CYCLONE_") {
+            if content.starts_with("FOMOXA_") {
                 tokens.push(Token {
                     kind: Kind::Directive(content),
                     line,
@@ -701,19 +701,19 @@ mod tests {
     fn reads_the_brief_s_own_example() {
         let models = models(
             r#"
-            // CYCLONE_MODEL
-            // CYCLONE_CODEC("edge", "unity")
+            // FOMOXA_MODEL
+            // FOMOXA_CODEC("edge", "unity")
             class DeviceState {
-                // CYCLONE_FIELD(u32)
-                // CYCLONE_CODEC("edge", "unity")
+                // FOMOXA_FIELD(u32)
+                // FOMOXA_CODEC("edge", "unity")
                 Id: number;
 
-                // CYCLONE_FIELD(f32)
-                // CYCLONE_CODEC("edge")
+                // FOMOXA_FIELD(f32)
+                // FOMOXA_CODEC("edge")
                 Temperature: number;
 
-                // CYCLONE_FIELD(string)
-                // CYCLONE_CODEC("unity")
+                // FOMOXA_FIELD(string)
+                // FOMOXA_CODEC("unity")
                 DisplayName: string;
             }
             "#,
@@ -735,9 +735,9 @@ mod tests {
     #[test]
     fn plain_javascript_fields_carry_no_type_annotation_at_all() {
         let models = models(
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\nclass Player {\n    \
-             // CYCLONE_FIELD(u32)\n    // CYCLONE_CODEC(\"edge\")\n    Id;\n\n    \
-             // CYCLONE_FIELD(f32)\n    // CYCLONE_CODEC(\"edge\")\n    X = 0;\n}\n",
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\nclass Player {\n    \
+             // FOMOXA_FIELD(u32)\n    // FOMOXA_CODEC(\"edge\")\n    Id;\n\n    \
+             // FOMOXA_FIELD(f32)\n    // FOMOXA_CODEC(\"edge\")\n    X = 0;\n}\n",
         );
         assert_eq!(models[0].fields.len(), 2);
         assert_eq!(models[0].fields[0].name, "Id");
@@ -754,18 +754,18 @@ mod tests {
     fn a_field_with_codec_but_no_wire_type_is_an_error() {
         let error = parse(
             Path::new("test.ts"),
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\nclass S {\n    \
-             // CYCLONE_CODEC(\"edge\")\n    id: number;\n}\n",
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\nclass S {\n    \
+             // FOMOXA_CODEC(\"edge\")\n    id: number;\n}\n",
         )
         .expect_err("missing wire type");
-        assert!(error.message.contains("CYCLONE_FIELD"), "{}", error.message);
+        assert!(error.message.contains("FOMOXA_FIELD"), "{}", error.message);
     }
 
     #[test]
     fn a_field_with_no_annotation_at_all_is_skipped_not_an_error() {
         let models = models(
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\nclass S {\n    \
-             cache: string;\n\n    // CYCLONE_FIELD(u32)\n    // CYCLONE_CODEC(\"edge\")\n    \
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\nclass S {\n    \
+             cache: string;\n\n    // FOMOXA_FIELD(u32)\n    // FOMOXA_CODEC(\"edge\")\n    \
              id: number;\n}\n",
         );
         assert_eq!(models[0].fields.len(), 1);
@@ -774,16 +774,16 @@ mod tests {
 
     #[test]
     fn a_model_in_a_comment_or_a_string_is_not_a_model() {
-        assert!(models("// // CYCLONE_MODEL class Ghost {}").is_empty());
-        assert!(models("/* // CYCLONE_MODEL\nclass Ghost {} */").is_empty());
-        assert!(models(r#"const s = "// CYCLONE_MODEL class Ghost {}";"#).is_empty());
+        assert!(models("// // FOMOXA_MODEL class Ghost {}").is_empty());
+        assert!(models("/* // FOMOXA_MODEL\nclass Ghost {} */").is_empty());
+        assert!(models(r#"const s = "// FOMOXA_MODEL class Ghost {}";"#).is_empty());
     }
 
     #[test]
     fn a_composite_network_type_keeps_its_spelling() {
         let models = models(
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\nclass S {\n    \
-             // CYCLONE_FIELD(Array<u32>)\n    // CYCLONE_CODEC(\"edge\")\n    xs: number[];\n}\n",
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\nclass S {\n    \
+             // FOMOXA_FIELD(Array<u32>)\n    // FOMOXA_CODEC(\"edge\")\n    xs: number[];\n}\n",
         );
         assert_eq!(models[0].fields[0].network_type, "Array<u32>");
     }
@@ -791,7 +791,7 @@ mod tests {
     #[test]
     fn annotations_do_not_leak_past_another_class() {
         let models = models(
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\nclass Before {}\n\
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\nclass Before {}\n\
              class After { id: number; }\n",
         );
         assert_eq!(models.len(), 1);
@@ -800,49 +800,49 @@ mod tests {
 
     #[test]
     fn a_model_carries_its_source_and_line() {
-        let models = models("\n\n// CYCLONE_MODEL\nclass Player {}\n");
+        let models = models("\n\n// FOMOXA_MODEL\nclass Player {}\n");
         assert_eq!(models[0].source, Path::new("test.ts"));
         assert_eq!(models[0].line, 3);
     }
 
     #[test]
-    fn cyclone_model_without_a_class_is_an_error() {
+    fn fomoxa_model_without_a_class_is_an_error() {
         let error = parse(
             Path::new("test.ts"),
-            "// CYCLONE_MODEL\nfunction notAClass() {}\n",
+            "// FOMOXA_MODEL\nfunction notAClass() {}\n",
         )
         .expect_err("error");
         assert!(error.message.contains("class"), "{}", error.message);
     }
 
     #[test]
-    fn cyclone_model_dangling_at_end_of_file_is_an_error() {
-        let error = parse(Path::new("test.ts"), "// CYCLONE_MODEL\n").expect_err("error");
+    fn fomoxa_model_dangling_at_end_of_file_is_an_error() {
+        let error = parse(Path::new("test.ts"), "// FOMOXA_MODEL\n").expect_err("error");
         assert!(error.message.contains("class"), "{}", error.message);
     }
 
     #[test]
-    fn cyclone_field_not_followed_by_a_field_is_an_error() {
+    fn fomoxa_field_not_followed_by_a_field_is_an_error() {
         let error = parse(
             Path::new("test.ts"),
-            "// CYCLONE_MODEL\nclass S {\n    // CYCLONE_FIELD(u32)\n    doStuff(): void {}\n}\n",
+            "// FOMOXA_MODEL\nclass S {\n    // FOMOXA_FIELD(u32)\n    doStuff(): void {}\n}\n",
         )
         .expect_err("error");
-        assert!(error.message.contains("CYCLONE_FIELD"), "{}", error.message);
+        assert!(error.message.contains("FOMOXA_FIELD"), "{}", error.message);
     }
 
     #[test]
     fn a_malformed_codec_is_an_error() {
         let error = parse(
             Path::new("test.ts"),
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(edge)\nclass S {}\n",
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(edge)\nclass S {}\n",
         )
         .expect_err("unquoted codec name");
         assert!(error.message.contains("quoted"), "{}", error.message);
 
         let error = parse(
             Path::new("test.ts"),
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\"\nclass S {}\n",
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\"\nclass S {}\n",
         )
         .expect_err("unclosed paren");
         assert!(
@@ -853,11 +853,11 @@ mod tests {
     }
 
     #[test]
-    fn a_duplicate_cyclone_field_is_an_error() {
+    fn a_duplicate_fomoxa_field_is_an_error() {
         let error = parse(
             Path::new("test.ts"),
-            "// CYCLONE_MODEL\nclass S {\n    // CYCLONE_FIELD(u32)\n    \
-             // CYCLONE_FIELD(f32)\n    id: number;\n}\n",
+            "// FOMOXA_MODEL\nclass S {\n    // FOMOXA_FIELD(u32)\n    \
+             // FOMOXA_FIELD(f32)\n    id: number;\n}\n",
         )
         .expect_err("duplicate");
         assert!(error.message.contains("duplicate"), "{}", error.message);
@@ -865,24 +865,23 @@ mod tests {
 
     #[test]
     fn export_default_and_abstract_modifiers_are_allowed_before_class() {
-        let default_export =
-            models("// CYCLONE_MODEL\nexport default class Player { id: number; }");
+        let default_export = models("// FOMOXA_MODEL\nexport default class Player { id: number; }");
         assert_eq!(default_export[0].name, "Player");
 
         let abstract_class =
-            models("// CYCLONE_MODEL\nexport abstract class Player { id: number; }");
+            models("// FOMOXA_MODEL\nexport abstract class Player { id: number; }");
         assert_eq!(abstract_class[0].name, "Player");
     }
 
     #[test]
     fn methods_and_accessors_are_not_mistaken_for_fields() {
         let models = models(
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\nclass S {\n    \
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\nclass S {\n    \
              constructor() {}\n\n    \
              get computed(): number { return 1; }\n\n    \
              set computed(value: number) {}\n\n    \
              async doStuff<T>(x: T): Promise<void> {}\n\n    \
-             // CYCLONE_FIELD(u32)\n    // CYCLONE_CODEC(\"edge\")\n    id: number;\n}\n",
+             // FOMOXA_FIELD(u32)\n    // FOMOXA_CODEC(\"edge\")\n    id: number;\n}\n",
         );
         assert_eq!(models[0].fields.len(), 1);
         assert_eq!(models[0].fields[0].name, "id");
@@ -891,8 +890,8 @@ mod tests {
     #[test]
     fn a_field_with_a_default_value_is_parsed() {
         let models = models(
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\nclass S {\n    \
-             // CYCLONE_FIELD(u32)\n    // CYCLONE_CODEC(\"edge\")\n    id: number = 0;\n}\n",
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\nclass S {\n    \
+             // FOMOXA_FIELD(u32)\n    // FOMOXA_CODEC(\"edge\")\n    id: number = 0;\n}\n",
         );
         assert_eq!(models[0].fields[0].name, "id");
         assert_eq!(models[0].fields[0].network_type, "u32");
@@ -901,9 +900,9 @@ mod tests {
     #[test]
     fn extends_and_implements_are_stepped_over() {
         let models = models(
-            "interface Nameable {}\n\n// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\")\n\
+            "interface Nameable {}\n\n// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\")\n\
              class Player extends Base<number> implements Nameable {\n    \
-             // CYCLONE_FIELD(u32)\n    // CYCLONE_CODEC(\"edge\")\n    id: number;\n}\n",
+             // FOMOXA_FIELD(u32)\n    // FOMOXA_CODEC(\"edge\")\n    id: number;\n}\n",
         );
         assert_eq!(models[0].name, "Player");
         assert_eq!(models[0].fields.len(), 1);
@@ -913,9 +912,9 @@ mod tests {
     fn a_javascript_file_parses_the_same_way() {
         let models = parse(
             Path::new("device_state.js"),
-            "// CYCLONE_MODEL\n// CYCLONE_CODEC(\"edge\", \"unity\")\nclass DeviceState {\n    \
-             // CYCLONE_FIELD(u32)\n    // CYCLONE_CODEC(\"edge\", \"unity\")\n    Id;\n\n    \
-             // CYCLONE_FIELD(string)\n    // CYCLONE_CODEC(\"unity\")\n    DisplayName;\n}\n",
+            "// FOMOXA_MODEL\n// FOMOXA_CODEC(\"edge\", \"unity\")\nclass DeviceState {\n    \
+             // FOMOXA_FIELD(u32)\n    // FOMOXA_CODEC(\"edge\", \"unity\")\n    Id;\n\n    \
+             // FOMOXA_FIELD(string)\n    // FOMOXA_CODEC(\"unity\")\n    DisplayName;\n}\n",
         )
         .expect("parse");
         assert_eq!(models[0].name, "DeviceState");

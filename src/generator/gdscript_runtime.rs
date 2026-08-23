@@ -1,13 +1,13 @@
 pub const RUNTIME: &str = r####"
 # ==========================================================================
-# Cyclone runtime - RFC-0002, carried verbatim.
+# Fomoxa runtime - RFC-0002, carried verbatim.
 #
 # Not generated from your models: this block is identical in every file
-# cyclonec writes. It is here so the file is self-contained - nothing to
+# fomoxac writes. It is here so the file is self-contained - nothing to
 # preload, nothing to add to your project beyond this one file.
 # ==========================================================================
 
-# A byte stream that does not satisfy the Cyclone Specification.
+# A byte stream that does not satisfy the Fomoxa Specification.
 #
 # GDScript has no exceptions, so every `decode` in this project returns a
 # DecodeError (or null, on success) instead of throwing one, and every
@@ -31,7 +31,7 @@ class DecodeError:
 			"length_overflow":
 				return "length overflow: length %d exceeds limit %d" % [length, limit]
 			_:
-				return "cyclone: decode error"
+				return "fomoxa: decode error"
 
 # Allocation guards applied while decoding (RFC-0002 §12).
 #
@@ -48,7 +48,7 @@ class Limits:
 	# max_bytes_len do.
 	var max_array_count: int = 0xFFFFFFFF
 
-# Writer appends Cyclone-encoded values to a growable buffer.
+# Writer appends Fomoxa-encoded values to a growable buffer.
 #
 # Every multi-byte value is Little Endian, with no padding, no alignment
 # and no metadata between values.
@@ -100,7 +100,7 @@ class Writer:
 	# still exactly right (no native type decides the wire format).
 	# Interpreting that bit pattern as unsigned, if a caller needs to, is
 	# the caller's business, the same way this project leaves a
-	# `# cyclone:u32` field's native width to every other host language's
+	# `# fomoxa:u32` field's native width to every other host language's
 	# own compiler.
 	func write_i64(value: int) -> void:
 		var start := buf.size()
@@ -141,7 +141,7 @@ class Writer:
 	func write_array_count(count: int) -> void:
 		write_u32(count)
 
-# Reader reads Cyclone-encoded values from a borrowed buffer.
+# Reader reads Fomoxa-encoded values from a borrowed buffer.
 #
 # Malformed input is always a DecodeError, returned - never thrown, GDScript
 # has no exceptions - and a failed read leaves the cursor where it was.

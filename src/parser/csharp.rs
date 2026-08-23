@@ -822,7 +822,7 @@ mod tests {
     #[test]
     fn a_qualified_attribute_name_is_still_recognised() {
         let models = models(
-            "[Cyclone.Network(\"u32\")]\n[Cyclone.Codec(\"edge\")]\nclass S {\n    [Cyclone.Network(\"u32\")]\n    [Cyclone.Codec(\"edge\")]\n    public uint Id { get; set; }\n}",
+            "[Fomoxa.Network(\"u32\")]\n[Fomoxa.Codec(\"edge\")]\nclass S {\n    [Fomoxa.Network(\"u32\")]\n    [Fomoxa.Codec(\"edge\")]\n    public uint Id { get; set; }\n}",
         );
         assert_eq!(models[0].fields[0].network_type, "u32");
     }

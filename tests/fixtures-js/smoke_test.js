@@ -1,4 +1,4 @@
-// Not part of the generated tree or the fixture cyclonec reads - a
+// Not part of the generated tree or the fixture fomoxac reads - a
 // throwaway smoke test run by hand (see the CI workflow) to prove the
 // generated codecs actually work, since no JavaScript step runs inside
 // `cargo test` itself.
@@ -17,11 +17,11 @@ import { DeviceStateUnityCodec } from "./src/generated/device_state_unity.js";
 import { TelemetryEdgeCodec } from "./src/generated/telemetry_edge.js";
 import { EveryPrimitiveEdgeCodec } from "./src/generated/every_primitive_edge.js";
 import {
-    CYCLONE_SCHEMA_FINGERPRINT,
-    CYCLONE_MESSAGES,
-    cycloneMessage,
-    cycloneHandshake,
-    CycloneHandshake,
+    FOMOXA_SCHEMA_FINGERPRINT,
+    FOMOXA_MESSAGES,
+    fomoxaMessage,
+    fomoxaHandshake,
+    FomoxaHandshake,
     PLAYER_EDGE_MESSAGE_ID,
     PLAYER_EDGE_FINGERPRINT,
 } from "./src/generated/handshake.js";
@@ -176,21 +176,21 @@ function encode(value, fn) {
     assert.equal(PlayerEdgeCodec.MESSAGE_ID, PLAYER_EDGE_MESSAGE_ID);
     assert.equal(PlayerEdgeCodec.FINGERPRINT, PLAYER_EDGE_FINGERPRINT);
 
-    const peer = CYCLONE_MESSAGES.map((message) => [
+    const peer = FOMOXA_MESSAGES.map((message) => [
         message.id,
         message.prefixes.length,
         message.fingerprint,
     ]);
-    assert.equal(cycloneHandshake(CYCLONE_SCHEMA_FINGERPRINT, peer), CycloneHandshake.CURRENT);
-    assert.notEqual(cycloneMessage(PLAYER_EDGE_MESSAGE_ID), undefined);
-    assert.equal(cycloneMessage(0), undefined);
+    assert.equal(fomoxaHandshake(FOMOXA_SCHEMA_FINGERPRINT, peer), FomoxaHandshake.CURRENT);
+    assert.notEqual(fomoxaMessage(PLAYER_EDGE_MESSAGE_ID), undefined);
+    assert.equal(fomoxaMessage(0), undefined);
 
     const rejected = peer.map(([id, fieldCount, fingerprint]) =>
         id === PLAYER_EDGE_MESSAGE_ID
             ? [id, fieldCount, fingerprint ^ 1n]
             : [id, fieldCount, fingerprint],
     );
-    assert.equal(cycloneHandshake(0xdeadbeef_00000000n, rejected), CycloneHandshake.REJECT);
+    assert.equal(fomoxaHandshake(0xdeadbeef_00000000n, rejected), FomoxaHandshake.REJECT);
 }
 
 // PlayerUnityCodec exists and is distinct from PlayerEdgeCodec.

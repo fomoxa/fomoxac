@@ -58,7 +58,7 @@ impl<'a> Scanner<'a> {
         {
             return Err(self.error(
                 line,
-                "//cyclone:model must be immediately followed by a `type Name struct { ... }` \
+                "//fomoxa:model must be immediately followed by a `type Name struct { ... }` \
                  declaration"
                     .to_owned(),
             ));
@@ -68,7 +68,7 @@ impl<'a> Scanner<'a> {
         let Some(name) = self.peek().and_then(Token::ident) else {
             return Err(self.error(
                 line,
-                "//cyclone:model: expected a type name after `type`".to_owned(),
+                "//fomoxa:model: expected a type name after `type`".to_owned(),
             ));
         };
         self.bump();
@@ -80,8 +80,8 @@ impl<'a> Scanner<'a> {
             return Err(self.error(
                 line,
                 format!(
-                    "//cyclone:model marks `{name}`, which is not a struct: only a struct \
-                     can be a Cyclone model"
+                    "//fomoxa:model marks `{name}`, which is not a struct: only a struct \
+                     can be a Fomoxa model"
                 ),
             ));
         }
@@ -91,7 +91,7 @@ impl<'a> Scanner<'a> {
             .peek()
             .is_some_and(|token| token.kind == Kind::Punct('{'))
         {
-            return Err(self.error(line, "//cyclone:model: expected `struct {`".to_owned()));
+            return Err(self.error(line, "//fomoxa:model: expected `struct {`".to_owned()));
         }
         let open = self.at;
 
@@ -136,7 +136,7 @@ impl<'a> Scanner<'a> {
             let parsed = parse_tag(tag);
             let codecs = parsed.codec.map(split_codec_list).unwrap_or_default();
 
-            match parsed.cyclone {
+            match parsed.fomoxa {
                 Some(network_type) if !network_type.is_empty() => {
                     fields.push(Field {
                         name: name.to_owned(),
@@ -147,7 +147,7 @@ impl<'a> Scanner<'a> {
                 }
                 _ if !codecs.is_empty() => {
                     return Err(
-                        self.error(line, format!("field '{name}' is missing cyclone wire type"))
+                        self.error(line, format!("field '{name}' is missing fomoxa wire type"))
                     );
                 }
                 _ => {}
@@ -201,7 +201,7 @@ fn parse_directive_arguments(text: &str) -> Result<Vec<String>, String> {
 
     let Some(list) = text.strip_prefix("codec=") else {
         return Err(format!(
-            "invalid //cyclone:model directive: expected nothing or `codec=name,name,...`, \
+            "invalid //fomoxa:model directive: expected nothing or `codec=name,name,...`, \
              found `{text}`"
         ));
     };
@@ -229,13 +229,13 @@ fn split_codec_list(list: String) -> Vec<String> {
 }
 
 struct Tag {
-    cyclone: Option<String>,
+    fomoxa: Option<String>,
     codec: Option<String>,
 }
 
 fn parse_tag(text: &str) -> Tag {
     let mut tag = Tag {
-        cyclone: None,
+        fomoxa: None,
         codec: None,
     };
     let bytes = text.as_bytes();
@@ -269,7 +269,7 @@ fn parse_tag(text: &str) -> Tag {
 
         let value = unescape(raw_value);
         match key {
-            "cyclone" if tag.cyclone.is_none() => tag.cyclone = Some(value),
+            "fomoxa" if tag.fomoxa.is_none() => tag.fomoxa = Some(value),
             "codec" if tag.codec.is_none() => tag.codec = Some(value),
             _ => {}
         }
@@ -319,7 +319,7 @@ impl<'a> Token<'a> {
     }
 }
 
-const DIRECTIVE_PREFIX: &str = "cyclone:model";
+const DIRECTIVE_PREFIX: &str = "fomoxa:model";
 
 fn lex(text: &str) -> Vec<Token<'_>> {
     let bytes = text.as_bytes();
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn a_directive_followed_by_a_struct_is_a_model() {
-        let text = "package models\n\n//cyclone:model codec=edge,unity\ntype DeviceState struct {\n\tID uint32 `cyclone:\"u32\" codec:\"edge,unity\"`\n}\n";
+        let text = "package models\n\n//fomoxa:model codec=edge,unity\ntype DeviceState struct {\n\tID uint32 `fomoxa:\"u32\" codec:\"edge,unity\"`\n}\n";
         let models = parse(Path::new("device_state.go"), text).expect("parse");
         assert_eq!(models.len(), 1);
         assert_eq!(models[0].name, "DeviceState");
@@ -473,7 +473,7 @@ mod tests {
 
     #[test]
     fn a_directive_not_followed_by_a_struct_is_an_error() {
-        let text = "//cyclone:model\nfunc notAStruct() {}\n";
+        let text = "//fomoxa:model\nfunc notAStruct() {}\n";
         let error = parse(Path::new("bad.go"), text).expect_err("error");
         assert!(
             error.message.contains("type Name struct"),
@@ -485,10 +485,10 @@ mod tests {
     #[test]
     fn a_field_with_codec_but_no_wire_type_is_an_error() {
         let text =
-            "//cyclone:model codec=edge\ntype Player struct {\n\tID uint32 `codec:\"edge\"`\n}\n";
+            "//fomoxa:model codec=edge\ntype Player struct {\n\tID uint32 `codec:\"edge\"`\n}\n";
         let error = parse(Path::new("player.go"), text).expect_err("error");
         assert!(
-            error.message.contains("missing cyclone wire type"),
+            error.message.contains("missing fomoxa wire type"),
             "{}",
             error.message
         );
@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn a_field_with_no_tag_at_all_is_skipped_not_an_error() {
-        let text = "//cyclone:model codec=edge\ntype Player struct {\n\tCache string\n\tID uint32 `cyclone:\"u32\" codec:\"edge\"`\n}\n";
+        let text = "//fomoxa:model codec=edge\ntype Player struct {\n\tCache string\n\tID uint32 `fomoxa:\"u32\" codec:\"edge\"`\n}\n";
         let models = parse(Path::new("player.go"), text).expect("parse");
         assert_eq!(models[0].fields.len(), 1);
         assert_eq!(models[0].fields[0].name, "ID");
@@ -513,7 +513,7 @@ mod tests {
 
     #[test]
     fn a_directive_not_immediately_followed_by_type_is_not_silently_dropped() {
-        let text = "//cyclone:model\nvar notAType = 1\n";
+        let text = "//fomoxa:model\nvar notAType = 1\n";
         let error = parse(Path::new("player.go"), text).expect_err("error");
         assert!(
             error.message.contains("immediately followed"),

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-pub const FILE_NAME: &str = "cyclone.toml";
+pub const FILE_NAME: &str = "fomoxa.toml";
 
 #[derive(Debug, Default, Clone)]
 pub struct Config {
@@ -41,7 +41,7 @@ fn parse(text: &str) -> Result<Config, String> {
             continue;
         }
 
-        if table.as_deref().is_some_and(|name| name != "cyclone") {
+        if table.as_deref().is_some_and(|name| name != "fomoxa") {
             continue;
         }
 
@@ -147,9 +147,9 @@ mod tests {
     }
 
     #[test]
-    fn keys_may_sit_under_a_cyclone_table_and_other_tables_are_ignored() {
+    fn keys_may_sit_under_a_fomoxa_table_and_other_tables_are_ignored() {
         let config =
-            parse("[cyclone]\nout = \"generated\"\n\n[other]\nout = \"nope\"\n").expect("parse");
+            parse("[fomoxa]\nout = \"generated\"\n\n[other]\nout = \"nope\"\n").expect("parse");
         assert_eq!(config.out, Some(PathBuf::from("generated")));
     }
 

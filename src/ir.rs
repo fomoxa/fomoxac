@@ -41,7 +41,7 @@ impl WireType {
         }
 
         if text.contains('<') || text.contains('>') {
-            return Err(format!("`{text}` is not a Cyclone type"));
+            return Err(format!("`{text}` is not a Fomoxa type"));
         }
 
         Ok(match text {
@@ -239,7 +239,7 @@ impl Schema {
 }
 
 pub fn generator_name() -> String {
-    format!("cyclonec {}", env!("CARGO_PKG_VERSION"))
+    format!("fomoxac {}", env!("CARGO_PKG_VERSION"))
 }
 
 fn slashed(path: &Path) -> String {

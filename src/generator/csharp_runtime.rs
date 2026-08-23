@@ -1,13 +1,13 @@
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated namespace is
+// fomoxac generates for. It is here so the generated namespace is
 // self-contained - nothing to add to your .csproj, nothing to import.
 // ==========================================================================
 
-/// A byte stream that does not satisfy the Cyclone Specification.
+/// A byte stream that does not satisfy the Fomoxa Specification.
 public sealed class DecodeException : System.Exception
 {
     private DecodeException(string message) : base(message) { }
@@ -64,7 +64,7 @@ public struct Limits
     };
 }
 
-/// Appends Cyclone-encoded values to a growable buffer.
+/// Appends Fomoxa-encoded values to a growable buffer.
 ///
 /// Every multi-byte value is Little Endian, with no padding, no alignment and
 /// no metadata between values.
@@ -147,7 +147,7 @@ public sealed class Writer
     }
 }
 
-/// Reads Cyclone-encoded values from a borrowed buffer.
+/// Reads Fomoxa-encoded values from a borrowed buffer.
 ///
 /// Malformed input is always a <see cref="DecodeException"/>, never a silent
 /// wrong answer, and a failed read leaves the cursor where it was.

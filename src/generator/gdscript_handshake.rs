@@ -23,7 +23,7 @@ pub fn handshake_file(
         ..super::gdscript::Header::default()
     }
     .render();
-    out.push_str("class_name CycloneHandshake\n\n");
+    out.push_str("class_name FomoxaHandshake\n\n");
 
     out.push_str(
         "# The fingerprint of the whole schema: every message, by name, with its own\n\
@@ -87,7 +87,7 @@ pub fn handshake_file(
     for message in &messages {
         let constant = message_constant(&message.model, &message.codec);
         out.push_str(&format!(
-            "\tCycloneMessage.new({constant}_MESSAGE_ID, {:?}, {constant}_FINGERPRINT, \
+            "\tFomoxaMessage.new({constant}_MESSAGE_ID, {:?}, {constant}_FINGERPRINT, \
              {constant}_PREFIXES),\n",
             message.name
         ));
@@ -142,7 +142,7 @@ fn check_constant_names(schema: &Schema) -> Result<(), String> {
 
 const TYPES: &str = "\
 # One message: its id, its name, and the fingerprint of its wire contract.
-class CycloneMessage:
+class FomoxaMessage:
 \tvar id: int
 \tvar name: String
 \tvar fingerprint: int
@@ -159,7 +159,7 @@ class CycloneMessage:
 
 # One entry of a peer's (id, field count, fingerprint) table - what MESSAGES is
 # on its side.
-class CyclonePeerMessage:
+class FomoxaPeerMessage:
 \tvar id: int
 \tvar field_count: int
 \tvar fingerprint: int
@@ -202,7 +202,7 @@ enum MessageCheck {
 
 const HANDSHAKE: &str = r####"
 # The message with this id, if this schema declares it - null otherwise.
-static func message_by_id(id: int) -> CycloneMessage:
+static func message_by_id(id: int) -> FomoxaMessage:
 	var low := 0
 	var high := MESSAGES.size()
 	while low < high:
@@ -289,7 +289,7 @@ const ENVELOPE: &str = r####"# =================================================
 # ==========================================================================
 
 # A frame whose envelope did not describe a message this schema can decode.
-# GDScript has no exceptions, so - like CycloneRuntime.DecodeError - this is
+# GDScript has no exceptions, so - like FomoxaRuntime.DecodeError - this is
 # returned, never thrown.
 class EnvelopeError:
 	var kind: String = ""
@@ -304,17 +304,17 @@ class EnvelopeError:
 			"fingerprint_mismatch":
 				return "message 0x%08X: peer fingerprint 0x%016X, ours 0x%016X" % [message_id, received_fingerprint, expected_fingerprint]
 			_:
-				return "cyclone: envelope error"
+				return "fomoxa: envelope error"
 
 # Writes [MessageId][MessageFingerprint], immediately before the payload.
-static func write_envelope(writer: CycloneRuntime.Writer, message: CycloneMessage) -> void:
+static func write_envelope(writer: FomoxaRuntime.Writer, message: FomoxaMessage) -> void:
 	writer.write_u32(message.id)
 	writer.write_u64(message.fingerprint)
 
 # Reads an envelope and resolves it against this schema. Returns
-# [CycloneMessage, error], with the reader left positioned at the payload
+# [FomoxaMessage, error], with the reader left positioned at the payload
 # only when error is null.
-static func read_envelope(reader: CycloneRuntime.Reader) -> Array:
+static func read_envelope(reader: FomoxaRuntime.Reader) -> Array:
 	var id_result := reader.read_u32()
 	if id_result[1] != null:
 		return [null, id_result[1]]
@@ -342,7 +342,7 @@ static func read_envelope(reader: CycloneRuntime.Reader) -> Array:
 
 const ENVELOPE_OFF: &str = "\
 # Per-frame message validation is off, so no envelope is generated and no
-# frame carries one. Turn it on in cyclone.toml:
+# frame carries one. Turn it on in fomoxa.toml:
 #
 #     validate_message_fingerprint = true
 #
@@ -381,7 +381,7 @@ mod tests {
     fn every_constant_the_brief_asks_for_is_generated() {
         let text = generated(&[model("Player", &["edge"]), model("Enemy", &["edge"])]);
 
-        assert!(text.contains("class_name CycloneHandshake\n"), "{text}");
+        assert!(text.contains("class_name FomoxaHandshake\n"), "{text}");
         assert!(text.contains("const SCHEMA_FINGERPRINT: int ="), "{text}");
         assert!(text.contains("const PLAYER_FINGERPRINT: int ="), "{text}");
         assert!(text.contains("const ENEMY_FINGERPRINT: int ="), "{text}");
@@ -407,7 +407,7 @@ mod tests {
 
         let lines: Vec<&str> = text
             .lines()
-            .filter(|line| line.trim_start().starts_with("CycloneMessage.new("))
+            .filter(|line| line.trim_start().starts_with("FomoxaMessage.new("))
             .collect();
         assert_eq!(lines.len(), 3, "{text}");
 

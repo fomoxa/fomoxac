@@ -34,7 +34,7 @@ pub fn handshake_file(
          /// everything.\n",
     );
     out.push_str(&format!(
-        "pub const CYCLONE_SCHEMA_FINGERPRINT: u64 = {};\n\n",
+        "pub const FOMOXA_SCHEMA_FINGERPRINT: u64 = {};\n\n",
         hex64(schema.fingerprint.u64())
     ));
 
@@ -93,12 +93,12 @@ pub fn handshake_file(
     out.push_str(
         "/// Every message this schema declares, sorted by id.\n\
          #[allow(dead_code)]\n\
-         pub const CYCLONE_MESSAGES: &[CycloneMessage] = &[\n",
+         pub const FOMOXA_MESSAGES: &[FomoxaMessage] = &[\n",
     );
     for message in &messages {
         let constant = message_constant(&message.model, &message.codec);
         out.push_str(&format!(
-            "    CycloneMessage {{ id: {constant}_MESSAGE_ID, name: \"{}\", \
+            "    FomoxaMessage {{ id: {constant}_MESSAGE_ID, name: \"{}\", \
              fingerprint: {constant}_FINGERPRINT, prefixes: {constant}_PREFIXES }},\n",
             message.name
         ));
@@ -110,7 +110,7 @@ pub fn handshake_file(
     out.push_str(&format!(
         "\n/// Whether this schema was generated with `validate_message_fingerprint`.\n\
          #[allow(dead_code)]\n\
-         pub const CYCLONE_VALIDATE_MESSAGE_FINGERPRINT: bool = {validate_message_fingerprint};\n"
+         pub const FOMOXA_VALIDATE_MESSAGE_FINGERPRINT: bool = {validate_message_fingerprint};\n"
     ));
     if validate_message_fingerprint {
         out.push_str(ENVELOPE);
@@ -156,7 +156,7 @@ const TYPES: &str = "\
 /// One message: its id, its name, and the fingerprint of its wire contract.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
-pub struct CycloneMessage {
+pub struct FomoxaMessage {
     /// Stable across schema changes; derived from the name alone.
     pub id: u32,
     /// `Model.codec`.
@@ -175,7 +175,7 @@ const HANDSHAKE: &str = r####"
 /// What a peer's fingerprints mean for this one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
-pub enum CycloneHandshake {
+pub enum FomoxaHandshake {
     /// The same schema, exactly.
     Current,
     /// A different schema, but every message both ends know agrees on the
@@ -185,24 +185,24 @@ pub enum CycloneHandshake {
     /// nothing to negotiate: disconnect.
     Reject,
     /// Not decidable from the peer's table alone - at least one message needs
-    /// the extra exchange described on `CycloneMessageCheck::NeedPrefix`.
+    /// the extra exchange described on `FomoxaMessageCheck::NeedPrefix`.
     NeedMore,
 }
 
 /// The message with this id, if this schema declares it.
 #[allow(dead_code)]
-pub fn cyclone_message(id: u32) -> ::core::option::Option<&'static CycloneMessage> {
+pub fn fomoxa_message(id: u32) -> ::core::option::Option<&'static FomoxaMessage> {
     let mut low = 0usize;
-    let mut high = CYCLONE_MESSAGES.len();
+    let mut high = FOMOXA_MESSAGES.len();
     while low < high {
         let middle = (low + high) / 2;
-        if CYCLONE_MESSAGES[middle].id < id {
+        if FOMOXA_MESSAGES[middle].id < id {
             low = middle + 1;
         } else {
             high = middle;
         }
     }
-    match CYCLONE_MESSAGES.get(low) {
+    match FOMOXA_MESSAGES.get(low) {
         ::core::option::Option::Some(message) if message.id == id => {
             ::core::option::Option::Some(message)
         }
@@ -215,8 +215,8 @@ pub fn cyclone_message(id: u32) -> ::core::option::Option<&'static CycloneMessag
 /// fields. `field_count` counts from 1; 0 is the empty prefix and has no
 /// fingerprint because it always matches.
 #[allow(dead_code)]
-pub fn cyclone_prefix(id: u32, field_count: u32) -> ::core::option::Option<u64> {
-    let message = cyclone_message(id)?;
+pub fn fomoxa_prefix(id: u32, field_count: u32) -> ::core::option::Option<u64> {
+    let message = fomoxa_message(id)?;
     if field_count == 0 {
         return ::core::option::Option::None;
     }
@@ -224,10 +224,10 @@ pub fn cyclone_prefix(id: u32, field_count: u32) -> ::core::option::Option<u64> 
 }
 
 /// What one of the peer's messages means for this schema's message of the same
-/// id. See [`cyclone_message_check`].
+/// id. See [`fomoxa_message_check`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
-pub enum CycloneMessageCheck {
+pub enum FomoxaMessageCheck {
     /// Either this schema does not declare the message at all, or the fields
     /// both ends carry agree. Nothing to do.
     Match,
@@ -236,7 +236,7 @@ pub enum CycloneMessageCheck {
     /// Undecidable from what the peer sent: the peer has more fields than this
     /// schema, so the answer lives at an index only the peer can produce. Ask
     /// it for its prefix fingerprint at this field count, then feed the reply
-    /// to `cyclone_prefix` for the same id and compare.
+    /// to `fomoxa_prefix` for the same id and compare.
     NeedPrefix(u32),
 }
 
@@ -248,72 +248,72 @@ pub enum CycloneMessageCheck {
 /// list is an exact prefix of the longer one, so the comparison happens at
 /// `min(peer_field_count, local field count)`.
 #[allow(dead_code)]
-pub fn cyclone_message_check(
+pub fn fomoxa_message_check(
     id: u32,
     peer_field_count: u32,
     peer_fingerprint: u64,
-) -> CycloneMessageCheck {
-    let ::core::option::Option::Some(known) = cyclone_message(id) else {
+) -> FomoxaMessageCheck {
+    let ::core::option::Option::Some(known) = fomoxa_message(id) else {
         // Not a message this schema declares, so it is never exchanged.
-        return CycloneMessageCheck::Match;
+        return FomoxaMessageCheck::Match;
     };
     let local_field_count = known.prefixes.len() as u32;
 
     if peer_fingerprint == known.fingerprint {
-        return CycloneMessageCheck::Match;
+        return FomoxaMessageCheck::Match;
     }
     if peer_field_count == 0 || local_field_count == 0 {
         // The empty field list is a prefix of everything.
-        return CycloneMessageCheck::Match;
+        return FomoxaMessageCheck::Match;
     }
     if peer_field_count == local_field_count {
         // Same length, different content - a prefix of equal length would have
         // to be equality, and it is not.
-        return CycloneMessageCheck::Reject;
+        return FomoxaMessageCheck::Reject;
     }
     if peer_field_count < local_field_count {
         // The peer's own fingerprint already is the value at the shared index.
         return match known.prefixes.get(peer_field_count as usize - 1) {
             ::core::option::Option::Some(local) if *local == peer_fingerprint => {
-                CycloneMessageCheck::Match
+                FomoxaMessageCheck::Match
             }
-            _ => CycloneMessageCheck::Reject,
+            _ => FomoxaMessageCheck::Reject,
         };
     }
-    CycloneMessageCheck::NeedPrefix(local_field_count)
+    FomoxaMessageCheck::NeedPrefix(local_field_count)
 }
 
 /// Compares a peer's whole message table against this schema's.
 ///
 /// `peer_messages` is the peer's `(id, field count, fingerprint)` table - what
-/// `CYCLONE_MESSAGES` is on its side. A `NeedMore` result means at least one
+/// `FOMOXA_MESSAGES` is on its side. A `NeedMore` result means at least one
 /// message needs the extra round described on
-/// [`CycloneMessageCheck::NeedPrefix`]; walk the table with
-/// `cyclone_message_check` to find which ones.
+/// [`FomoxaMessageCheck::NeedPrefix`]; walk the table with
+/// `fomoxa_message_check` to find which ones.
 #[allow(dead_code)]
-pub fn cyclone_handshake(
+pub fn fomoxa_handshake(
     peer_schema_fingerprint: u64,
     peer_messages: &[(u32, u32, u64)],
-) -> CycloneHandshake {
-    if peer_schema_fingerprint == CYCLONE_SCHEMA_FINGERPRINT {
-        return CycloneHandshake::Current;
+) -> FomoxaHandshake {
+    if peer_schema_fingerprint == FOMOXA_SCHEMA_FINGERPRINT {
+        return FomoxaHandshake::Current;
     }
 
     let mut need_more = false;
     for (id, field_count, fingerprint) in peer_messages {
-        match cyclone_message_check(*id, *field_count, *fingerprint) {
+        match fomoxa_message_check(*id, *field_count, *fingerprint) {
             // One mismatch decides the whole session. Every other message
             // could agree and it would still be unsafe to speak.
-            CycloneMessageCheck::Reject => return CycloneHandshake::Reject,
-            CycloneMessageCheck::NeedPrefix(_) => need_more = true,
-            CycloneMessageCheck::Match => {}
+            FomoxaMessageCheck::Reject => return FomoxaHandshake::Reject,
+            FomoxaMessageCheck::NeedPrefix(_) => need_more = true,
+            FomoxaMessageCheck::Match => {}
         }
     }
 
     if need_more {
-        return CycloneHandshake::NeedMore;
+        return FomoxaHandshake::NeedMore;
     }
-    CycloneHandshake::Outdated
+    FomoxaHandshake::Outdated
 }
 "####;
 
@@ -332,7 +332,7 @@ const ENVELOPE: &str = r####"
 /// A frame whose envelope did not describe a message this schema can decode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
-pub enum CycloneEnvelopeError {
+pub enum FomoxaEnvelopeError {
     /// The envelope itself could not be read.
     Malformed(DecodeError),
     /// An id this schema does not declare.
@@ -341,14 +341,14 @@ pub enum CycloneEnvelopeError {
     FingerprintMismatch { id: u32, expected: u64, received: u64 },
 }
 
-impl ::core::fmt::Display for CycloneEnvelopeError {
+impl ::core::fmt::Display for FomoxaEnvelopeError {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match *self {
-            CycloneEnvelopeError::Malformed(error) => write!(f, "malformed envelope: {error}"),
-            CycloneEnvelopeError::UnknownMessage { id } => {
+            FomoxaEnvelopeError::Malformed(error) => write!(f, "malformed envelope: {error}"),
+            FomoxaEnvelopeError::UnknownMessage { id } => {
                 write!(f, "unknown message id 0x{id:08X}")
             }
-            CycloneEnvelopeError::FingerprintMismatch { id, expected, received } => write!(
+            FomoxaEnvelopeError::FingerprintMismatch { id, expected, received } => write!(
                 f,
                 "message 0x{id:08X}: peer fingerprint 0x{received:016X}, ours 0x{expected:016X}"
             ),
@@ -356,11 +356,11 @@ impl ::core::fmt::Display for CycloneEnvelopeError {
     }
 }
 
-impl ::std::error::Error for CycloneEnvelopeError {}
+impl ::std::error::Error for FomoxaEnvelopeError {}
 
 /// Writes `[MessageId][MessageFingerprint]`, immediately before the payload.
 #[allow(dead_code)]
-pub fn cyclone_write_envelope(writer: &mut Writer, message: &CycloneMessage) {
+pub fn fomoxa_write_envelope(writer: &mut Writer, message: &FomoxaMessage) {
     writer.write_u32(message.id);
     writer.write_u64(message.fingerprint);
 }
@@ -368,17 +368,17 @@ pub fn cyclone_write_envelope(writer: &mut Writer, message: &CycloneMessage) {
 /// Reads an envelope and resolves it against this schema, leaving the reader
 /// positioned at the payload.
 #[allow(dead_code)]
-pub fn cyclone_read_envelope(
+pub fn fomoxa_read_envelope(
     reader: &mut Reader,
-) -> ::core::result::Result<&'static CycloneMessage, CycloneEnvelopeError> {
-    let id = reader.read_u32().map_err(CycloneEnvelopeError::Malformed)?;
-    let fingerprint = reader.read_u64().map_err(CycloneEnvelopeError::Malformed)?;
+) -> ::core::result::Result<&'static FomoxaMessage, FomoxaEnvelopeError> {
+    let id = reader.read_u32().map_err(FomoxaEnvelopeError::Malformed)?;
+    let fingerprint = reader.read_u64().map_err(FomoxaEnvelopeError::Malformed)?;
 
-    let ::core::option::Option::Some(message) = cyclone_message(id) else {
-        return ::core::result::Result::Err(CycloneEnvelopeError::UnknownMessage { id });
+    let ::core::option::Option::Some(message) = fomoxa_message(id) else {
+        return ::core::result::Result::Err(FomoxaEnvelopeError::UnknownMessage { id });
     };
     if message.fingerprint != fingerprint {
-        return ::core::result::Result::Err(CycloneEnvelopeError::FingerprintMismatch {
+        return ::core::result::Result::Err(FomoxaEnvelopeError::FingerprintMismatch {
             id,
             expected: message.fingerprint,
             received: fingerprint,
@@ -391,12 +391,12 @@ pub fn cyclone_read_envelope(
 
 const ENVELOPE_OFF: &str = "\
 // Per-frame message validation is off, so no envelope is generated and no
-// frame carries one. Turn it on in cyclone.toml:
+// frame carries one. Turn it on in fomoxa.toml:
 //
 //     validate_message_fingerprint = true
 //
 // and every frame gains [MessageId: u32][MessageFingerprint: u64] in front of
-// its payload, with cyclone_write_envelope / cyclone_read_envelope to match.
+// its payload, with fomoxa_write_envelope / fomoxa_read_envelope to match.
 ";
 
 #[cfg(test)]
@@ -431,7 +431,7 @@ mod tests {
         let text = generated(&[model("Player", &["edge"]), model("Enemy", &["edge"])]);
 
         assert!(
-            text.contains("pub const CYCLONE_SCHEMA_FINGERPRINT: u64 = 0x"),
+            text.contains("pub const FOMOXA_SCHEMA_FINGERPRINT: u64 = 0x"),
             "{text}"
         );
         assert!(
@@ -451,7 +451,7 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("pub const CYCLONE_MESSAGES: &[CycloneMessage]"),
+            text.contains("pub const FOMOXA_MESSAGES: &[FomoxaMessage]"),
             "{text}"
         );
     }
@@ -465,7 +465,7 @@ mod tests {
 
         let ids: Vec<&str> = text
             .lines()
-            .filter(|line| line.trim_start().starts_with("CycloneMessage {"))
+            .filter(|line| line.trim_start().starts_with("FomoxaMessage {"))
             .collect();
         assert_eq!(ids.len(), 3, "{text}");
 
@@ -491,19 +491,19 @@ mod tests {
     fn the_envelope_is_off_unless_asked_for() {
         let off = generated(&[model("Player", &["edge"])]);
         assert!(
-            off.contains("CYCLONE_VALIDATE_MESSAGE_FINGERPRINT: bool = false"),
+            off.contains("FOMOXA_VALIDATE_MESSAGE_FINGERPRINT: bool = false"),
             "{off}"
         );
-        assert!(!off.contains("fn cyclone_write_envelope"), "{off}");
+        assert!(!off.contains("fn fomoxa_write_envelope"), "{off}");
 
         let schema = Schema::build(&[model("Player", &["edge"])]).expect("build");
         let on = handshake_file(&schema, true).expect("render");
         assert!(
-            on.contains("CYCLONE_VALIDATE_MESSAGE_FINGERPRINT: bool = true"),
+            on.contains("FOMOXA_VALIDATE_MESSAGE_FINGERPRINT: bool = true"),
             "{on}"
         );
-        assert!(on.contains("fn cyclone_write_envelope"), "{on}");
-        assert!(on.contains("fn cyclone_read_envelope"), "{on}");
+        assert!(on.contains("fn fomoxa_write_envelope"), "{on}");
+        assert!(on.contains("fn fomoxa_read_envelope"), "{on}");
     }
 
     #[test]

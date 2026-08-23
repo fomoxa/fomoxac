@@ -5,7 +5,7 @@
 //! properly means letting time actually pass - a real subprocess per
 //! scenario (as `tests/cli.rs` prefers) would work too, but multiplies that
 //! wait by however many scenarios there are. A background thread inside this
-//! process, talking to the exact same `cyclonec::watch::run` the CLI calls,
+//! process, talking to the exact same `fomoxac::watch::run` the CLI calls,
 //! gets the same coverage in a fraction of the time; `tests/cli.rs` still
 //! covers `--watch` once, end to end, through the compiled binary.
 
@@ -14,8 +14,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use cyclonec::generate::Options;
-use cyclonec::watch;
+use fomoxac::generate::Options;
+use fomoxac::watch;
 
 // ===================================================================== harness
 
@@ -192,7 +192,7 @@ fn source_file_deletion_removes_its_generated_codec() {
 #[test]
 fn a_parse_error_is_reported_and_watched_past_then_fixed() {
     let directory = project("parse-error");
-    // `Vec<u32>` is not a Cyclone wire type - only `Array<u32>` is - so this
+    // `Vec<u32>` is not a Fomoxa wire type - only `Array<u32>` is - so this
     // is invalid from the first tick onward.
     write(
         &directory,

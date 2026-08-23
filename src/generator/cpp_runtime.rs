@@ -1,13 +1,13 @@
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated tree is self-contained
+// fomoxac generates for. It is here so the generated tree is self-contained
 // - nothing to add to your build beyond this directory, nothing to link.
 // ==========================================================================
 
-/// A byte stream that does not satisfy the Cyclone Specification.
+/// A byte stream that does not satisfy the Fomoxa Specification.
 ///
 /// A default-constructed `DecodeError` means "no error" - `kind` is
 /// `Kind::None` and `ok()` is true - which is what every generated `decode`
@@ -100,7 +100,7 @@ struct Limits {
     static Limits unlimited() { return Limits(); }
 };
 
-/// Appends Cyclone-encoded values to a growable buffer.
+/// Appends Fomoxa-encoded values to a growable buffer.
 ///
 /// Every multi-byte value is Little Endian, with no padding, no alignment and
 /// no metadata between values.
@@ -200,7 +200,7 @@ private:
     std::vector<std::uint8_t> buf_;
 };
 
-/// Reads Cyclone-encoded values from a borrowed buffer.
+/// Reads Fomoxa-encoded values from a borrowed buffer.
 ///
 /// Malformed input is always a [`DecodeError`], never a thrown exception and
 /// never a silent wrong answer, and a failed read leaves the cursor where it

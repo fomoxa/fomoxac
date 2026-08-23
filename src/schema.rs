@@ -2,7 +2,7 @@ use crate::fingerprint::Fingerprint;
 use crate::ir::{Field, Message, Model, Schema, WireType, SCHEMA_VERSION};
 use crate::json::Json;
 
-pub const PATH: &str = ".cyclone/schema.json";
+pub const PATH: &str = ".fomoxa/schema.json";
 
 pub fn to_json(schema: &Schema) -> String {
     document(schema).to_pretty()
@@ -119,7 +119,7 @@ pub fn from_json(text: &str) -> Result<Schema, String> {
         .ok_or("schema.json has no `schema_version`")?;
     if version != u64::from(SCHEMA_VERSION) {
         return Err(format!(
-            "schema.json is version {version}; this cyclonec reads version {SCHEMA_VERSION}"
+            "schema.json is version {version}; this fomoxac reads version {SCHEMA_VERSION}"
         ));
     }
 

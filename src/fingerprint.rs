@@ -46,7 +46,7 @@ impl Fingerprint {
     }
 }
 
-const HEADER: &str = "cyclone-fingerprint/2\n";
+const HEADER: &str = "fomoxa-fingerprint/2\n";
 
 pub fn canonical_field_name(name: &str) -> String {
     let canonical: String = name
@@ -111,7 +111,7 @@ pub fn project(models: &[Model]) -> Fingerprint {
 }
 
 pub fn message_id(name: &str) -> u32 {
-    let digest = sha256::hash(format!("cyclone-message-id/1\n{name}\n").as_bytes());
+    let digest = sha256::hash(format!("fomoxa-message-id/1\n{name}\n").as_bytes());
     u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]])
 }
 
@@ -264,7 +264,7 @@ mod tests {
 
         assert_eq!(
             canonical_message(model, "edge", &schema.models),
-            "cyclone-fingerprint/2\nmessage Player.edge\nfield 0 id u32\nfield 1 x f32\nend\n"
+            "fomoxa-fingerprint/2\nmessage Player.edge\nfield 0 id u32\nfield 1 x f32\nend\n"
         );
     }
 
@@ -312,7 +312,7 @@ mod tests {
                 field("x", "f32"),
                 field("y", "f32")
             ]),
-            vec![0x61B0FCFAB53A875E, 0xF1ED8779E2A4A35D, 0x1C6D09808C8BA4CA]
+            vec![0x9ED3AEA54BC5CBD4, 0x6962E00C99B90942, 0x19D8F679A9BB419F]
         );
     }
 
@@ -405,7 +405,7 @@ mod tests {
         let fingerprint = player_fingerprint(vec![field("id", "u32"), field("x", "f32")]);
         assert_eq!(
             fingerprint.tagged(),
-            "sha256:f1ed8779e2a4a35d30067fa88ba1cec15f7417ea9907df5752f06b97a0d93ddc"
+            "sha256:6962e00c99b909423ecb4cd3d5e8f1e6305752395cca4d244090352b71c8710a"
         );
     }
 

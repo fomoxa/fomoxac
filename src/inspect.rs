@@ -19,13 +19,13 @@ pub struct Options {
 }
 
 pub const USAGE: &str = "\
-cyclone-inspect - decode a Cyclone packet through a schema
+fomoxa-inspect - decode a Fomoxa packet through a schema
 
 USAGE:
-    cyclone-inspect --schema <SCHEMA> --message <NAME> (--file <PATH> | --hex <HEX>)
+    fomoxa-inspect --schema <SCHEMA> --message <NAME> (--file <PATH> | --hex <HEX>)
 
 OPTIONS:
-        --schema <PATH>   .cyclone/schema.json. Required - never guessed.
+        --schema <PATH>   .fomoxa/schema.json. Required - never guessed.
         --message <NAME>  `Player`, or `Player.edge` to name the codec too.
         --codec <NAME>    The codec, if --message did not name one.
         --file <PATH>     A binary file holding one message's payload.
@@ -36,8 +36,8 @@ OPTIONS:
     -h, --help            Print this message
 
 EXAMPLES:
-    cyclone-inspect --schema .cyclone/schema.json --message Player --file packet.bin
-    cyclone-inspect --schema .cyclone/schema.json --message Player.edge --hex '64000000 0000 2841'
+    fomoxa-inspect --schema .fomoxa/schema.json --message Player --file packet.bin
+    fomoxa-inspect --schema .fomoxa/schema.json --message Player.edge --hex '64000000 0000 2841'
 ";
 
 pub fn parse(
