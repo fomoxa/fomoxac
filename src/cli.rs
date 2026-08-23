@@ -1,54 +1,39 @@
-//! Command-line arguments, parsed by hand.
-//!
-//! Three commands, because they are three different jobs with three different
-//! failure modes:
-//!
-//! - `generate` reads source and writes the tree. It **warns** about
-//!   compatibility and never fails for it - a developer breaking their own
-//!   schema on purpose is a normal afternoon.
-//! - `compat` compares two schemas and says what changed. It fails on a
-//!   breaking change, because somebody asked it the question.
-//! - `ci` does what a pull request needs: check the committed schema still
-//!   matches source, fetch the *target branch's* schema, compare, and exit 1 on
-//!   a breaking change.
-
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-/// The usage text, printed by `--help` and on a usage error.
 pub const USAGE: &str = "\
-cyclonec - the official Cyclone source generator
+fomoxac - the official Fomoxa source generator
 
-Reads Cyclone attributes from Rust, Go, C#, GDScript, C++, C, TypeScript or
+Reads Fomoxa attributes from Rust, Go, C#, GDScript, C++, C, TypeScript or
 JavaScript sources - never more than one language in one run - and writes one
 codec file per model per codec, plus the schema, fingerprints and build graph
 that go with them.
 
 USAGE:
-    cyclonec generate [--src <PATH>]... [--out <PATH>] [--check] [--watch] [-q]
-    cyclonec compat --base <SCHEMA> [--head <SCHEMA>] [--src <PATH>]...
-    cyclonec ci --base-ref <REF> [--src <PATH>]... [--out <PATH>]
+    fomoxac generate [--src <PATH>]... [--out <PATH>] [--check] [--watch] [-q]
+    fomoxac compat --base <SCHEMA> [--head <SCHEMA>] [--src <PATH>]...
+    fomoxac ci --base-ref <REF> [--src <PATH>]... [--out <PATH>]
 
 COMMANDS:
-    generate    Read source, write the tree, .cyclone/schema.json and
-                .cyclone/build-graph.json. Warns about schema changes; never
+    generate    Read source, write the tree, .fomoxa/schema.json and
+                .fomoxa/build-graph.json. Warns about schema changes; never
                 fails because of one.
     compat      Compare a base schema against the current source (or against
                 --head). Exits 1 on a BREAKING change.
-    ci          Verify .cyclone/schema.json matches source, then compare it
+    ci          Verify .fomoxa/schema.json matches source, then compare it
                 against the target branch's. Exits 1 on either problem.
 
 OPTIONS:
         --src <PATH>     A directory to scan recursively, or a single file.
-                         Repeatable. Default: cyclone.toml's `src`, else `src`.
+                         Repeatable. Default: fomoxa.toml's `src`, else `src`.
                          Every file found must be one language - `.rs`, `.go`,
                          `.cs`, `.gd`, `.hpp`/`.cpp`/`.cc`/`.cxx` (C++),
                          `.c`/`.h` (C), or `.ts`/`.js` (TypeScript/
                          JavaScript) - never a mix; separate projects sharing
                          one schema each get their own `--src`/`--out` (and
-                         usually their own cyclone.toml).
+                         usually their own fomoxa.toml).
     -o, --out <PATH>     Where generated source goes.
-                         Default: cyclone.toml's `out`, else `generated`.
+                         Default: fomoxa.toml's `out`, else `generated`.
         --model-path <PATH>
                          Where a generated codec reaches your models.
                          Rust: a module path, e.g. `crate::models` - default is
@@ -88,8 +73,8 @@ OPTIONS:
                          annotation is reported and watched past, not a
                          reason to stop:
 
-                             [cyclonec] error: failed to parse src/models/player.rs
-                             [cyclonec] watching for changes...
+                             [fomoxac] error: failed to parse src/models/player.rs
+                             [fomoxac] watching for changes...
 
                          Never watches --out, and never regenerates because
                          of a file this generator wrote itself.
@@ -104,12 +89,12 @@ OPTIONS:
     -V, --version        Print the version
 
 EXAMPLES:
-    cyclonec generate --src src --out generated
-    cyclonec generate --check
-    cyclonec --src src --out generated --watch
-    cyclonec --watch
-    cyclonec compat --base .cyclone/schema.json
-    cyclonec ci --base-ref origin/${GITHUB_BASE_REF}
+    fomoxac generate --src src --out generated
+    fomoxac generate --check
+    fomoxac --src src --out generated --watch
+    fomoxac --watch
+    fomoxac compat --base .fomoxa/schema.json
+    fomoxac ci --base-ref origin/${GITHUB_BASE_REF}
 
 A model declares which codecs to generate; there is no flag for it. Rust:
 
@@ -125,13 +110,13 @@ A model declares which codecs to generate; there is no flag for it. Rust:
         x: f32,
     }
 
-Go has no attributes, so a `//cyclone:model` comment directive and
-`cyclone:\"...\"` / `codec:\"...\"` struct tags say the same thing:
+Go has no attributes, so a `//fomoxa:model` comment directive and
+`fomoxa:\"...\"` / `codec:\"...\"` struct tags say the same thing:
 
-    //cyclone:model codec=edge,unity
+    //fomoxa:model codec=edge,unity
     type Player struct {
-        ID uint32  `cyclone:\"u32\" codec:\"edge,unity\"`
-        X  float32 `cyclone:\"f32\" codec:\"edge\"`
+        ID uint32  `fomoxa:\"u32\" codec:\"edge,unity\"`
+        X  float32 `fomoxa:\"f32\" codec:\"edge\"`
     }
 
 C# spells the same declaration with attributes, the same shape as Rust's:
@@ -150,33 +135,33 @@ C# spells the same declaration with attributes, the same shape as Rust's:
     }
 
 GDScript has no attributes either, and an unrecognized `@name` is a parse
-error in Godot itself - so, like Go, a `# cyclone:` comment directive says it
+error in Godot itself - so, like Go, a `# fomoxa:` comment directive says it
 instead:
 
-    # cyclone:model codec=edge,unity
+    # fomoxa:model codec=edge,unity
     class_name Player
 
-    # cyclone:u32 codec=edge,unity
+    # fomoxa:u32 codec=edge,unity
     var id: int
 
-    # cyclone:f32 codec=edge
+    # fomoxa:f32 codec=edge
     var x: float
 
 C++ has no attributes either, and no comment-directive syntax to fall back
 on - it spells the same declaration with three macros a small header (see
-`cyclone.h` in the brief) defines to expand to nothing, so an annotated
-struct compiles unchanged whether or not cyclonec ever runs over it:
+`fomoxa.h` in the brief) defines to expand to nothing, so an annotated
+struct compiles unchanged whether or not fomoxac ever runs over it:
 
-    CYCLONE_MODEL
-    CYCLONE_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
+    FOMOXA_MODEL
+    FOMOXA_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
     struct Player
     {
-        CYCLONE_FIELD(u32)
-        CYCLONE_CODEC(\"edge\", \"unity\")  ->  in both
+        FOMOXA_FIELD(u32)
+        FOMOXA_CODEC(\"edge\", \"unity\")  ->  in both
         uint32_t Id;
 
-        CYCLONE_FIELD(f32)
-        CYCLONE_CODEC(\"edge\")             ->  in the edge codec only
+        FOMOXA_FIELD(f32)
+        FOMOXA_CODEC(\"edge\")             ->  in the edge codec only
         float X;
     };
 
@@ -184,16 +169,16 @@ C reads the same three macros, from the same header - a `string` field's
 host type is always `const char *` (heap-owned once decoded; see the C
 section of the README for why), and there is no `namespace` to open at all:
 
-    CYCLONE_MODEL
-    CYCLONE_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
+    FOMOXA_MODEL
+    FOMOXA_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
     struct Player
     {
-        CYCLONE_FIELD(u32)
-        CYCLONE_CODEC(\"edge\", \"unity\")  ->  in both
+        FOMOXA_FIELD(u32)
+        FOMOXA_CODEC(\"edge\", \"unity\")  ->  in both
         uint32_t Id;
 
-        CYCLONE_FIELD(string)
-        CYCLONE_CODEC(\"edge\")             ->  in the edge codec only
+        FOMOXA_FIELD(string)
+        FOMOXA_CODEC(\"edge\")             ->  in the edge codec only
         const char *Name;
     };
 
@@ -202,58 +187,43 @@ runtime dependency, so - like Go and GDScript - a comment directive says it,
 read the same way for both languages (`.ts` and `.js`) and requiring no
 decorator and no package to install:
 
-    // CYCLONE_MODEL
-    // CYCLONE_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
+    // FOMOXA_MODEL
+    // FOMOXA_CODEC(\"edge\", \"unity\")      ->  PlayerEdgeCodec, PlayerUnityCodec
     class Player {
-        // CYCLONE_FIELD(u32)
-        // CYCLONE_CODEC(\"edge\", \"unity\")  ->  in both
+        // FOMOXA_FIELD(u32)
+        // FOMOXA_CODEC(\"edge\", \"unity\")  ->  in both
         Id: number;
 
-        // CYCLONE_FIELD(f32)
-        // CYCLONE_CODEC(\"edge\")             ->  in the edge codec only
+        // FOMOXA_FIELD(f32)
+        // FOMOXA_CODEC(\"edge\")             ->  in the edge codec only
         X: number;
     }
 
 The TypeScript host type (`number`, above) is never consulted - `number`
 cannot say whether a field is `u32`, `i32`, `f32` or `f64` - only
-CYCLONE_FIELD's own argument is. A JavaScript model writes the identical
+FOMOXA_FIELD's own argument is. A JavaScript model writes the identical
 directives with no type annotation at all (`Id;` in place of `Id: number;`)
 and means exactly the same thing.
 ";
 
-/// Where to read from and where to write to - shared by every command that
-/// touches source.
 #[derive(Debug, Default, Clone)]
 pub struct Paths {
-    /// `--src`, empty if the flag was never given.
     pub src: Vec<PathBuf>,
-    /// `--out`, if given.
     pub out: Option<PathBuf>,
-    /// `--model-path`, if given: overrides how a generated codec reaches your
-    /// models - a module path in Rust, an import path in Go, a namespace in
-    /// C# or C++ - in place of the one the source layout (Rust), `go.mod`
-    /// (Go), or the model's own `namespace` (C#, C++) implies. No effect on
-    /// GDScript or C, neither of which has anything to override.
     pub model_path: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct GenerateArgs {
     pub paths: Paths,
-    /// Report staleness instead of writing.
     pub check: bool,
-    /// Generate once, then keep regenerating on every source change until
-    /// terminated. Never both true alongside `check` - see [`parse`].
     pub watch: bool,
     pub quiet: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct CompatArgs {
-    /// The schema being evolved from.
     pub base: PathBuf,
-    /// The schema being evolved to. `None` reads the current source instead,
-    /// which is what makes this useful before anything has been committed.
     pub head: Option<PathBuf>,
     pub paths: Paths,
     pub quiet: bool,
@@ -261,13 +231,11 @@ pub struct CompatArgs {
 
 #[derive(Debug, Clone)]
 pub struct CiArgs {
-    /// The git ref of the branch this change would merge into.
     pub base_ref: String,
     pub paths: Paths,
     pub quiet: bool,
 }
 
-/// What the command line asked for.
 #[derive(Debug, Clone)]
 pub enum Command {
     Generate(GenerateArgs),
@@ -277,18 +245,12 @@ pub enum Command {
     Version,
 }
 
-/// Parses the command line.
-///
-/// # Errors
-///
-/// An unknown flag, a missing value, or a required argument that was not given.
 pub fn parse(argv: impl IntoIterator<Item = OsString>) -> Result<Command, String> {
     let mut argv: Vec<String> = argv
         .into_iter()
         .map(|argument| argument.to_string_lossy().into_owned())
         .collect();
 
-    // No command at all means `generate`: it is the one that runs every build.
     let command = match argv.first().map(String::as_str) {
         Some("generate") | Some("compat") | Some("ci") => argv.remove(0),
         _ => "generate".to_owned(),

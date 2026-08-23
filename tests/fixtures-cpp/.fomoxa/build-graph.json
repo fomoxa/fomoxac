@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "generator": "fomoxac 0.2.0",
+  "schema_fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
+  "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
+  "sources": {
+    "src/models/player.hpp": {
+      "models": [
+        "Player",
+        "PlayerInfo",
+        "Team"
+      ],
+      "outputs": [
+        {
+          "path": "src/generated/player_edge.hpp",
+          "model": "Player",
+          "codec": "edge",
+          "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
+          "sha256": "966d506d61f6ca4589cdcfe3bc821625eb2e3f7998d22992225b616028e6bc6c"
+        },
+        {
+          "path": "src/generated/player_unity.hpp",
+          "model": "Player",
+          "codec": "unity",
+          "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
+          "sha256": "13e88fdda2417240e596329ef1d0df98417966f82465e8994ca3ab5b97840bf5"
+        },
+        {
+          "path": "src/generated/player_info_edge.hpp",
+          "model": "PlayerInfo",
+          "codec": "edge",
+          "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+          "sha256": "dd661ffac8e56e2d23256e639fe0fecae2688e080408d77ef0dc686b5bc5a897"
+        },
+        {
+          "path": "src/generated/team_edge.hpp",
+          "model": "Team",
+          "codec": "edge",
+          "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+          "sha256": "75193f6d879060eb57d0f0b532c4c30ee48171a6d492a8121805c8a603ad53fa"
+        }
+      ]
+    }
+  },
+  "shared": [
+    {
+      "path": "src/generated/runtime.hpp",
+      "kind": "runtime",
+      "sha256": "e06043226f4fe22677681c9720ee519600c617d3ad60bf0726491f8caa41adc4"
+    },
+    {
+      "path": "src/generated/handshake.hpp",
+      "kind": "handshake",
+      "sha256": "04bb0bde1f7fbf899cd1a8241c60604a6e9e918c8e9e62a04b8171048fed25cc"
+    }
+  ]
+}

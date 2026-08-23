@@ -1,37 +1,3 @@
-//! `handshake.gd` - the fingerprints, generated.
-//!
-//! The GDScript counterpart of [`super::handshake`], [`super::go_handshake`]
-//! and [`super::csharp_handshake`] - same contract, same safety property:
-//!
-//! ```text
-//! peer schema fingerprint == ours               -> Current    accept
-//! a message both ends know, fingerprints differ -> Reject     disconnect
-//! otherwise                                      -> Outdated   accept
-//! ```
-//!
-//! `cyclonec_old` never had a GDScript handshake generator at all - this is
-//! new. It follows [`super::csharp_handshake`]'s shape more than
-//! [`super::go_handshake`]'s: GDScript, like C#, has no package-level
-//! `const` outside a type, so every fingerprint constant, the message table,
-//! and the compare function all live inside one `class_name CycloneHandshake`
-//! wrapper - the same "everything through one file's own global name"
-//! constraint [`super::gdscript`]'s module docs describe.
-//!
-//! [`CycloneMessage`], [`CyclonePeerMessage`] and the verdict itself
-//! (`CycloneHandshake.Verdict`) are declared *nested* inside that one
-//! wrapper, rather than as sibling top-level types the way they are in Go and
-//! C#: a `.gd` file gets exactly one `class_name`, so there is no second slot
-//! to declare a second globally-reachable type in. A caller reaches the
-//! verdict as `CycloneHandshake.Verdict.CURRENT`, and a message as
-//! `CycloneHandshake.CycloneMessage` - one extra qualifier, and the whole of
-//! the difference this constraint makes.
-//!
-//! GDScript has no exceptions (see [`super::gdscript_runtime`]), so
-//! `read_envelope` returns `[CycloneMessage, error]`, the same two-slot
-//! convention every read in this project's GDScript runtime already uses,
-//! rather than throwing the way [`super::csharp_handshake`]'s
-//! `CycloneReadEnvelope` does.
-
 use std::collections::BTreeMap;
 
 use crate::ir::Schema;
@@ -39,16 +5,8 @@ use crate::model::screaming_snake_case;
 
 use super::gdscript::{u32_literal, u64_literal};
 
-/// The file name, relative to the output directory.
 pub const FILE_NAME: &str = "handshake.gd";
 
-/// Renders `handshake.gd`.
-///
-/// # Errors
-///
-/// Two constants that would be spelled the same - a model named `PlayerEdge`
-/// beside a `Player` with an `edge` codec. Rare, mechanical, and far better
-/// reported here than as a redeclaration error in the user's project.
 pub fn handshake_file(
     schema: &Schema,
     validate_message_fingerprint: bool,
@@ -65,7 +23,7 @@ pub fn handshake_file(
         ..super::gdscript::Header::default()
     }
     .render();
-    out.push_str("class_name CycloneHandshake\n\n");
+    out.push_str("class_name FomoxaHandshake\n\n");
 
     out.push_str(
         "# The fingerprint of the whole schema: every message, by name, with its own\n\
@@ -103,14 +61,24 @@ pub fn handshake_file(
                 "const {constant}_FINGERPRINT: int = {}\n",
                 u64_literal(message.fingerprint.u64())
             ));
+            out.push_str(&format!(
+                "# One fingerprint per prefix of {}: entry k-1 covers its first k fields.\n\
+                 # The last entry is {constant}_FINGERPRINT. Never sent whole - a peer sends\n\
+                 # its field count and its last entry, and the two sides compare at min of\n\
+                 # the two counts (RFC-0002 9.1).\n",
+                message.name
+            ));
+            out.push_str(&format!("const {constant}_PREFIXES: Array = [\n"));
+            for prefix in &message.prefixes {
+                out.push_str(&format!("\t{},\n", u64_literal(prefix.u64())));
+            }
+            out.push_str("]\n");
         }
         out.push('\n');
     }
 
     out.push_str(TYPES);
 
-    // Sorted by id, so a peer's table and ours can be compared without either
-    // side sorting first.
     let mut messages: Vec<_> = schema.messages().collect();
     messages.sort_by_key(|message| message.id);
 
@@ -119,7 +87,8 @@ pub fn handshake_file(
     for message in &messages {
         let constant = message_constant(&message.model, &message.codec);
         out.push_str(&format!(
-            "\tCycloneMessage.new({constant}_MESSAGE_ID, {:?}, {constant}_FINGERPRINT),\n",
+            "\tFomoxaMessage.new({constant}_MESSAGE_ID, {:?}, {constant}_FINGERPRINT, \
+             {constant}_PREFIXES),\n",
             message.name
         ));
     }
@@ -140,7 +109,6 @@ pub fn handshake_file(
     Ok(out)
 }
 
-/// `Player` + `edge` → `PLAYER_EDGE`.
 fn message_constant(model: &str, codec: &str) -> String {
     format!(
         "{}_{}",
@@ -149,7 +117,6 @@ fn message_constant(model: &str, codec: &str) -> String {
     )
 }
 
-/// Two constants may not be spelled the same.
 fn check_constant_names(schema: &Schema) -> Result<(), String> {
     let mut seen: BTreeMap<String, String> = BTreeMap::new();
 
@@ -173,50 +140,69 @@ fn check_constant_names(schema: &Schema) -> Result<(), String> {
     Ok(())
 }
 
-/// The message descriptor and the verdict enum, nested inside
-/// `CycloneHandshake` because a `.gd` file has exactly one `class_name` to
-/// declare - see the module docs.
 const TYPES: &str = "\
 # One message: its id, its name, and the fingerprint of its wire contract.
-class CycloneMessage:
+class FomoxaMessage:
 \tvar id: int
 \tvar name: String
 \tvar fingerprint: int
+\t# One entry per field: entry k-1 covers the first k fields. The last entry
+\t# is fingerprint. Stays local; only its size and its last entry ever go on
+\t# the wire.
+\tvar prefixes: Array
 
-\tfunc _init(message_id: int, message_name: String, message_fingerprint: int) -> void:
+\tfunc _init(message_id: int, message_name: String, message_fingerprint: int, message_prefixes: Array) -> void:
 \t\tid = message_id
 \t\tname = message_name
 \t\tfingerprint = message_fingerprint
+\t\tprefixes = message_prefixes
 
-# One entry of a peer's (id, fingerprint) table - what MESSAGES is on its side.
-class CyclonePeerMessage:
+# One entry of a peer's (id, field count, fingerprint) table - what MESSAGES is
+# on its side.
+class FomoxaPeerMessage:
 \tvar id: int
+\tvar field_count: int
 \tvar fingerprint: int
 
-\tfunc _init(message_id: int, message_fingerprint: int) -> void:
+\tfunc _init(message_id: int, message_field_count: int, message_fingerprint: int) -> void:
 \t\tid = message_id
+\t\tfield_count = message_field_count
 \t\tfingerprint = message_fingerprint
 
 # What a peer's fingerprints mean for this one.
 enum Verdict {
 \t# The same schema, exactly.
 \tCURRENT,
-\t# A different schema, but no message both ends know disagrees. One side is
-\t# older; every message they share is byte-identical.
+\t# A different schema, but every message both ends know agrees on the fields
+\t# both ends carry. Safe to proceed.
 \tOUTDATED,
-\t# A message both ends know has two different shapes. There is nothing to
-\t# negotiate: disconnect.
+\t# Both ends put different fields at an index both of them carry. There is
+\t# nothing to negotiate: disconnect.
 \tREJECT,
+\t# Not decidable from the peer's table alone - at least one message needs the
+\t# extra exchange described on MessageCheck.NEED_PREFIX.
+\tNEED_MORE,
+}
+
+# What one of the peer's messages means for this schema's message of the same id.
+enum MessageCheck {
+\t# Either this schema does not declare the message at all, or the fields both
+\t# ends carry agree. Nothing to do.
+\tMATCH,
+\t# Both ends put different fields at an index both of them carry.
+\tREJECT,
+\t# Undecidable from what the peer sent: the peer has more fields than this
+\t# schema, so the answer lives at an index only the peer can produce. Ask it
+\t# for its prefix fingerprint at the reported field count, then compare the
+\t# reply against prefix() for the same id.
+\tNEED_PREFIX,
 }
 
 ";
 
-/// The lookup and compare functions, identical in every generated
-/// `handshake.gd` - appended right after the generated `MESSAGES` table they
-/// read.
 const HANDSHAKE: &str = r####"
 # The message with this id, if this schema declares it - null otherwise.
-static func message_by_id(id: int) -> CycloneMessage:
+static func message_by_id(id: int) -> FomoxaMessage:
 	var low := 0
 	var high := MESSAGES.size()
 	while low < high:
@@ -229,23 +215,68 @@ static func message_by_id(id: int) -> CycloneMessage:
 		return MESSAGES[low]
 	return null
 
-# Compares a peer's fingerprints against this schema's. peer_messages is only
-# worth sending when the schema fingerprints already differ.
+# This schema's fingerprint for the first field_count fields of a message, or
+# -1 if it does not declare that message or does not have that many fields.
+# field_count counts from 1; 0 is the empty prefix and has no fingerprint
+# because it always matches.
+static func prefix(id: int, field_count: int) -> int:
+	var message := message_by_id(id)
+	if message == null or field_count <= 0 or field_count > message.prefixes.size():
+		return -1
+	return message.prefixes[field_count - 1]
+
+# Compares one of the peer's messages against this schema's. Returns
+# [check, ask_for]; ask_for is the field count to ask the peer about, and is
+# only meaningful for MessageCheck.NEED_PREFIX.
+#
+# This is RFC-0002 9.1's prefix test: the two are compatible when the shorter
+# field list is an exact prefix of the longer one, so the comparison happens at
+# the smaller of the two field counts.
+static func check_message(id: int, peer_field_count: int, peer_fingerprint: int) -> Array:
+	var known := message_by_id(id)
+	if known == null:
+		# Not a message this schema declares, so it is never exchanged.
+		return [MessageCheck.MATCH, 0]
+	var local_field_count := known.prefixes.size()
+
+	if peer_fingerprint == known.fingerprint:
+		return [MessageCheck.MATCH, 0]
+	if peer_field_count == 0 or local_field_count == 0:
+		# The empty field list is a prefix of everything.
+		return [MessageCheck.MATCH, 0]
+	if peer_field_count == local_field_count:
+		# Same length, different content - a prefix of equal length would have
+		# to be equality, and it is not.
+		return [MessageCheck.REJECT, 0]
+	if peer_field_count < local_field_count:
+		# The peer's own fingerprint already is the value at the shared index.
+		if known.prefixes[peer_field_count - 1] == peer_fingerprint:
+			return [MessageCheck.MATCH, 0]
+		return [MessageCheck.REJECT, 0]
+	return [MessageCheck.NEED_PREFIX, local_field_count]
+
+# Compares a peer's whole message table against this schema's. A NEED_MORE
+# result means at least one message needs the extra round; walk the table with
+# check_message() to find which ones.
 static func compare(peer_schema_fingerprint: int, peer_messages: Array) -> Verdict:
 	if peer_schema_fingerprint == SCHEMA_FINGERPRINT:
 		return Verdict.CURRENT
 
+	var need_more := false
 	for peer in peer_messages:
-		var known := message_by_id(peer.id)
-		if known != null and known.fingerprint != peer.fingerprint:
-			# A message both ends know, with two shapes. Every other message
-			# could match and it would still be unsafe to speak.
+		var outcome := check_message(peer.id, peer.field_count, peer.fingerprint)
+		if outcome[0] == MessageCheck.REJECT:
+			# One mismatch decides the whole session. Every other message could
+			# agree and it would still be unsafe to speak.
 			return Verdict.REJECT
+		if outcome[0] == MessageCheck.NEED_PREFIX:
+			need_more = true
 
+	if need_more:
+		return Verdict.NEED_MORE
 	return Verdict.OUTDATED
 "####;
 
-/// The optional per-frame envelope, when `validate_message_fingerprint` is on.
 const ENVELOPE: &str = r####"# ==========================================================================
 # Per-frame validation - validate_message_fingerprint = true.
 #
@@ -258,7 +289,7 @@ const ENVELOPE: &str = r####"# =================================================
 # ==========================================================================
 
 # A frame whose envelope did not describe a message this schema can decode.
-# GDScript has no exceptions, so - like CycloneRuntime.DecodeError - this is
+# GDScript has no exceptions, so - like FomoxaRuntime.DecodeError - this is
 # returned, never thrown.
 class EnvelopeError:
 	var kind: String = ""
@@ -273,17 +304,17 @@ class EnvelopeError:
 			"fingerprint_mismatch":
 				return "message 0x%08X: peer fingerprint 0x%016X, ours 0x%016X" % [message_id, received_fingerprint, expected_fingerprint]
 			_:
-				return "cyclone: envelope error"
+				return "fomoxa: envelope error"
 
 # Writes [MessageId][MessageFingerprint], immediately before the payload.
-static func write_envelope(writer: CycloneRuntime.Writer, message: CycloneMessage) -> void:
+static func write_envelope(writer: FomoxaRuntime.Writer, message: FomoxaMessage) -> void:
 	writer.write_u32(message.id)
 	writer.write_u64(message.fingerprint)
 
 # Reads an envelope and resolves it against this schema. Returns
-# [CycloneMessage, error], with the reader left positioned at the payload
+# [FomoxaMessage, error], with the reader left positioned at the payload
 # only when error is null.
-static func read_envelope(reader: CycloneRuntime.Reader) -> Array:
+static func read_envelope(reader: FomoxaRuntime.Reader) -> Array:
 	var id_result := reader.read_u32()
 	if id_result[1] != null:
 		return [null, id_result[1]]
@@ -309,10 +340,9 @@ static func read_envelope(reader: CycloneRuntime.Reader) -> Array:
 	return [known, null]
 "####;
 
-/// What stands in for the envelope when it is off.
 const ENVELOPE_OFF: &str = "\
 # Per-frame message validation is off, so no envelope is generated and no
-# frame carries one. Turn it on in cyclone.toml:
+# frame carries one. Turn it on in fomoxa.toml:
 #
 #     validate_message_fingerprint = true
 #
@@ -351,7 +381,7 @@ mod tests {
     fn every_constant_the_brief_asks_for_is_generated() {
         let text = generated(&[model("Player", &["edge"]), model("Enemy", &["edge"])]);
 
-        assert!(text.contains("class_name CycloneHandshake\n"), "{text}");
+        assert!(text.contains("class_name FomoxaHandshake\n"), "{text}");
         assert!(text.contains("const SCHEMA_FINGERPRINT: int ="), "{text}");
         assert!(text.contains("const PLAYER_FINGERPRINT: int ="), "{text}");
         assert!(text.contains("const ENEMY_FINGERPRINT: int ="), "{text}");
@@ -377,7 +407,7 @@ mod tests {
 
         let lines: Vec<&str> = text
             .lines()
-            .filter(|line| line.trim_start().starts_with("CycloneMessage.new("))
+            .filter(|line| line.trim_start().starts_with("FomoxaMessage.new("))
             .collect();
         assert_eq!(lines.len(), 3, "{text}");
 

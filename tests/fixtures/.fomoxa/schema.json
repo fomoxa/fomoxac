@@ -1,0 +1,508 @@
+{
+  "schema_version": 1,
+  "generator": "fomoxac 0.2.0",
+  "fingerprint": "sha256:9622e96b1c562c0c0e2f36c250555a86aa93f005eb03c91bd8d68137bdc6db88",
+  "fingerprint_u64": "0x9622E96B1C562C0C",
+  "models": {
+    "DeviceState": {
+      "source": "src/models/device_state.rs",
+      "fingerprint": "sha256:509323305edef242d320c8b9ea3c5600c8622358cbb5f4ed432664e5aabfc533",
+      "codecs": [
+        "edge",
+        "unity"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "u32",
+          "codecs": [
+            "edge",
+            "unity"
+          ]
+        },
+        {
+          "name": "temperature",
+          "type": "f32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "display_name",
+          "type": "string",
+          "codecs": [
+            "unity"
+          ]
+        },
+        {
+          "name": "unrouted",
+          "type": "u32",
+          "codecs": []
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0x2796F8AC",
+          "fingerprint": "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91",
+          "fingerprint_u64": "0x4625CB8E64B0827A",
+          "prefixes": [
+            "sha256:33123a29c6e2c60bd186ffde59b0eae5f30c6fc3d61edb694d5f99117fc7e8ff",
+            "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91"
+          ],
+          "prefixes_u64": [
+            "0x33123A29C6E2C60B",
+            "0x4625CB8E64B0827A"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "type": "u32"
+            },
+            {
+              "name": "temperature",
+              "type": "f32"
+            }
+          ]
+        },
+        "unity": {
+          "id": "0x9AF41CDE",
+          "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
+          "fingerprint_u64": "0x4811419F2DA07DFE",
+          "prefixes": [
+            "sha256:68807466c873e0a6f99aa4783ccbdd6e431506b03ee2f563555e6ef824ba473d",
+            "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae"
+          ],
+          "prefixes_u64": [
+            "0x68807466C873E0A6",
+            "0x4811419F2DA07DFE"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "type": "u32"
+            },
+            {
+              "name": "display_name",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "EveryPrimitive": {
+      "source": "src/models/every_primitive.rs",
+      "fingerprint": "sha256:cf954a74f95a1de77c8d1f2c714081bb1d6401eba71eb20037346d13b2e52178",
+      "codecs": [
+        "edge"
+      ],
+      "fields": [
+        {
+          "name": "flag",
+          "type": "bool",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "tiny",
+          "type": "i8",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "byte",
+          "type": "u8",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "small",
+          "type": "i16",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "port",
+          "type": "u16",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "offset",
+          "type": "i32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "count",
+          "type": "u32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "delta",
+          "type": "i64",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "sequence",
+          "type": "u64",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "ratio",
+          "type": "f32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "precise",
+          "type": "f64",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "blob",
+          "type": "bytes",
+          "codecs": [
+            "edge"
+          ]
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0x19FCABFF",
+          "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
+          "fingerprint_u64": "0x2EC0C98895E5A4E1",
+          "prefixes": [
+            "sha256:4d6dc9844a18ddff961a988fc3c63e4c0acb231f7a38eca773c2cf933e3d5e04",
+            "sha256:fc215272ffcafdb8a357599a0dd0aa88d5a18bc49c581e5a1321ec84c9647cba",
+            "sha256:f1a864bb7177e8e0978a775dbea2215a4b53dbd54ea3c8c24c4eb261f90b1eea",
+            "sha256:1dd4756dcead61608ee0f4cb2425d9fdf23a0289148537d30f8dec739350342f",
+            "sha256:903eb21e7301e9ede912a52d07985d2b917337b7ce3409872f19adf7f84ee36f",
+            "sha256:6fa7e2cac6e1f0dfca6a4ac9dfedccc50dd2654e134380e43186ed4596922e86",
+            "sha256:ee0244490a2409e9c80c194daf4579e40a4a1f0ea82d1133caf509403e3046a7",
+            "sha256:30f8d7167aebc19da63c9060e03bd350d6e8de3e6313b6043bec1b369188cec6",
+            "sha256:ab2adfabc128e75f38f90f5fc0ca034c85fb062757152fecbb969b0de3038a9e",
+            "sha256:7922b5e2aa14fd8ccbd9254f79d090a5b35d4a39edc00567a133bc81fcb14985",
+            "sha256:55aa80dcc57258513b0bb2d8c5fc8837accf3bf0c8c03f96c4a48d3615f585be",
+            "sha256:19e805517eeac40609727d5e3bc776cdbb096d7a7de671dcf83ecd7d51e640a1",
+            "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512"
+          ],
+          "prefixes_u64": [
+            "0x4D6DC9844A18DDFF",
+            "0xFC215272FFCAFDB8",
+            "0xF1A864BB7177E8E0",
+            "0x1DD4756DCEAD6160",
+            "0x903EB21E7301E9ED",
+            "0x6FA7E2CAC6E1F0DF",
+            "0xEE0244490A2409E9",
+            "0x30F8D7167AEBC19D",
+            "0xAB2ADFABC128E75F",
+            "0x7922B5E2AA14FD8C",
+            "0x55AA80DCC5725851",
+            "0x19E805517EEAC406",
+            "0x2EC0C98895E5A4E1"
+          ],
+          "fields": [
+            {
+              "name": "flag",
+              "type": "bool"
+            },
+            {
+              "name": "tiny",
+              "type": "i8"
+            },
+            {
+              "name": "byte",
+              "type": "u8"
+            },
+            {
+              "name": "small",
+              "type": "i16"
+            },
+            {
+              "name": "port",
+              "type": "u16"
+            },
+            {
+              "name": "offset",
+              "type": "i32"
+            },
+            {
+              "name": "count",
+              "type": "u32"
+            },
+            {
+              "name": "delta",
+              "type": "i64"
+            },
+            {
+              "name": "sequence",
+              "type": "u64"
+            },
+            {
+              "name": "ratio",
+              "type": "f32"
+            },
+            {
+              "name": "precise",
+              "type": "f64"
+            },
+            {
+              "name": "label",
+              "type": "string"
+            },
+            {
+              "name": "blob",
+              "type": "bytes"
+            }
+          ]
+        }
+      }
+    },
+    "Player": {
+      "source": "src/models/player.rs",
+      "fingerprint": "sha256:ba355f0228d362801dcf6937b50a61200edd44ab439a9d3a5e8b15a2383b387b",
+      "codecs": [
+        "edge"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "u32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "x",
+          "type": "f32",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "y",
+          "type": "f32",
+          "codecs": [
+            "edge"
+          ]
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0x5AD3FC4F",
+          "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
+          "fingerprint_u64": "0x19D8F679A9BB419F",
+          "prefixes": [
+            "sha256:9ed3aea54bc5cbd40865209360f5c45597dfd49423a7be8b7cf9194c9e3233dd",
+            "sha256:6962e00c99b909423ecb4cd3d5e8f1e6305752395cca4d244090352b71c8710a",
+            "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa"
+          ],
+          "prefixes_u64": [
+            "0x9ED3AEA54BC5CBD4",
+            "0x6962E00C99B90942",
+            "0x19D8F679A9BB419F"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "type": "u32"
+            },
+            {
+              "name": "x",
+              "type": "f32"
+            },
+            {
+              "name": "y",
+              "type": "f32"
+            }
+          ]
+        }
+      }
+    },
+    "PlayerInfo": {
+      "source": "src/models/player.rs",
+      "fingerprint": "sha256:16c91cab6596e852a98c85c7bf1e55b07334dd687c02626b1dcc4e38de73ed71",
+      "codecs": [
+        "edge"
+      ],
+      "fields": [
+        {
+          "name": "level",
+          "type": "u32",
+          "codecs": [
+            "edge"
+          ]
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0xC396A399",
+          "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+          "fingerprint_u64": "0xB87A1C88C5B6E0DD",
+          "prefixes": [
+            "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd"
+          ],
+          "prefixes_u64": [
+            "0xB87A1C88C5B6E0DD"
+          ],
+          "fields": [
+            {
+              "name": "level",
+              "type": "u32"
+            }
+          ]
+        }
+      }
+    },
+    "Team": {
+      "source": "src/models/player.rs",
+      "fingerprint": "sha256:75660c480fc1252fed456c7597adf79d345060aeaedef08c092483d5f2fcc61b",
+      "codecs": [
+        "edge"
+      ],
+      "fields": [
+        {
+          "name": "captain",
+          "type": "PlayerInfo",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "tags",
+          "type": "Array<string>",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "scores",
+          "type": "Array<u32>",
+          "codecs": [
+            "edge"
+          ]
+        },
+        {
+          "name": "roster",
+          "type": "Array<PlayerInfo>",
+          "codecs": [
+            "edge"
+          ]
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0x7AEF5FF1",
+          "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+          "fingerprint_u64": "0xF79FA59BF3400D19",
+          "prefixes": [
+            "sha256:1a86435942d0b7cd4597f5b4ed3000b41bc22784ef4f77f8ba278c5fa5c21939",
+            "sha256:d42fd55dd56c0355b926cd866553ab95964f9bf55dd2a05b41d9b3c6008e01a3",
+            "sha256:76e108bd0347fae6c051f9831b185af2f806c230bf95b46c9dd9254b9950330a",
+            "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b"
+          ],
+          "prefixes_u64": [
+            "0x1A86435942D0B7CD",
+            "0xD42FD55DD56C0355",
+            "0x76E108BD0347FAE6",
+            "0xF79FA59BF3400D19"
+          ],
+          "fields": [
+            {
+              "name": "captain",
+              "type": "PlayerInfo"
+            },
+            {
+              "name": "tags",
+              "type": "Array<string>"
+            },
+            {
+              "name": "scores",
+              "type": "Array<u32>"
+            },
+            {
+              "name": "roster",
+              "type": "Array<PlayerInfo>"
+            }
+          ]
+        }
+      }
+    },
+    "Telemetry": {
+      "source": "src/models/device_state.rs",
+      "fingerprint": "sha256:f61cbfae4b8d1f0b084ac441fd7c9bf0bd6c0ebb54621e647cbfb4e4d9b0a0f4",
+      "codecs": [
+        "edge",
+        "orange_pi"
+      ],
+      "fields": [
+        {
+          "name": "sequence",
+          "type": "u64",
+          "codecs": [
+            "edge",
+            "orange_pi"
+          ]
+        }
+      ],
+      "messages": {
+        "edge": {
+          "id": "0x2EBD5DCD",
+          "fingerprint": "sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5",
+          "fingerprint_u64": "0x6C195D481F875B06",
+          "prefixes": [
+            "sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5"
+          ],
+          "prefixes_u64": [
+            "0x6C195D481F875B06"
+          ],
+          "fields": [
+            {
+              "name": "sequence",
+              "type": "u64"
+            }
+          ]
+        },
+        "orange_pi": {
+          "id": "0x451F06EE",
+          "fingerprint": "sha256:795e4aaf9379b5fef010061b70469a498b522a0856b080be6dfa6cde562b3998",
+          "fingerprint_u64": "0x795E4AAF9379B5FE",
+          "prefixes": [
+            "sha256:795e4aaf9379b5fef010061b70469a498b522a0856b080be6dfa6cde562b3998"
+          ],
+          "prefixes_u64": [
+            "0x795E4AAF9379B5FE"
+          ],
+          "fields": [
+            {
+              "name": "sequence",
+              "type": "u64"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

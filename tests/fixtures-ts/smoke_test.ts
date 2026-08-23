@@ -1,4 +1,4 @@
-// Not part of the generated tree or the fixture cyclonec reads - a
+// Not part of the generated tree or the fixture fomoxac reads - a
 // throwaway smoke test compiled and run by hand (see the CI workflow) to
 // prove the generated codecs actually build and round-trip, since no
 // TypeScript toolchain step runs inside `cargo test` itself.
@@ -17,11 +17,11 @@ import { DeviceStateUnityCodec } from "./src/generated/device_state_unity";
 import { TelemetryEdgeCodec } from "./src/generated/telemetry_edge";
 import { EveryPrimitiveEdgeCodec } from "./src/generated/every_primitive_edge";
 import {
-    CYCLONE_SCHEMA_FINGERPRINT,
-    CYCLONE_MESSAGES,
-    cycloneMessage,
-    cycloneHandshake,
-    CycloneHandshake,
+    FOMOXA_SCHEMA_FINGERPRINT,
+    FOMOXA_MESSAGES,
+    fomoxaMessage,
+    fomoxaHandshake,
+    FomoxaHandshake,
     PLAYER_EDGE_MESSAGE_ID,
     PLAYER_EDGE_FINGERPRINT,
 } from "./src/generated/handshake";
@@ -181,17 +181,21 @@ function encode<T>(value: T, fn: (writer: Writer, value: T) => void): Uint8Array
     assert.equal(PlayerEdgeCodec.MESSAGE_ID, PLAYER_EDGE_MESSAGE_ID);
     assert.equal(PlayerEdgeCodec.FINGERPRINT, PLAYER_EDGE_FINGERPRINT);
 
-    const peer = CYCLONE_MESSAGES.map((message) => [message.id, message.fingerprint] as const);
-    assert.equal(cycloneHandshake(CYCLONE_SCHEMA_FINGERPRINT, peer), CycloneHandshake.Current);
-    assert.notEqual(cycloneMessage(0), undefined === cycloneMessage(0));
-    assert.equal(cycloneMessage(0x00000000), undefined);
+    const peer = FOMOXA_MESSAGES.map(
+        (message) => [message.id, message.prefixes.length, message.fingerprint] as const,
+    );
+    assert.equal(fomoxaHandshake(FOMOXA_SCHEMA_FINGERPRINT, peer), FomoxaHandshake.Current);
+    assert.notEqual(fomoxaMessage(0), undefined === fomoxaMessage(0));
+    assert.equal(fomoxaMessage(0x00000000), undefined);
 
-    const rejected: (readonly [number, bigint])[] = peer.map(([id, fingerprint]) =>
-        id === PLAYER_EDGE_MESSAGE_ID ? ([id, fingerprint ^ 1n] as const) : ([id, fingerprint] as const),
+    const rejected: (readonly [number, number, bigint])[] = peer.map(([id, fieldCount, fingerprint]) =>
+        id === PLAYER_EDGE_MESSAGE_ID
+            ? ([id, fieldCount, fingerprint ^ 1n] as const)
+            : ([id, fieldCount, fingerprint] as const),
     );
     assert.equal(
-        cycloneHandshake(0xdeadbeef_00000000n, rejected),
-        CycloneHandshake.Reject,
+        fomoxaHandshake(0xdeadbeef_00000000n, rejected),
+        FomoxaHandshake.Reject,
     );
 }
 

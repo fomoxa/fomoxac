@@ -6,22 +6,22 @@ package models
 
 // PlayerInfo is a field whose network type is another model.
 //
-//cyclone:model codec=edge
+//fomoxa:model codec=edge
 type PlayerInfo struct {
-	Level uint32 `cyclone:"u32" codec:"edge"`
+	Level uint32 `fomoxa:"u32" codec:"edge"`
 }
 
 // Player is the model RFC-0002 §9.1 is tested against: three fields, and a
 // version that appends a fourth.
 //
-//cyclone:model codec=edge,unity
+//fomoxa:model codec=edge,unity
 type Player struct {
-	ID uint32  `cyclone:"u32" codec:"edge,unity"`
-	X  float32 `cyclone:"f32" codec:"edge"`
-	Y  float32 `cyclone:"f32" codec:"edge"`
+	ID uint32  `fomoxa:"u32" codec:"edge,unity"`
+	X  float32 `fomoxa:"f32" codec:"edge"`
+	Y  float32 `fomoxa:"f32" codec:"edge"`
 
 	// A network field in no codec: it is written by none of them.
-	Unrouted uint32 `cyclone:"u32"`
+	Unrouted uint32 `fomoxa:"u32"`
 
 	// Not a network field at all. Logic and caches stay off the wire.
 	Cache string
@@ -30,10 +30,10 @@ type Player struct {
 // Team holds composites: an array of primitives, an array of models, and a
 // nested model.
 //
-//cyclone:model codec=edge
+//fomoxa:model codec=edge
 type Team struct {
-	Captain PlayerInfo   `cyclone:"PlayerInfo" codec:"edge"`
-	Tags    []string     `cyclone:"Array<string>" codec:"edge"`
-	Scores  []uint32     `cyclone:"Array<u32>" codec:"edge"`
-	Roster  []PlayerInfo `cyclone:"Array<PlayerInfo>" codec:"edge"`
+	Captain PlayerInfo   `fomoxa:"PlayerInfo" codec:"edge"`
+	Tags    []string     `fomoxa:"Array<string>" codec:"edge"`
+	Scores  []uint32     `fomoxa:"Array<u32>" codec:"edge"`
+	Roster  []PlayerInfo `fomoxa:"Array<PlayerInfo>" codec:"edge"`
 }

@@ -4,8 +4,8 @@
 # `.gd` file may declare only one `class_name`.
 
 # A field whose network type is another model.
-# cyclone:model codec=edge
+# fomoxa:model codec=edge
 class_name PlayerInfo
 
-# cyclone:u32 codec=edge
+# fomoxa:u32 codec=edge
 var level: int = 0

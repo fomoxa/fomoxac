@@ -1,61 +1,16 @@
-//! The Cyclone runtime, carried verbatim into `runtime.ts`.
-//!
-//! The TypeScript counterpart of [`super::rust_runtime`], [`super::go_runtime`]
-//! and [`super::csharp_runtime`] - same reasoning, same guarantee: the block
-//! below is fixed, written once against RFC-0002, and copied out unchanged.
-//! Nothing about byte layout, endianness or string encoding is computed per
-//! model, per field, or per run.
-//!
-//! # Why `DataView`, and why `bigint`
-//!
-//! `DataView` is the one built-in that reads and writes every RFC-0002
-//! primitive at an explicit byte offset with an explicit endianness
-//! (`littleEndian: true` on every call, never the platform default) and
-//! reinterprets `f32`/`f64` bits without normalizing them - exactly what
-//! `Writer.writeF32`/`Reader.readF32` need to keep `-0.0` and a `NaN`
-//! payload intact (RFC-0002 §2.3), the same property
-//! [`super::rust_runtime`]'s `to_bits`/`from_bits` round trip guarantees.
-//!
-//! A JavaScript `number` is an IEEE 754 double: exact for every integer up
-//! to 2^53, short of `u64`/`i64`'s full 64 bits. So, uniquely among this
-//! project's backends, `i64`/`u64` are `bigint` here, not `number` - and
-//! `DataView.getBigInt64`/`getBigUint64`/`setBigInt64`/`setBigUint64` (also
-//! always called with `littleEndian: true`) read and write them without ever
-//! routing a 64-bit value through a `number`.
-//!
-//! Like [`super::csharp_runtime`], TypeScript/JavaScript has exceptions, so
-//! `Reader`'s methods either return a value or throw [`DecodeError`] - never
-//! a `[value, error]` pair the way [`super::go_runtime`] returns one.
-//!
-//! `Writer` owns a `Uint8Array` that it grows by doubling, the same
-//! amortised-linear strategy `Vec<u8>`/`List<byte>` give the other backends
-//! for free; `Reader` never allocates while reading a fixed-width value,
-//! only where `Writer` did on the way in: a `string`'s or `bytes`'s payload.
-//!
-//! # `Reader.fieldAbsent`
-//!
-//! One method carries RFC-0002 §9.1's whole first rule, the same one
-//! [`super::rust_runtime::RUNTIME`]'s own doc comment explains: a decoder
-//! calls it at every field boundary, *before* reading, to tell "the writer's
-//! model stopped here" (not an error; the field and everything after it is
-//! zero) apart from "the field started and the stream ran out inside it" (a
-//! truncated packet: [`DecodeError`], never a zero). See `generator::typescript`
-//! for what the generated decoder does with it.
-
-/// The runtime block, emitted once, into its own file.
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated tree is self-contained -
+// fomoxac generates for. It is here so the generated tree is self-contained -
 // nothing to add to package.json, nothing to import from elsewhere.
 // ==========================================================================
 
-const CYCLONE_TEXT_ENCODER = new TextEncoder();
-const CYCLONE_TEXT_DECODER = new TextDecoder("utf-8", { fatal: true });
+const FOMOXA_TEXT_ENCODER = new TextEncoder();
+const FOMOXA_TEXT_DECODER = new TextDecoder("utf-8", { fatal: true });
 
-/** A byte stream that does not satisfy the Cyclone Specification. */
+/** A byte stream that does not satisfy the Fomoxa Specification. */
 export class DecodeError extends Error {
     private constructor(message: string) {
         super(message);
@@ -115,7 +70,7 @@ export class Limits {
 }
 
 /**
- * Appends Cyclone-encoded values to a growable buffer.
+ * Appends Fomoxa-encoded values to a growable buffer.
  *
  * Every multi-byte value is Little Endian, with no padding, no alignment and
  * no metadata between values.
@@ -243,7 +198,7 @@ export class Writer {
      * The length counts bytes, not characters.
      */
     writeString(value: string): void {
-        const encoded = CYCLONE_TEXT_ENCODER.encode(value);
+        const encoded = FOMOXA_TEXT_ENCODER.encode(value);
         this.writeLength(encoded.length);
         this.ensure(encoded.length);
         this.bytes.set(encoded, this.len);
@@ -269,7 +224,7 @@ export class Writer {
     private writeLength(len: number): void {
         if (len > 0xffffffff) {
             throw new RangeError(
-                "cyclone: length exceeds 0xFFFFFFFF and cannot be represented on the wire",
+                "fomoxa: length exceeds 0xFFFFFFFF and cannot be represented on the wire",
             );
         }
         this.writeU32(len);
@@ -277,7 +232,7 @@ export class Writer {
 }
 
 /**
- * Reads Cyclone-encoded values from a borrowed buffer.
+ * Reads Fomoxa-encoded values from a borrowed buffer.
  *
  * Malformed input is always a {@link DecodeError}, never a silent wrong
  * answer, and a failed read leaves the cursor where it was.
@@ -431,7 +386,7 @@ export class Reader {
         }
 
         try {
-            return CYCLONE_TEXT_DECODER.decode(this.bytes.subarray(offset, offset + len));
+            return FOMOXA_TEXT_DECODER.decode(this.bytes.subarray(offset, offset + len));
         } catch {
             this.pos = start;
             throw DecodeError.invalidUtf8();

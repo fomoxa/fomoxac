@@ -12,14 +12,14 @@
 // The generated runtime is `pub` and these tests do not call all of it.
 #![allow(dead_code)]
 
-// The models a user would write, and the tree `cyclonec` wrote for them.
+// The models a user would write, and the tree `fomoxac` wrote for them.
 // Mounted the way a user mounts them: the models the user annotated, and the
 // tree generated from them. The generated codecs reach the models at
 // `crate::models::player::Player` - the same types, not copies of them, at the
 // path the fixture's own layout implies.
 // Through a macro, for one reason: `cargo fmt` follows a `mod` declaration into
 // the file it names, and reformatting the committed generated tree would leave
-// it disagreeing with what `cyclonec` writes - a permanent, self-inflicted
+// it disagreeing with what `fomoxac` writes - a permanent, self-inflicted
 // "stale" that no amount of regenerating fixes. rustfmt works on the AST before
 // expansion, so it cannot see these; the compiler expands them into two
 // ordinary modules and nothing else about the test changes.
@@ -432,71 +432,136 @@ fn each_codec_has_its_own_fingerprint() {
 
 #[test]
 fn the_message_table_holds_every_message() {
-    assert_eq!(CYCLONE_MESSAGES.len(), 8);
-    for message in CYCLONE_MESSAGES {
-        assert_eq!(cyclone_message(message.id), Some(message));
+    assert_eq!(FOMOXA_MESSAGES.len(), 8);
+    for message in FOMOXA_MESSAGES {
+        assert_eq!(fomoxa_message(message.id), Some(message));
     }
-    assert_eq!(cyclone_message(0), None);
+    assert_eq!(fomoxa_message(0), None);
 }
 
 // =============================================================== the handshake
 
 #[test]
 fn handshake_current() {
-    let peer: Vec<(u32, u64)> = CYCLONE_MESSAGES
+    let peer: Vec<(u32, u32, u64)> = FOMOXA_MESSAGES
         .iter()
-        .map(|message| (message.id, message.fingerprint))
+        .map(|message| {
+            (
+                message.id,
+                message.prefixes.len() as u32,
+                message.fingerprint,
+            )
+        })
         .collect();
 
     assert_eq!(
-        cyclone_handshake(CYCLONE_SCHEMA_FINGERPRINT, &peer),
-        CycloneHandshake::Current
+        fomoxa_handshake(FOMOXA_SCHEMA_FINGERPRINT, &peer),
+        FomoxaHandshake::Current
     );
 }
 
-/// A peer on an older schema: it knows fewer messages, and every message both
-/// ends know is byte-identical. Safe to talk.
 #[test]
 fn handshake_outdated() {
-    let peer = [(PLAYER_EDGE_MESSAGE_ID, PLAYER_EDGE_FINGERPRINT)];
+    let peer = [(PLAYER_EDGE_MESSAGE_ID, 3, PLAYER_EDGE_FINGERPRINT)];
 
     assert_eq!(
-        cyclone_handshake(0xDEAD_BEEF_0000_0000, &peer),
-        CycloneHandshake::Outdated
+        fomoxa_handshake(0xDEAD_BEEF_0000_0000, &peer),
+        FomoxaHandshake::Outdated
     );
 }
 
-/// A peer that knows `Player.edge` as a different shape. There is nothing to
-/// negotiate.
 #[test]
 fn handshake_breaking_is_rejected() {
-    let peer = [(PLAYER_EDGE_MESSAGE_ID, PLAYER_EDGE_FINGERPRINT ^ 1)];
+    let peer = [(PLAYER_EDGE_MESSAGE_ID, 3, PLAYER_EDGE_FINGERPRINT ^ 1)];
 
     assert_eq!(
-        cyclone_handshake(0xDEAD_BEEF_0000_0000, &peer),
-        CycloneHandshake::Reject
+        fomoxa_handshake(0xDEAD_BEEF_0000_0000, &peer),
+        FomoxaHandshake::Reject
     );
 }
 
-/// A message only the peer has says nothing about the messages we share - it
-/// is the definition of being one version behind.
 #[test]
 fn a_message_only_one_side_knows_does_not_reject() {
     let peer = [
-        (PLAYER_EDGE_MESSAGE_ID, PLAYER_EDGE_FINGERPRINT),
-        (0x1234_5678, 0xAAAA_BBBB_CCCC_DDDD),
+        (PLAYER_EDGE_MESSAGE_ID, 3, PLAYER_EDGE_FINGERPRINT),
+        (0x1234_5678, 2, 0xAAAA_BBBB_CCCC_DDDD),
     ];
 
     assert_eq!(
-        cyclone_handshake(0xDEAD_BEEF_0000_0000, &peer),
-        CycloneHandshake::Outdated
+        fomoxa_handshake(0xDEAD_BEEF_0000_0000, &peer),
+        FomoxaHandshake::Outdated
     );
+}
+
+#[test]
+fn a_peer_with_fewer_fields_is_accepted_when_the_prefix_agrees() {
+    let peer = [(PLAYER_EDGE_MESSAGE_ID, 2, PLAYER_EDGE_PREFIXES[1])];
+
+    assert_eq!(
+        fomoxa_message_check(PLAYER_EDGE_MESSAGE_ID, 2, PLAYER_EDGE_PREFIXES[1]),
+        FomoxaMessageCheck::Match
+    );
+    assert_eq!(
+        fomoxa_handshake(0xDEAD_BEEF_0000_0000, &peer),
+        FomoxaHandshake::Outdated
+    );
+}
+
+#[test]
+fn a_peer_with_fewer_fields_is_rejected_when_the_prefix_disagrees() {
+    let peer = [(PLAYER_EDGE_MESSAGE_ID, 2, PLAYER_EDGE_PREFIXES[1] ^ 1)];
+
+    assert_eq!(
+        fomoxa_handshake(0xDEAD_BEEF_0000_0000, &peer),
+        FomoxaHandshake::Reject
+    );
+}
+
+#[test]
+fn a_peer_with_more_fields_needs_one_more_exchange() {
+    let peer = [(PLAYER_EDGE_MESSAGE_ID, 5, 0xAAAA_BBBB_CCCC_DDDD)];
+
+    assert_eq!(
+        fomoxa_message_check(PLAYER_EDGE_MESSAGE_ID, 5, 0xAAAA_BBBB_CCCC_DDDD),
+        FomoxaMessageCheck::NeedPrefix(3)
+    );
+    assert_eq!(
+        fomoxa_handshake(0xDEAD_BEEF_0000_0000, &peer),
+        FomoxaHandshake::NeedMore
+    );
+}
+
+#[test]
+fn a_prefix_is_readable_by_field_count() {
+    assert_eq!(
+        fomoxa_prefix(PLAYER_EDGE_MESSAGE_ID, 1),
+        Some(PLAYER_EDGE_PREFIXES[0])
+    );
+    assert_eq!(
+        fomoxa_prefix(PLAYER_EDGE_MESSAGE_ID, 3),
+        Some(PLAYER_EDGE_FINGERPRINT)
+    );
+    assert_eq!(fomoxa_prefix(PLAYER_EDGE_MESSAGE_ID, 0), None);
+    assert_eq!(fomoxa_prefix(PLAYER_EDGE_MESSAGE_ID, 4), None);
+    assert_eq!(fomoxa_prefix(0x1234_5678, 1), None);
+}
+
+#[test]
+fn the_last_prefix_is_the_message_fingerprint() {
+    for message in FOMOXA_MESSAGES {
+        assert_eq!(
+            message.prefixes.last(),
+            Some(&message.fingerprint),
+            "{}",
+            message.name
+        );
+    }
 }
 
 /// The envelope is off by default: no frame carries a fingerprint, and the
 /// payload starts at byte zero.
 #[test]
 fn per_frame_validation_is_off_by_default() {
-    const { assert!(!CYCLONE_VALIDATE_MESSAGE_FINGERPRINT) };
+    const { assert!(!FOMOXA_VALIDATE_MESSAGE_FINGERPRINT) };
     assert_eq!(encode(&player(), PlayerEdgeCodec::encode).len(), 12);
 }

@@ -8,40 +8,40 @@
 #include <string>
 #include <vector>
 
-#include "cyclone.h"
+#include "fomoxa.h"
 
 namespace models {
 
 /// A field whose network type is another model.
-CYCLONE_MODEL
-CYCLONE_CODEC("edge")
+FOMOXA_MODEL
+FOMOXA_CODEC("edge")
 struct PlayerInfo
 {
-    CYCLONE_FIELD(u32)
-    CYCLONE_CODEC("edge")
+    FOMOXA_FIELD(u32)
+    FOMOXA_CODEC("edge")
     uint32_t Level = 0;
 };
 
 /// The model RFC-0002 §9.1 is tested against: three fields, and a version
 /// that appends a fourth.
-CYCLONE_MODEL
-CYCLONE_CODEC("edge", "unity")
+FOMOXA_MODEL
+FOMOXA_CODEC("edge", "unity")
 struct Player
 {
-    CYCLONE_FIELD(u32)
-    CYCLONE_CODEC("edge", "unity")
+    FOMOXA_FIELD(u32)
+    FOMOXA_CODEC("edge", "unity")
     uint32_t Id = 0;
 
-    CYCLONE_FIELD(f32)
-    CYCLONE_CODEC("edge")
+    FOMOXA_FIELD(f32)
+    FOMOXA_CODEC("edge")
     float X = 0.0f;
 
-    CYCLONE_FIELD(f32)
-    CYCLONE_CODEC("edge")
+    FOMOXA_FIELD(f32)
+    FOMOXA_CODEC("edge")
     float Y = 0.0f;
 
     /// A network field in no codec: it is written by none of them.
-    CYCLONE_FIELD(u32)
+    FOMOXA_FIELD(u32)
     uint32_t Unrouted = 0;
 
     /// Not a network field at all. Logic and caches stay off the wire.
@@ -50,24 +50,24 @@ struct Player
 
 /// Holds composites: an array of primitives, an array of models, and a
 /// nested model.
-CYCLONE_MODEL
-CYCLONE_CODEC("edge")
+FOMOXA_MODEL
+FOMOXA_CODEC("edge")
 struct Team
 {
-    CYCLONE_FIELD(PlayerInfo)
-    CYCLONE_CODEC("edge")
+    FOMOXA_FIELD(PlayerInfo)
+    FOMOXA_CODEC("edge")
     PlayerInfo Captain;
 
-    CYCLONE_FIELD(Array<string>)
-    CYCLONE_CODEC("edge")
+    FOMOXA_FIELD(Array<string>)
+    FOMOXA_CODEC("edge")
     std::vector<std::string> Tags;
 
-    CYCLONE_FIELD(Array<u32>)
-    CYCLONE_CODEC("edge")
+    FOMOXA_FIELD(Array<u32>)
+    FOMOXA_CODEC("edge")
     std::vector<uint32_t> Scores;
 
-    CYCLONE_FIELD(Array<PlayerInfo>)
-    CYCLONE_CODEC("edge")
+    FOMOXA_FIELD(Array<PlayerInfo>)
+    FOMOXA_CODEC("edge")
     std::vector<PlayerInfo> Roster;
 };
 

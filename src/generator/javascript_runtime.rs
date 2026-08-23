@@ -1,34 +1,16 @@
-//! The Cyclone runtime, carried verbatim into `runtime.js`.
-//!
-//! The JavaScript counterpart of [`super::typescript_runtime`] - the same
-//! block, with every type annotation erased and TypeScript-only syntax
-//! (`interface`, visibility modifiers) replaced by its plain-JavaScript
-//! equivalent (`#private` class fields, JSDoc `@param`/`@returns` comments
-//! for a reader that wants the types without a compiler). See
-//! [`super::typescript_runtime`]'s module docs for why `DataView` and
-//! `bigint` are used at all - every word of that reasoning applies here
-//! unchanged, because this **is** that reasoning, generating plain
-//! JavaScript instead of TypeScript.
-//!
-//! Kept a byte-for-byte identical wire format on purpose: the brief requires
-//! it, and it is checked by generating both from the same schema and
-//! comparing what they encode - see `tests/cli.rs`'s
-//! `typescript_and_javascript_backends_agree_on_the_wire_format`.
-
-/// The runtime block, emitted once, into its own file.
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated tree is self-contained -
+// fomoxac generates for. It is here so the generated tree is self-contained -
 // nothing to add to package.json, nothing to import from elsewhere.
 // ==========================================================================
 
-const CYCLONE_TEXT_ENCODER = new TextEncoder();
-const CYCLONE_TEXT_DECODER = new TextDecoder("utf-8", { fatal: true });
+const FOMOXA_TEXT_ENCODER = new TextEncoder();
+const FOMOXA_TEXT_DECODER = new TextDecoder("utf-8", { fatal: true });
 
-/** A byte stream that does not satisfy the Cyclone Specification. */
+/** A byte stream that does not satisfy the Fomoxa Specification. */
 export class DecodeError extends Error {
     constructor(message) {
         super(message);
@@ -107,7 +89,7 @@ export class Limits {
 Limits.UNLIMITED = new Limits(0xffffffff, 0xffffffff, 0xffffffff);
 
 /**
- * Appends Cyclone-encoded values to a growable buffer.
+ * Appends Fomoxa-encoded values to a growable buffer.
  *
  * Every multi-byte value is Little Endian, with no padding, no alignment and
  * no metadata between values.
@@ -250,7 +232,7 @@ export class Writer {
      * @param {string} value
      */
     writeString(value) {
-        const encoded = CYCLONE_TEXT_ENCODER.encode(value);
+        const encoded = FOMOXA_TEXT_ENCODER.encode(value);
         this.#writeLength(encoded.length);
         this.#ensure(encoded.length);
         this.#bytes.set(encoded, this.#len);
@@ -278,7 +260,7 @@ export class Writer {
     #writeLength(len) {
         if (len > 0xffffffff) {
             throw new RangeError(
-                "cyclone: length exceeds 0xFFFFFFFF and cannot be represented on the wire",
+                "fomoxa: length exceeds 0xFFFFFFFF and cannot be represented on the wire",
             );
         }
         this.writeU32(len);
@@ -286,7 +268,7 @@ export class Writer {
 }
 
 /**
- * Reads Cyclone-encoded values from a borrowed buffer.
+ * Reads Fomoxa-encoded values from a borrowed buffer.
  *
  * Malformed input is always a {@link DecodeError}, never a silent wrong
  * answer, and a failed read leaves the cursor where it was.
@@ -458,7 +440,7 @@ export class Reader {
         }
 
         try {
-            return CYCLONE_TEXT_DECODER.decode(this.#bytes.subarray(offset, offset + len));
+            return FOMOXA_TEXT_DECODER.decode(this.#bytes.subarray(offset, offset + len));
         } catch {
             this.#pos = start;
             throw DecodeError.invalidUtf8();

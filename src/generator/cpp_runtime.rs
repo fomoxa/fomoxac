@@ -1,56 +1,13 @@
-//! The Cyclone runtime, carried verbatim into `runtime.hpp`.
-//!
-//! The C++ counterpart of [`super::rust_runtime`], [`super::go_runtime`] and
-//! [`super::csharp_runtime`] - same reasoning, same guarantee: the block below
-//! is fixed, written once against RFC-0002, and copied out unchanged. Nothing
-//! about byte layout is computed per model, per field, or per run.
-//!
-//! # Why an error is returned, not thrown
-//!
-//! Unlike [`super::csharp_runtime`], this runtime never throws. A generated
-//! model's fields are plain public members - not properties - so nothing here
-//! needed C#'s workaround either; what it *does* need is a shape a C++
-//! project that has turned exceptions off (common in game and embedded code,
-//! and the whole reason `-fno-exceptions` exists) can still call. Every
-//! `Reader` read method therefore takes its result by output reference and
-//! returns a [`DecodeError`], the C++ counterpart of Go's `(T, error)` and
-//! Rust's `Result<T, DecodeError>`: a default-constructed `DecodeError` *is*
-//! "no error" (`kind == DecodeError::Kind::None`), so a caller checks
-//! `error.ok()` exactly the way a generated Go decoder checks `err != nil`.
-//!
-//! # Why a length prefix needs no 64-bit workaround
-//!
-//! [`super::gdscript_runtime`] had to split a 64-bit fingerprint constant in
-//! two because GDScript's `int` has no unsigned counterpart. C++'s
-//! `std::uint64_t` is exact and unsigned, and an unsuffixed hex literal too
-//! wide for `int`/`long` is promoted to `unsigned long long` by the language
-//! itself (an ordinary rule of `[lex.icon]`, not something this generator has
-//! to work around) - so a fingerprint is written as a plain
-//! `0x...ULL` literal, the `ULL` suffix only ever there for clarity.
-//!
-//! # Endianness is never assumed
-//!
-//! Every multi-byte value is assembled and disassembled byte by byte with
-//! shifts and masks, never `memcpy`d as a whole and never read through a
-//! reinterpreted pointer - so the wire format is Little Endian on a
-//! Little-Endian host and a Big-Endian one alike. `memcpy` is used in exactly
-//! one place, [`Writer::write_f32`]/[`Writer::write_f64`] and their `Reader`
-//! counterparts, and only to reinterpret an IEEE-754 value's bits as an
-//! integer of the same width - never to move multi-byte integers to or from
-//! the wire, which is what would make the result host-endianness-dependent.
-
-/// The runtime block, emitted once, into its own file, inside the generated
-/// namespace.
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated tree is self-contained
+// fomoxac generates for. It is here so the generated tree is self-contained
 // - nothing to add to your build beyond this directory, nothing to link.
 // ==========================================================================
 
-/// A byte stream that does not satisfy the Cyclone Specification.
+/// A byte stream that does not satisfy the Fomoxa Specification.
 ///
 /// A default-constructed `DecodeError` means "no error" - `kind` is
 /// `Kind::None` and `ok()` is true - which is what every generated `decode`
@@ -143,7 +100,7 @@ struct Limits {
     static Limits unlimited() { return Limits(); }
 };
 
-/// Appends Cyclone-encoded values to a growable buffer.
+/// Appends Fomoxa-encoded values to a growable buffer.
 ///
 /// Every multi-byte value is Little Endian, with no padding, no alignment and
 /// no metadata between values.
@@ -243,7 +200,7 @@ private:
     std::vector<std::uint8_t> buf_;
 };
 
-/// Reads Cyclone-encoded values from a borrowed buffer.
+/// Reads Fomoxa-encoded values from a borrowed buffer.
 ///
 /// Malformed input is always a [`DecodeError`], never a thrown exception and
 /// never a silent wrong answer, and a failed read leaves the cursor where it

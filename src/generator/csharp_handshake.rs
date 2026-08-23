@@ -1,37 +1,11 @@
-//! `Handshake.cs` - the fingerprints, generated.
-//!
-//! The C# counterpart of [`super::handshake`] and [`super::go_handshake`] -
-//! same contract, same safety property:
-//!
-//! ```text
-//! peer schema fingerprint == ours               -> Current    accept
-//! a message both ends know, fingerprints differ -> Reject     disconnect
-//! otherwise                                      -> Outdated   accept
-//! ```
-//!
-//! C# has no top-level `const` or `static` outside a type, so where Go writes
-//! every fingerprint as a package-level constant, this backend gathers them -
-//! and the lookup table and the compare function that go with them - into one
-//! `public static class Handshake`. [`CycloneMessage`] and
-//! [`CycloneHandshake`] are ordinary namespace-level types beside it, the
-//! same shape they have in every other backend.
-
 use std::collections::BTreeMap;
 
 use crate::ir::Schema;
 use crate::model::pascal_case;
 use crate::schema::hex64;
 
-/// The file name, relative to the output directory.
-pub const FILE_NAME: &str = "handshake.cs";
+pub const FILE_NAME: &str = "Handshake.cs";
 
-/// Renders `Handshake.cs`.
-///
-/// # Errors
-///
-/// Two constants that would be spelled the same - a model named `PlayerEdge`
-/// beside a `Player` with an `edge` codec. Rare, mechanical, and far better
-/// reported here than as a redefinition error in the user's build.
 pub fn handshake_file(
     schema: &Schema,
     namespace: &str,
@@ -63,7 +37,7 @@ pub fn handshake_file(
          \x20\x20\x20\x20/// everything.</summary>\n",
     );
     out.push_str(&format!(
-        "    public const ulong CycloneSchemaFingerprint = {};\n\n",
+        "    public const ulong FomoxaSchemaFingerprint = {};\n\n",
         hex64(schema.fingerprint.u64())
     ));
 
@@ -96,23 +70,37 @@ pub fn handshake_file(
                 "    public const ulong {constant}Fingerprint = {};\n",
                 hex64(message.fingerprint.u64())
             ));
+            out.push_str(&format!(
+                "    /// <summary>One fingerprint per prefix of <c>{}</c>: entry <c>k-1</c>\n\
+                 \x20   /// covers its first <c>k</c> fields. The last entry is\n\
+                 \x20   /// <see cref=\"{constant}Fingerprint\"/>. Never sent whole - a peer\n\
+                 \x20   /// sends its field count and its last entry, and the two sides\n\
+                 \x20   /// compare at <c>min</c> of the two counts (RFC-0002 9.1).</summary>\n",
+                message.name
+            ));
+            out.push_str(&format!(
+                "    public static readonly ulong[] {constant}Prefixes = new ulong[]\n    {{\n"
+            ));
+            for prefix in &message.prefixes {
+                out.push_str(&format!("        {},\n", hex64(prefix.u64())));
+            }
+            out.push_str("    };\n");
         }
         out.push('\n');
     }
 
-    // Sorted by id, so a peer's table and ours can be compared without either
-    // side sorting first.
     let mut messages: Vec<_> = schema.messages().collect();
     messages.sort_by_key(|message| message.id);
 
     out.push_str(
         "    /// <summary>Every message this schema declares, sorted by id.</summary>\n\
-         \x20\x20\x20\x20public static readonly CycloneMessage[] CycloneMessages = new CycloneMessage[]\n    {\n",
+         \x20\x20\x20\x20public static readonly FomoxaMessage[] FomoxaMessages = new FomoxaMessage[]\n    {\n",
     );
     for message in &messages {
         let constant = message_constant(&message.model, &message.codec);
         out.push_str(&format!(
-            "        new CycloneMessage({constant}MessageId, \"{}\", {constant}Fingerprint),\n",
+            "        new FomoxaMessage({constant}MessageId, \"{}\", {constant}Fingerprint, \
+             {constant}Prefixes),\n",
             message.name
         ));
     }
@@ -123,7 +111,7 @@ pub fn handshake_file(
     out.push_str(&format!(
         "\n    /// <summary>Whether this schema was generated with \
          validate_message_fingerprint.</summary>\n    \
-         public const bool CycloneValidateMessageFingerprint = {};\n",
+         public const bool FomoxaValidateMessageFingerprint = {};\n",
         if validate_message_fingerprint {
             "true"
         } else {
@@ -141,12 +129,10 @@ pub fn handshake_file(
     Ok(out)
 }
 
-/// `Player` + `edge` → `PlayerEdge`.
 fn message_constant(model: &str, codec: &str) -> String {
     format!("{model}{}", pascal_case(codec))
 }
 
-/// Two constants may not be spelled the same.
 fn check_constant_names(schema: &Schema) -> Result<(), String> {
     let mut seen: BTreeMap<String, String> = BTreeMap::new();
 
@@ -170,11 +156,9 @@ fn check_constant_names(schema: &Schema) -> Result<(), String> {
     Ok(())
 }
 
-/// The message descriptor and the handshake verdict, identical in every
-/// generated `Handshake.cs`.
 const TYPES: &str = r####"/// <summary>One message: its id, its name, and the fingerprint of its wire
 /// contract.</summary>
-public readonly struct CycloneMessage
+public readonly struct FomoxaMessage
 {
     /// <summary>Stable across schema changes; derived from the name alone.</summary>
     public readonly uint Id;
@@ -182,57 +166,80 @@ public readonly struct CycloneMessage
     public readonly string Name;
     /// <summary>Changes whenever the message's fields do.</summary>
     public readonly ulong Fingerprint;
+    /// <summary>One entry per field: entry <c>k-1</c> covers the first <c>k</c> fields.
+    /// The last entry is <see cref="Fingerprint"/>. Stays local; only its length and its
+    /// last entry ever go on the wire.</summary>
+    public readonly ulong[] Prefixes;
 
-    public CycloneMessage(uint id, string name, ulong fingerprint)
+    public FomoxaMessage(uint id, string name, ulong fingerprint, ulong[] prefixes)
     {
         Id = id;
         Name = name;
         Fingerprint = fingerprint;
+        Prefixes = prefixes;
     }
 }
 
-/// <summary>One entry of a peer's (id, fingerprint) table - what
-/// <see cref="Handshake.CycloneMessages"/> is on its side.</summary>
-public readonly struct CyclonePeerMessage
+/// <summary>One entry of a peer's (id, field count, fingerprint) table - what
+/// <see cref="Handshake.FomoxaMessages"/> is on its side.</summary>
+public readonly struct FomoxaPeerMessage
 {
     public readonly uint Id;
+    public readonly uint FieldCount;
     public readonly ulong Fingerprint;
 
-    public CyclonePeerMessage(uint id, ulong fingerprint)
+    public FomoxaPeerMessage(uint id, uint fieldCount, ulong fingerprint)
     {
         Id = id;
+        FieldCount = fieldCount;
         Fingerprint = fingerprint;
     }
 }
 
 /// <summary>What a peer's fingerprints mean for this one.</summary>
-public enum CycloneHandshake
+public enum FomoxaHandshake
 {
     /// <summary>The same schema, exactly.</summary>
     Current,
-    /// <summary>A different schema, but no message both ends know disagrees. One side is
-    /// older; every message they share is byte-identical.</summary>
+    /// <summary>A different schema, but every message both ends know agrees on the
+    /// fields both ends carry. Safe to proceed.</summary>
     Outdated,
-    /// <summary>A message both ends know has two different shapes. There is nothing to
-    /// negotiate: disconnect.</summary>
+    /// <summary>Both ends put different fields at an index both of them carry. There is
+    /// nothing to negotiate: disconnect.</summary>
     Reject,
+    /// <summary>Not decidable from the peer's table alone - at least one message needs
+    /// the extra exchange described on <see cref="FomoxaMessageCheck.NeedPrefix"/>.</summary>
+    NeedMore,
+}
+
+/// <summary>What one of the peer's messages means for this schema's message of the same
+/// id.</summary>
+public enum FomoxaMessageCheck
+{
+    /// <summary>Either this schema does not declare the message at all, or the fields
+    /// both ends carry agree. Nothing to do.</summary>
+    Match,
+    /// <summary>Both ends put different fields at an index both of them carry.</summary>
+    Reject,
+    /// <summary>Undecidable from what the peer sent: the peer has more fields than this
+    /// schema, so the answer lives at an index only the peer can produce. Ask it for its
+    /// prefix fingerprint at the reported field count, then compare the reply against
+    /// <c>FomoxaPrefix</c> for the same id.</summary>
+    NeedPrefix,
 }
 
 "####;
 
-/// The lookup and compare functions, identical in every generated
-/// `Handshake.cs` - appended right after the generated `CycloneMessages`
-/// table they read.
 const HANDSHAKE: &str = r####"
     /// <summary>The message with this id, if this schema declares it.</summary>
-    public static CycloneMessage? CycloneMessageById(uint id)
+    public static FomoxaMessage? FomoxaMessageById(uint id)
     {
         int low = 0;
-        int high = CycloneMessages.Length;
+        int high = FomoxaMessages.Length;
         while (low < high)
         {
             int middle = (low + high) / 2;
-            if (CycloneMessages[middle].Id < id)
+            if (FomoxaMessages[middle].Id < id)
             {
                 low = middle + 1;
             }
@@ -241,42 +248,107 @@ const HANDSHAKE: &str = r####"
                 high = middle;
             }
         }
-        if (low < CycloneMessages.Length && CycloneMessages[low].Id == id)
+        if (low < FomoxaMessages.Length && FomoxaMessages[low].Id == id)
         {
-            return CycloneMessages[low];
+            return FomoxaMessages[low];
         }
         return null;
     }
 
-    /// <summary>Compares a peer's fingerprints against this schema's.</summary>
-    /// <remarks><paramref name="peerMessages"/> is only worth sending when the schema
-    /// fingerprints already differ.</remarks>
-    public static CycloneHandshake CycloneHandshakeCompare(
-        ulong peerSchemaFingerprint,
-        System.Collections.Generic.IEnumerable<CyclonePeerMessage> peerMessages)
+    /// <summary>This schema's fingerprint for the first <paramref name="fieldCount"/>
+    /// fields of a message, or <c>null</c> if it does not declare that message or does
+    /// not have that many fields. <paramref name="fieldCount"/> counts from 1; 0 is the
+    /// empty prefix and has no fingerprint because it always matches.</summary>
+    public static ulong? FomoxaPrefix(uint id, uint fieldCount)
     {
-        if (peerSchemaFingerprint == CycloneSchemaFingerprint)
+        var message = FomoxaMessageById(id);
+        if (!message.HasValue || fieldCount == 0 || fieldCount > message.Value.Prefixes.Length)
         {
-            return CycloneHandshake.Current;
+            return null;
+        }
+        return message.Value.Prefixes[fieldCount - 1];
+    }
+
+    /// <summary>Compares one of the peer's messages against this schema's.</summary>
+    /// <remarks>This is RFC-0002 9.1's prefix test: the two are compatible when the
+    /// shorter field list is an exact prefix of the longer one, so the comparison happens
+    /// at the smaller of the two field counts. <paramref name="askFor"/> is the field
+    /// count to ask the peer about, and is only meaningful for
+    /// <see cref="FomoxaMessageCheck.NeedPrefix"/>.</remarks>
+    public static FomoxaMessageCheck FomoxaCheckMessage(
+        uint id,
+        uint peerFieldCount,
+        ulong peerFingerprint,
+        out uint askFor)
+    {
+        askFor = 0;
+        var message = FomoxaMessageById(id);
+        if (!message.HasValue)
+        {
+            // Not a message this schema declares, so it is never exchanged.
+            return FomoxaMessageCheck.Match;
+        }
+        var known = message.Value;
+        uint localFieldCount = (uint)known.Prefixes.Length;
+
+        if (peerFingerprint == known.Fingerprint)
+        {
+            return FomoxaMessageCheck.Match;
+        }
+        if (peerFieldCount == 0 || localFieldCount == 0)
+        {
+            // The empty field list is a prefix of everything.
+            return FomoxaMessageCheck.Match;
+        }
+        if (peerFieldCount == localFieldCount)
+        {
+            // Same length, different content - a prefix of equal length would
+            // have to be equality, and it is not.
+            return FomoxaMessageCheck.Reject;
+        }
+        if (peerFieldCount < localFieldCount)
+        {
+            // The peer's own fingerprint already is the value at the shared index.
+            return known.Prefixes[peerFieldCount - 1] == peerFingerprint
+                ? FomoxaMessageCheck.Match
+                : FomoxaMessageCheck.Reject;
+        }
+        askFor = localFieldCount;
+        return FomoxaMessageCheck.NeedPrefix;
+    }
+
+    /// <summary>Compares a peer's whole message table against this schema's.</summary>
+    /// <remarks>A <see cref="FomoxaHandshake.NeedMore"/> result means at least one
+    /// message needs the extra round; walk the table with
+    /// <see cref="FomoxaCheckMessage"/> to find which ones.</remarks>
+    public static FomoxaHandshake FomoxaHandshakeCompare(
+        ulong peerSchemaFingerprint,
+        System.Collections.Generic.IEnumerable<FomoxaPeerMessage> peerMessages)
+    {
+        if (peerSchemaFingerprint == FomoxaSchemaFingerprint)
+        {
+            return FomoxaHandshake.Current;
         }
 
+        bool needMore = false;
         foreach (var peer in peerMessages)
         {
-            var known = CycloneMessageById(peer.Id);
-            if (known.HasValue && known.Value.Fingerprint != peer.Fingerprint)
+            switch (FomoxaCheckMessage(peer.Id, peer.FieldCount, peer.Fingerprint, out _))
             {
-                // A message both ends know, with two shapes. Every other
-                // message could match and it would still be unsafe to speak.
-                return CycloneHandshake.Reject;
+                case FomoxaMessageCheck.Reject:
+                    // One mismatch decides the whole session. Every other message
+                    // could agree and it would still be unsafe to speak.
+                    return FomoxaHandshake.Reject;
+                case FomoxaMessageCheck.NeedPrefix:
+                    needMore = true;
+                    break;
             }
         }
 
-        return CycloneHandshake.Outdated;
+        return needMore ? FomoxaHandshake.NeedMore : FomoxaHandshake.Outdated;
     }
 "####;
 
-/// The optional per-frame envelope, when `validate_message_fingerprint` is
-/// on.
 const ENVELOPE: &str = r####"
     // ======================================================================
     // Per-frame validation - validate_message_fingerprint = true.
@@ -291,23 +363,23 @@ const ENVELOPE: &str = r####"
 
     /// <summary>A frame whose envelope did not describe a message this schema can
     /// decode.</summary>
-    public sealed class CycloneEnvelopeException : System.Exception
+    public sealed class FomoxaEnvelopeException : System.Exception
     {
-        private CycloneEnvelopeException(string message) : base(message) { }
+        private FomoxaEnvelopeException(string message) : base(message) { }
 
         /// <summary>An id this schema does not declare.</summary>
-        public static CycloneEnvelopeException UnknownMessage(uint id) =>
-            new CycloneEnvelopeException($"unknown message id 0x{id:X8}");
+        public static FomoxaEnvelopeException UnknownMessage(uint id) =>
+            new FomoxaEnvelopeException($"unknown message id 0x{id:X8}");
 
         /// <summary>The right message, the wrong shape.</summary>
-        public static CycloneEnvelopeException FingerprintMismatch(uint id, ulong expected, ulong received) =>
-            new CycloneEnvelopeException(
+        public static FomoxaEnvelopeException FingerprintMismatch(uint id, ulong expected, ulong received) =>
+            new FomoxaEnvelopeException(
                 $"message 0x{id:X8}: peer fingerprint 0x{received:X16}, ours 0x{expected:X16}");
     }
 
     /// <summary>Writes [MessageId][MessageFingerprint], immediately before the
     /// payload.</summary>
-    public static void CycloneWriteEnvelope(Writer writer, CycloneMessage message)
+    public static void FomoxaWriteEnvelope(Writer writer, FomoxaMessage message)
     {
         writer.WriteU32(message.Id);
         writer.WriteU64(message.Fingerprint);
@@ -316,35 +388,34 @@ const ENVELOPE: &str = r####"
     /// <summary>Reads an envelope and resolves it against this schema, leaving the
     /// reader positioned at the payload.</summary>
     /// <exception cref="DecodeException">The envelope itself could not be read.</exception>
-    /// <exception cref="CycloneEnvelopeException">It names an id this schema does not
+    /// <exception cref="FomoxaEnvelopeException">It names an id this schema does not
     /// declare, or it names the right message with the wrong fingerprint.</exception>
-    public static CycloneMessage CycloneReadEnvelope(ref Reader reader)
+    public static FomoxaMessage FomoxaReadEnvelope(ref Reader reader)
     {
         uint id = reader.ReadU32();
         ulong fingerprint = reader.ReadU64();
 
-        var message = CycloneMessageById(id);
+        var message = FomoxaMessageById(id);
         if (!message.HasValue)
         {
-            throw CycloneEnvelopeException.UnknownMessage(id);
+            throw FomoxaEnvelopeException.UnknownMessage(id);
         }
         if (message.Value.Fingerprint != fingerprint)
         {
-            throw CycloneEnvelopeException.FingerprintMismatch(id, message.Value.Fingerprint, fingerprint);
+            throw FomoxaEnvelopeException.FingerprintMismatch(id, message.Value.Fingerprint, fingerprint);
         }
         return message.Value;
     }
 "####;
 
-/// What stands in for the envelope when it is off.
 const ENVELOPE_OFF: &str = r####"
     // Per-frame message validation is off, so no envelope is generated and no
-    // frame carries one. Turn it on in cyclone.toml:
+    // frame carries one. Turn it on in fomoxa.toml:
     //
     //     validate_message_fingerprint = true
     //
     // and every frame gains [MessageId: uint][MessageFingerprint: ulong] in front of
-    // its payload, with CycloneWriteEnvelope / CycloneReadEnvelope to match.
+    // its payload, with FomoxaWriteEnvelope / FomoxaReadEnvelope to match.
 "####;
 
 #[cfg(test)]
@@ -380,7 +451,7 @@ mod tests {
 
         assert!(text.contains("namespace Generated\n"), "{text}");
         assert!(
-            text.contains("public const ulong CycloneSchemaFingerprint = 0x"),
+            text.contains("public const ulong FomoxaSchemaFingerprint = 0x"),
             "{text}"
         );
         assert!(
@@ -400,7 +471,7 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("public static readonly CycloneMessage[] CycloneMessages"),
+            text.contains("public static readonly FomoxaMessage[] FomoxaMessages"),
             "{text}"
         );
     }
@@ -416,7 +487,7 @@ mod tests {
 
         let lines: Vec<&str> = text
             .lines()
-            .filter(|line| line.trim_start().starts_with("new CycloneMessage("))
+            .filter(|line| line.trim_start().starts_with("new FomoxaMessage("))
             .collect();
         assert_eq!(lines.len(), 3, "{text}");
 
@@ -437,22 +508,22 @@ mod tests {
     fn the_envelope_is_off_unless_asked_for() {
         let off = generated(&[model("Player", &["edge"])]);
         assert!(
-            off.contains("CycloneValidateMessageFingerprint = false"),
+            off.contains("FomoxaValidateMessageFingerprint = false"),
             "{off}"
         );
         assert!(
-            !off.contains("public static void CycloneWriteEnvelope"),
+            !off.contains("public static void FomoxaWriteEnvelope"),
             "{off}"
         );
 
         let schema = Schema::build(&[model("Player", &["edge"])]).expect("build");
         let on = handshake_file(&schema, "Generated", true).expect("render");
         assert!(
-            on.contains("CycloneValidateMessageFingerprint = true"),
+            on.contains("FomoxaValidateMessageFingerprint = true"),
             "{on}"
         );
-        assert!(on.contains("CycloneWriteEnvelope"), "{on}");
-        assert!(on.contains("CycloneReadEnvelope"), "{on}");
+        assert!(on.contains("FomoxaWriteEnvelope"), "{on}");
+        assert!(on.contains("FomoxaReadEnvelope"), "{on}");
     }
 
     #[test]

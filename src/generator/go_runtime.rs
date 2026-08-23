@@ -1,31 +1,9 @@
-//! The Cyclone runtime, carried verbatim into `runtime.go`.
-//!
-//! The Go counterpart of [`super::rust_runtime`] - same reasoning, same
-//! guarantee: the block below is fixed, written once against RFC-0002, and
-//! copied out unchanged. Nothing about byte layout is computed per model, per
-//! field, or per run.
-//!
-//! Go has no exceptions, so where Rust returns `Result`, `Reader`'s methods
-//! return `(T, error)` - the idiom every generated `Decode` is written
-//! against: `value.ID, err = r.ReadU32()`.
-//!
-//! # What changed from `cyclonec_old`
-//!
-//! One method: [`Reader::FieldAbsent`] (see the block below). The old runtime
-//! gave a generated decoder no way to tell *this field never arrived* from
-//! *this field arrived truncated* - every read simply returned an
-//! `unexpected_eof` `DecodeError` - so the decoder could not implement
-//! RFC-0002 §9.1 at all. See `generator::go` for what the generated decoder
-//! does with it; the fix is identical in spirit to [`super::rust_runtime`]'s.
-
-/// The runtime block, emitted once, into its own file, right after the
-/// package clause.
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated package is
+// fomoxac generates for. It is here so the generated package is
 // self-contained - nothing to add to go.mod, nothing to import.
 // ==========================================================================
 
@@ -36,7 +14,7 @@ import (
 	"unicode/utf8"
 )
 
-// DecodeError is a byte stream that does not satisfy the Cyclone
+// DecodeError is a byte stream that does not satisfy the Fomoxa
 // Specification.
 type DecodeError struct {
 	// Kind names which Specification error condition this is.
@@ -65,7 +43,7 @@ func (e *DecodeError) Error() string {
 	case "length_overflow":
 		return fmt.Sprintf("length overflow: length %d exceeds limit %d", e.Length, e.Limit)
 	default:
-		return "cyclone: decode error"
+		return "fomoxa: decode error"
 	}
 }
 
@@ -110,7 +88,7 @@ var UnlimitedLimits = Limits{
 	MaxArrayCount: math.MaxUint32,
 }
 
-// Writer appends Cyclone-encoded values to a growable buffer.
+// Writer appends Fomoxa-encoded values to a growable buffer.
 //
 // Every multi-byte value is Little Endian, with no padding, no alignment and
 // no metadata between values.
@@ -224,7 +202,7 @@ func (w *Writer) WriteArrayCount(count int) {
 	w.WriteU32(uint32(count))
 }
 
-// Reader reads Cyclone-encoded values from a borrowed buffer.
+// Reader reads Fomoxa-encoded values from a borrowed buffer.
 //
 // Malformed input is always a *DecodeError, never a panic, and a failed read
 // leaves the cursor where it was.

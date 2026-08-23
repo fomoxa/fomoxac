@@ -1,59 +1,7 @@
-//! One message → one C# file.
-//!
-//! The C# counterpart of [`super::go`] and [`super::rust`]. Same rule, same
-//! shape: a message is walked once, a field at a time, and each field appends
-//! one statement. Nothing is analysed on the way: a primitive is a table
-//! lookup, and anything else is another model's name spelled into a call.
-//!
-//! # What C# forces that Go and Rust do not
-//!
-//! A C# property is not an addressable storage location, so it cannot be
-//! passed `ref` directly - unlike a Rust struct field or a Go struct field,
-//! both of which are. A nested model field is therefore decoded through a
-//! local: read the existing value out, decode into it by `ref`, assign it
-//! back (see [`decode_field`]). This preserves the same "leaves fields this
-//! codec does not carry alone" guarantee the Rust and Go backends have -
-//! including recursively, into the nested model - and it costs nothing when
-//! the member turns out to be a plain field instead of a property, which is
-//! also legal C# for a Cyclone model.
-//!
-//! C# has no `import`; a codec file needs nothing added to a `.csproj` to
-//! reach a model in a different namespace, because a fully-qualified name
-//! (`Models.Player`) compiles without a `using` directive. So unlike
-//! [`super::go`], this backend never writes an import block - it always
-//! spells a cross-namespace reference out in full, and a bare reference
-//! whenever the model is declared in the same namespace this run generates
-//! into, or in no namespace at all (C#'s global namespace, reachable
-//! unqualified from anywhere that does not shadow it).
-//!
-//! # The decoder, and RFC-0002 §9.1
-//!
-//! Identical policy to [`super::rust`] and [`super::go`]: a bare field asks
-//! `reader.FieldAbsent()` before it reads, taking its zero value when the
-//! stream already ended; array *elements* are read strictly, once the count
-//! says they exist; a nested model is decoded through its own codec
-//! unconditionally, which asks the same question of every one of *its*
-//! fields.
-//!
-//! # A deliberate gap: `Array<Array<T>>`
-//!
-//! Refused with a clear error rather than generated wrong, the same choice
-//! [`super::go`] makes and for the same reason: the element-type table this
-//! generator's whole knowledge of C# types lives in has no entry for
-//! `Array<T>` itself, only for what `T` can be. Nesting one array inside
-//! another is rare enough in practice that refusing it outright, clearly, was
-//! judged better than the extra generator complexity a correct
-//! implementation would need.
-
 use crate::ir::{Field, Message, Model, WireType};
-use crate::model::snake_case;
 
 use super::codec_type_name;
 
-/// The C# namespace every generated file in one run shares, derived from
-/// `--out`'s own directory name - the C# counterpart of
-/// [`super::go::package_name_from_out`], PascalCased because that is the
-/// .NET convention for a namespace segment where Go's is all lowercase.
 pub fn namespace_from_out(out: &std::path::Path) -> String {
     let basename = out
         .file_name()
@@ -62,10 +10,6 @@ pub fn namespace_from_out(out: &std::path::Path) -> String {
     sanitize_namespace(basename)
 }
 
-/// A C# identifier is letters, digits and `_`, may not start with a digit,
-/// and may not be a reserved word. `--out`'s basename rarely needs any of
-/// this, but a generator that trusts a directory name unchecked is a
-/// generator that picks today to find out `--out 2fast` does not compile.
 fn sanitize_namespace(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut capitalize = true;
@@ -175,15 +119,7 @@ const CSHARP_KEYWORDS: &[&str] = &[
     "while",
 ];
 
-/// The runtime method each primitive maps to, and the C# type it reads or
-/// writes.
-///
-/// This table is the whole of the generator's type knowledge. Every name in
-/// it comes from RFC-0002's Reader / Writer interface, spelled the way
-/// [`super::csharp_runtime`] spells it; a name that is not in it is another
-/// model, and the call is spelled and left for the C# compiler to resolve.
 fn primitive(ty: &WireType) -> Option<(&'static str, &'static str, &'static str)> {
-    // (writer method, reader method, C# type)
     Some(match ty {
         WireType::Bool => ("WriteBool", "ReadBool", "bool"),
         WireType::I8 => ("WriteI8", "ReadI8", "sbyte"),
@@ -202,10 +138,6 @@ fn primitive(ty: &WireType) -> Option<(&'static str, &'static str, &'static str)
     })
 }
 
-/// The C# zero-value expression for a field the stream ended before
-/// (RFC-0002 §9.1). Only ever called for a primitive: an array's absence is
-/// its own zero element count, and a model field has no zero expression of
-/// its own - see [`decode_field`].
 fn zero(ty: &WireType) -> &'static str {
     match ty {
         WireType::Bool => "false",
@@ -219,58 +151,34 @@ fn zero(ty: &WireType) -> &'static str {
     }
 }
 
-/// The generated file name: `Player` + `edge` → `player_edge.cs`.
+pub const RUNTIME_FILE_NAME: &str = "Runtime.cs";
+
 pub fn file_name(model: &str, codec: &str) -> String {
-    format!("{}_{}.cs", snake_case(model), snake_case(codec))
+    format!("{}.cs", codec_type_name(model, codec))
 }
 
-/// Escapes text embedded inside an XML doc comment's `<c>...</c>`.
-///
-/// A wire type's own spelling is the only thing here that can contain `<` or
-/// `>` (`Array<T>`), and left unescaped it reads as a nested XML element,
-/// which is malformed XML doc - `csc` accepts it but warns (CS1570) on every
-/// one, which is not a warning a generated file's reader can act on.
 fn xml_escape(text: &str) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
 }
 
-/// Where every model this run parsed can be reached from inside a generated
-/// C# file: `None` for a model declared in no namespace at all (C#'s global
-/// namespace), `Some(namespace)` for one declared in one.
 pub struct Imports<'a> {
     pub locations: &'a std::collections::BTreeMap<String, Option<String>>,
-    /// The namespace the generated file itself opens. A model declared in
-    /// this same namespace is spelled bare, the same as one in the global
-    /// namespace.
     pub own_namespace: &'a str,
 }
 
 impl Imports<'_> {
-    /// How a model's type is spelled in generated code: bare if it shares
-    /// this run's namespace (or has none), fully qualified otherwise. Never
-    /// a `using` - see the module docs.
     fn qualify(&self, model: &str) -> String {
         match self.locations.get(model) {
             Some(Some(namespace)) if namespace != self.own_namespace => {
                 format!("{namespace}.{model}")
             }
-            // Same namespace, no namespace at all, or a model this run never
-            // parsed (a hand-written type): spelled bare, left for the C#
-            // compiler to resolve - the same "leave it to the host compiler"
-            // policy `super::rust` and `super::go` apply.
             _ => model.to_owned(),
         }
     }
 }
 
-/// Refuses `Array<Array<T>>` before any text is generated - see the module
-/// docs' "deliberate gap".
-///
-/// # Errors
-///
-/// A field whose type nests one `Array` inside another.
 pub fn check_no_nested_arrays(model: &Model) -> Result<(), String> {
     for field in &model.fields {
         if let WireType::Array(element) = &field.ty {
@@ -286,8 +194,6 @@ pub fn check_no_nested_arrays(model: &Model) -> Result<(), String> {
     Ok(())
 }
 
-/// Renders one codec file: the header, the namespace, the codec type, its
-/// constants, and its `Encode` / `Decode`.
 pub fn codec_file(
     model: &Model,
     message: &Message,
@@ -308,7 +214,7 @@ pub fn codec_file(
     let model_type = imports.qualify(&model.name);
 
     out.push_str(&format!(
-        "/// <summary>The <c>{}</c> codec for <see cref=\"{}\"/>, generated from its Cyclone \
+        "/// <summary>The <c>{}</c> codec for <see cref=\"{}\"/>, generated from its Fomoxa \
          attributes.</summary>\n",
         message.codec, model.name
     ));
@@ -351,7 +257,6 @@ pub fn codec_file(
         message.fingerprint.u64()
     ));
 
-    // -------------------------------------------------------------- encode
     out.push_str(&format!(
         "    /// <summary>Writes the <c>{}</c> fields of <paramref name=\"value\"/>, in \
          declaration order.</summary>\n",
@@ -367,7 +272,6 @@ pub fn codec_file(
     }
     out.push_str("    }\n\n");
 
-    // -------------------------------------------------------------- decode
     out.push_str(&format!(
         "    /// <summary>Reads the <c>{}</c> fields into <paramref name=\"value\"/>, in \
          declaration order.</summary>\n",
@@ -396,8 +300,6 @@ pub fn codec_file(
     out
 }
 
-// =================================================================== encoding
-
 fn encode_field(out: &mut String, field: &Field, codec: &str) {
     let place = format!("value.{}", field.name);
 
@@ -414,8 +316,6 @@ fn encode_field(out: &mut String, field: &Field, codec: &str) {
     encode_scalar(out, &field.ty, &place, codec);
 }
 
-/// Writes one non-array value - a bare field, or an array element (never an
-/// array itself: `check_no_nested_arrays` has already refused that case).
 fn encode_scalar(out: &mut String, ty: &WireType, place: &str, codec: &str) {
     match primitive(ty) {
         Some((writer_method, ..)) => {
@@ -431,16 +331,9 @@ fn encode_scalar(out: &mut String, ty: &WireType, place: &str, codec: &str) {
     }
 }
 
-// =================================================================== decoding
-
 fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<'_>) {
     let place = format!("value.{}", field.name);
 
-    // A nested model needs no absence check of its own: its codec asks the
-    // same question of every one of its fields, so an absent nested model
-    // zeroes them all without reading a byte. A C# property is not
-    // addressable, so the existing value is read out, decoded into by `ref`,
-    // and assigned back - see the module docs.
     if let Some(name) = as_model(&field.ty) {
         let nested = codec_type_name(name, codec);
         let local = local_name(&field.name);
@@ -480,9 +373,6 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
     ));
 }
 
-/// Decodes one array element - strictly, unlike a field: the count already
-/// promised this element exists, so a stream that ends here is truncated,
-/// not skewed - and appends it to `list_local`.
 fn decode_element_into(
     out: &mut String,
     ty: &WireType,
@@ -509,8 +399,6 @@ fn decode_element_into(
     }
 }
 
-/// `T`'s C# type name for `Array<T>`'s `List<T>` local - the primitive
-/// table's own spelling, or a qualified model reference.
 fn element_type_name(ty: &WireType, imports: &Imports<'_>) -> String {
     match primitive(ty) {
         Some((_, _, csharp_type)) => csharp_type.to_owned(),
@@ -518,9 +406,6 @@ fn element_type_name(ty: &WireType, imports: &Imports<'_>) -> String {
     }
 }
 
-/// The model name of a bare model type - `Array<T>` is not one, because an
-/// array is decoded element by element and only *its elements* may be
-/// models.
 fn as_model(ty: &WireType) -> Option<&str> {
     match ty {
         WireType::Model(name) => Some(name),
@@ -528,8 +413,6 @@ fn as_model(ty: &WireType) -> Option<&str> {
     }
 }
 
-/// A local variable name that cannot collide with `writer`, `reader`,
-/// `value`, or another field's own locals in the same method.
 fn local_name(field_name: &str) -> String {
     let mut chars = field_name.chars();
     let mut local = match chars.next() {
@@ -546,7 +429,9 @@ mod tests {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
 
-    use super::{check_no_nested_arrays, codec_file, file_name, namespace_from_out, Imports};
+    use super::{
+        check_no_nested_arrays, codec_file, codec_type_name, file_name, namespace_from_out, Imports,
+    };
     use crate::ir::Schema;
     use crate::model::{Field, Model};
 
@@ -582,10 +467,6 @@ mod tests {
         ])
         .expect("build");
 
-        // Colocated with the generated namespace, so every model reference in
-        // these tests is bare - the common case, and the one most of them
-        // are about. Qualification across namespaces has its own tests
-        // below.
         let locations: BTreeMap<String, Option<String>> = ["Player", "PlayerInfo"]
             .into_iter()
             .map(|name| (name.to_owned(), Some("Game.Generated".to_owned())))
@@ -810,11 +691,16 @@ mod tests {
     }
 
     #[test]
-    fn a_codec_file_is_named_like_the_other_backends() {
-        assert_eq!(file_name("Player", "edge"), "player_edge.cs");
+    fn a_codec_file_is_named_after_the_type_it_declares() {
+        assert_eq!(file_name("Player", "edge"), "PlayerEdgeCodec.cs");
         assert_eq!(
             file_name("PlayerInfo", "orange_pi"),
-            "player_info_orange_pi.cs"
+            "PlayerInfoOrangePiCodec.cs"
+        );
+        assert_eq!(
+            file_name("Player", "edge"),
+            format!("{}.cs", codec_type_name("Player", "edge")),
+            "the file name and the type name must not drift apart"
         );
     }
 
@@ -831,7 +717,7 @@ mod tests {
     fn the_file_carries_the_headers_the_brief_asks_for() {
         let text = generated(&[("Id", "u32")]);
         assert!(
-            text.starts_with("// GENERATED BY cyclonec\n// DO NOT EDIT MANUALLY\n"),
+            text.starts_with("// GENERATED BY fomoxac\n// DO NOT EDIT MANUALLY\n"),
             "{text}"
         );
         assert!(text.contains("// source: Models/Player.cs\n"), "{text}");

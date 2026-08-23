@@ -1,67 +1,8 @@
-//! C++ source → [`Model`]s.
-//!
-//! Reads `CYCLONE_MODEL` / `CYCLONE_CODEC(...)` / `CYCLONE_FIELD(TYPE)` - three
-//! macros a project defines for itself in a small header with no dependency of
-//! its own (the same role `cyclone-attributes` plays for Rust and the
-//! `Cyclone.Network` / `Cyclone.Codec` pair plays for C#), each expanding to
-//! nothing so an annotated struct compiles unchanged on any C++ toolchain
-//! whether or not `cyclonec` ever runs over it:
-//!
-//! ```text
-//! CYCLONE_MODEL
-//! CYCLONE_CODEC("edge", "unity")
-//! struct DeviceState
-//! {
-//!     CYCLONE_FIELD(u32)
-//!     CYCLONE_CODEC("edge", "unity")
-//!     uint32_t Id;
-//! };
-//! ```
-//!
-//! Unlike C#'s `[Network]` / `[Codec(...)]`, these are not wrapped in
-//! `[...]` - they are ordinary tokens, exactly the shape a real macro
-//! invocation has to be, and the scanner below reads them as such rather than
-//! as a bracketed attribute section. See [`crate::parser`] for what this
-//! scanner is and is not - it never looks at a field's C++ type, only at the
-//! type name `CYCLONE_FIELD(...)` itself spelled.
-//!
-//! # Scope
-//!
-//! A model is a top-level `struct` or `class`; nested types are not specially
-//! recognised (the same non-handling the Rust and C# scanners have for a model
-//! nested inside `mod` / another type). A `namespace` is stepped over like any
-//! other braces - unlike Go's `package` or C#'s `namespace`, a C++
-//! `namespace` may legally nest and may legally repeat across a file, so
-//! [`namespace_name`] reads only the *first* one, the same simplification
-//! [`super::csharp::namespace_name`] already makes for C#'s "first `namespace`
-//! in the file" and documents there for the same reason: the common case is
-//! one namespace per model file, and a project whose layout is not that shape
-//! has `--model-path` to say so explicitly.
-//!
-//! # What C++ needs that C# does not
-//!
-//! A C++ member may sit behind an `public:` / `private:` / `protected:`
-//! access specifier, which is not itself a declaration and must not be read as
-//! one - the scanner steps over `identifier :` at the top of a struct body
-//! before ever asking what kind of member follows. And a field's host type may
-//! be a template (`std::vector<uint32_t>`) or a C array (`uint32_t[4]`) - both
-//! are stepped over by the same bracket-depth walk [`super::csharp`] already
-//! uses for C#'s generics, since `<...>` and `[...]` need the identical
-//! "count the nesting, do not stop at the first closer" treatment.
-
 use std::path::Path;
 
 use crate::model::{Field, Model};
 use crate::parser::Error;
 
-/// Extracts every `CYCLONE_MODEL` model from `text`.
-///
-/// # Errors
-///
-/// Only what stops generation: a `CYCLONE_FIELD()` with no wire type inside
-/// its parentheses, or a `CYCLONE_FIELD` / `CYCLONE_CODEC` marker sitting on a
-/// method instead of a field. Source that does not compile for any other
-/// reason is the C++ compiler's to report.
 pub fn parse(path: &Path, text: &str) -> Result<Vec<Model>, Error> {
     let tokens = lex(text);
     Scanner {
@@ -72,9 +13,6 @@ pub fn parse(path: &Path, text: &str) -> Result<Vec<Model>, Error> {
     .file()
 }
 
-/// The `namespace` a C++ source file opens, if any - the first one, however
-/// deeply the file goes on to nest others. See the module docs for why only
-/// the first is read.
 pub fn namespace_name(text: &str) -> Option<String> {
     let tokens = lex(text);
     let start = tokens
@@ -106,27 +44,17 @@ pub fn namespace_name(text: &str) -> Option<String> {
     }
 }
 
-// ============================================================== the scanner
-
 struct Scanner<'a> {
     path: &'a Path,
     tokens: &'a [Token<'a>],
     at: usize,
 }
 
-/// The Cyclone markers collected so far, waiting for the declaration they
-/// precede.
 #[derive(Default)]
 struct Pending {
-    /// Whether a `CYCLONE_MODEL` has been seen (top-level scanning only).
     model: bool,
-    /// `CYCLONE_FIELD(TYPE)`, and the type if its parentheses were not empty
-    /// (member scanning only).
     field_type: Option<Option<String>>,
-    /// Every string from every `CYCLONE_CODEC(...)`, in order.
     codecs: Vec<String>,
-    /// The line the first Cyclone marker was on. `0` means "none yet" - every
-    /// real line number is at least `1`.
     line: usize,
 }
 
@@ -144,14 +72,13 @@ impl Pending {
 }
 
 impl<'a> Scanner<'a> {
-    /// Walks a file, collecting models declared at the top level.
     fn file(&mut self) -> Result<Vec<Model>, Error> {
         let mut models = Vec::new();
         let mut pending = Pending::default();
 
         while let Some(token) = self.peek() {
             match token.kind {
-                Kind::Ident("CYCLONE_MODEL") => {
+                Kind::Ident("FOMOXA_MODEL") => {
                     let line = token.line;
                     if pending.line == 0 {
                         pending.line = line;
@@ -160,7 +87,7 @@ impl<'a> Scanner<'a> {
                     self.bump();
                 }
 
-                Kind::Ident("CYCLONE_CODEC") => {
+                Kind::Ident("FOMOXA_CODEC") => {
                     self.codec_directive(&mut pending)?;
                 }
 
@@ -173,9 +100,6 @@ impl<'a> Scanner<'a> {
                     pending.clear();
                 }
 
-                // A keyword that starts a different kind of declaration ends
-                // the run of markers, so a `CYCLONE_MODEL` on an enum is not
-                // inherited by the next struct.
                 Kind::Ident(word) if is_boundary_keyword(word) => {
                     self.bump();
                     pending.clear();
@@ -195,9 +119,6 @@ impl<'a> Scanner<'a> {
         Ok(models)
     }
 
-    /// Reads a `CYCLONE_CODEC(...)` invocation, adding its codec names to
-    /// `pending`. Not followed by `(` at all - a definition this scanner does
-    /// not need to understand - is left alone rather than treated as ours.
     fn codec_directive(&mut self, pending: &mut Pending) -> Result<(), Error> {
         let line = self.tokens[self.at].line;
         if pending.line == 0 {
@@ -225,7 +146,6 @@ impl<'a> Scanner<'a> {
         Ok(())
     }
 
-    /// Reads a `CYCLONE_FIELD(TYPE)` invocation into `pending.field_type`.
     fn field_directive(&mut self, pending: &mut Pending) -> Result<(), Error> {
         let line = self.tokens[self.at].line;
         if pending.line == 0 {
@@ -255,20 +175,14 @@ impl<'a> Scanner<'a> {
         Ok(())
     }
 
-    /// Reads a `struct` or `class` declaration, returning it if it is a
-    /// model.
     fn type_declaration(&mut self, pending: &mut Pending) -> Result<Option<Model>, Error> {
         let Some(name) = self.peek().and_then(Token::ident) else {
             return Ok(None);
         };
         self.bump();
 
-        // A type nothing marks is somebody else's. It must not become an
-        // error just because it shares a file with a model.
         let is_model = pending.model;
 
-        // A base-clause (`: public Base`) and any template parameters are
-        // stepped over without being read.
         let body = self.skip_to_body();
 
         if !is_model {
@@ -292,10 +206,6 @@ impl<'a> Scanner<'a> {
         Ok(Some(model))
     }
 
-    /// Reads the annotated members out of a `struct` or `class` body.
-    ///
-    /// `open` is the index of the body's `{`; the cursor is left past its
-    /// `}`.
     fn members(&mut self, open: usize) -> Result<Vec<Field>, Error> {
         let close = self.matching(open, '{', '}');
         self.at = open + 1;
@@ -306,11 +216,11 @@ impl<'a> Scanner<'a> {
         while self.at < close {
             let token = self.tokens[self.at];
 
-            if token.kind == Kind::Ident("CYCLONE_CODEC") {
+            if token.kind == Kind::Ident("FOMOXA_CODEC") {
                 self.codec_directive(&mut pending)?;
                 continue;
             }
-            if token.kind == Kind::Ident("CYCLONE_FIELD") {
+            if token.kind == Kind::Ident("FOMOXA_FIELD") {
                 self.field_directive(&mut pending)?;
                 continue;
             }
@@ -319,10 +229,6 @@ impl<'a> Scanner<'a> {
                 pending.clear();
                 continue;
             }
-            // `public:` / `private:` / `protected:` is not a declaration -
-            // stepping over it here keeps it from being fed to
-            // `declaration_end`, which would otherwise read the field right
-            // after it as if the specifier were the field's own host type.
             if is_access_specifier(token, self.tokens.get(self.at + 1)) {
                 self.at += 2;
                 continue;
@@ -333,7 +239,7 @@ impl<'a> Scanner<'a> {
                     if !pending.is_empty() {
                         return Err(self.error(
                             pending.line,
-                            "a CYCLONE_FIELD or CYCLONE_CODEC marker is not on a field",
+                            "a FOMOXA_FIELD or FOMOXA_CODEC marker is not on a field",
                         ));
                     }
                     self.skip_balanced('(', ')');
@@ -346,12 +252,10 @@ impl<'a> Scanner<'a> {
 
                     if !pending.is_empty() {
                         match pending.field_type.take() {
-                            // Told the field is on the wire, not told what to
-                            // write for it.
                             Some(None) => {
                                 return Err(self.error(
                                     line,
-                                    "CYCLONE_FIELD() requires a wire type: CYCLONE_FIELD(...)",
+                                    "FOMOXA_FIELD() requires a wire type: FOMOXA_FIELD(...)",
                                 ));
                             }
                             Some(Some(network_type)) => fields.push(Field {
@@ -360,13 +264,10 @@ impl<'a> Scanner<'a> {
                                 codecs: dedupe(std::mem::take(&mut pending.codecs)),
                                 line,
                             }),
-                            // `CYCLONE_CODEC(...)` with no `CYCLONE_FIELD(...)`
-                            // names a codec for a field the generator does not
-                            // know is on the wire at all.
                             None if !pending.codecs.is_empty() => {
                                 return Err(self.error(
                                     line,
-                                    "CYCLONE_CODEC(...) on a field with no CYCLONE_FIELD(...) \
+                                    "FOMOXA_CODEC(...) on a field with no FOMOXA_FIELD(...) \
                                      has nothing to route: give the field a wire type",
                                 ));
                             }
@@ -376,9 +277,6 @@ impl<'a> Scanner<'a> {
 
                     pending.clear();
                 }
-                // Defensive: every other arm above is guaranteed to advance
-                // `self.at`. This one is reached on debris `declaration_end`
-                // could not name a member from - guarantee progress anyway.
                 DeclarationEnd::EndOfBody => {
                     if self.at < close {
                         self.bump();
@@ -391,13 +289,6 @@ impl<'a> Scanner<'a> {
         Ok(fields)
     }
 
-    /// Scans a declaration from the current position, stopping at the token
-    /// that reveals what kind of member it is.
-    ///
-    /// `(` at depth `0` is always read as a method or constructor starting -
-    /// a plain field's C++ host type cannot itself contain one, the same
-    /// simplification [`super::csharp::Scanner::declaration_end`] makes for
-    /// C#, where it is exact rather than a simplification at all.
     fn declaration_end(&mut self, close: usize) -> DeclarationEnd {
         let mut depth = 0i32;
         let mut last_ident = None;
@@ -441,9 +332,6 @@ impl<'a> Scanner<'a> {
         DeclarationEnd::EndOfBody
     }
 
-    /// Skips from a member's name to just past the end of its declaration:
-    /// past `;`, or past `= expression ;`, or past a brace initializer
-    /// (`{0}`) and any trailing `;`.
     fn skip_member_tail(&mut self, close: usize) {
         while self.at < close {
             match self.tokens[self.at].kind {
@@ -467,8 +355,6 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    // ------------------------------------------------------------- movement
-
     fn peek(&self) -> Option<&'a Token<'a>> {
         self.tokens.get(self.at)
     }
@@ -485,10 +371,6 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    /// Steps over a type's base-clause and any template parameters.
-    ///
-    /// Returns the index of its body's `{`, or `None` for a `;`-terminated
-    /// forward declaration, which has no members to read.
     fn skip_to_body(&mut self) -> Option<usize> {
         let mut depth = 0i32;
 
@@ -513,7 +395,6 @@ impl<'a> Scanner<'a> {
         self.at = self.matching(self.at, open, close) + 1;
     }
 
-    /// The index of the bracket closing the one at `start`.
     fn matching(&self, start: usize, open: char, close: char) -> usize {
         let mut depth = 0i32;
 
@@ -533,19 +414,12 @@ impl<'a> Scanner<'a> {
     }
 }
 
-/// What a member declaration turned out to be, once the scanner reached the
-/// token that reveals it.
 enum DeclarationEnd {
-    /// A method or constructor - `(` at depth 0.
     Method,
-    /// A field, named by the identifier at `name_index`.
     Member { name_index: usize },
-    /// The body ended before a member could be identified.
     EndOfBody,
 }
 
-/// Whether `token` is `public` / `private` / `protected` immediately followed
-/// by `:` - an access specifier, not a declaration.
 fn is_access_specifier(token: Token<'_>, next: Option<&Token<'_>>) -> bool {
     matches!(
         token.kind,
@@ -553,8 +427,6 @@ fn is_access_specifier(token: Token<'_>, next: Option<&Token<'_>>) -> bool {
     ) && next.is_some_and(|token| token.kind == Kind::Punct(':'))
 }
 
-/// The string content of a token sequence that is exactly one string literal,
-/// ignoring surrounding whitespace-equivalent tokens there are none of.
 fn string_literal(tokens: &[Token<'_>]) -> Option<String> {
     match tokens {
         [Token {
@@ -565,9 +437,6 @@ fn string_literal(tokens: &[Token<'_>]) -> Option<String> {
     }
 }
 
-/// Joins a `CYCLONE_FIELD(...)` argument's tokens back into the text the user
-/// wrote: `Array < u32 >` becomes `Array<u32>`. The result is handed to the IR
-/// as a name to resolve, not as something this module analyses.
 fn render(tokens: &[Token<'_>]) -> String {
     let mut out = String::new();
     for token in tokens {
@@ -580,7 +449,6 @@ fn render(tokens: &[Token<'_>]) -> String {
     out
 }
 
-/// Splits a token slice on commas that are not inside brackets.
 fn split_top_level<'a, 'b>(tokens: &'b [Token<'a>]) -> Vec<&'b [Token<'a>]> {
     let mut parts = Vec::new();
     let mut depth = 0i32;
@@ -605,8 +473,6 @@ fn split_top_level<'a, 'b>(tokens: &'b [Token<'a>]) -> Vec<&'b [Token<'a>]> {
     parts
 }
 
-/// Drops repeats, keeping the order the source wrote. See the identical
-/// helper in [`crate::parser::rust`].
 fn dedupe(mut names: Vec<String>) -> Vec<String> {
     let mut seen = Vec::with_capacity(names.len());
     names.retain(|name| {
@@ -619,8 +485,6 @@ fn dedupe(mut names: Vec<String>) -> Vec<String> {
     names
 }
 
-/// Keywords that start a declaration `CYCLONE_MODEL`/`CYCLONE_CODEC` cannot
-/// attach to, and so end a run of pending markers.
 fn is_boundary_keyword(word: &str) -> bool {
     matches!(
         word,
@@ -628,9 +492,6 @@ fn is_boundary_keyword(word: &str) -> bool {
     )
 }
 
-// ================================================================= the lexer
-
-/// One token, borrowed from the source.
 #[derive(Debug, Clone, Copy)]
 struct Token<'a> {
     kind: Kind<'a>,
@@ -640,11 +501,8 @@ struct Token<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Kind<'a> {
     Ident(&'a str),
-    /// A string literal's contents - decoded enough to read a codec name,
-    /// which is the only thing a string ever holds here.
     Str(&'a str),
     Punct(char),
-    /// A numeric or character literal. Never meaningful here, only skipped.
     Other,
 }
 
@@ -657,13 +515,6 @@ impl<'a> Token<'a> {
     }
 }
 
-/// Splits C++ source into tokens.
-///
-/// Comments, whitespace and preprocessor directives are dropped: none of them
-/// can carry a Cyclone marker, and all of them can carry a `{` or `(` that
-/// would otherwise be counted. `#if` blocks are not evaluated - a model behind
-/// one is read either way, which is safer than guessing which branch a build
-/// takes.
 fn lex(text: &str) -> Vec<Token<'_>> {
     let bytes = text.as_bytes();
     let mut tokens = Vec::new();
@@ -702,11 +553,6 @@ fn lex(text: &str) -> Vec<Token<'_>> {
             continue;
         }
 
-        // A preprocessor directive runs to end of line - `#include`,
-        // `#pragma once`, `#define`, `#ifdef`, and so on. `CYCLONE_MODEL`
-        // itself never starts with `#`: it is an ordinary macro
-        // *invocation*, indistinguishable in the token stream from any other
-        // identifier until this scanner recognises its spelling.
         if byte == b'#' {
             while at < bytes.len() && bytes[at] != b'\n' {
                 at += 1;
@@ -786,10 +632,6 @@ fn lex(text: &str) -> Vec<Token<'_>> {
     tokens
 }
 
-/// Matches a C++11 raw string literal `R"delim(...)delim"` at `at`, returning
-/// the index just past it. `None` if `at` is not the start of one - in
-/// particular, an ordinary identifier that happens to start with `R` and is
-/// not immediately followed by `"` is left alone.
 fn raw_string_end(bytes: &[u8], at: usize) -> Option<usize> {
     if bytes.get(at) != Some(&b'R') || bytes.get(at + 1) != Some(&b'"') {
         return None;
@@ -860,16 +702,16 @@ mod tests {
     fn reads_a_model_its_codecs_and_its_fields() {
         let models = models(
             r#"
-            CYCLONE_MODEL
-            CYCLONE_CODEC("edge", "unity")
+            FOMOXA_MODEL
+            FOMOXA_CODEC("edge", "unity")
             struct Player
             {
-                CYCLONE_FIELD(u32)
-                CYCLONE_CODEC("edge", "unity")
+                FOMOXA_FIELD(u32)
+                FOMOXA_CODEC("edge", "unity")
                 uint32_t Id;
 
-                CYCLONE_FIELD(f32)
-                CYCLONE_CODEC("edge")
+                FOMOXA_FIELD(f32)
+                FOMOXA_CODEC("edge")
                 float X;
 
                 // Not on the wire at all.
@@ -895,7 +737,7 @@ mod tests {
     fn a_field_without_a_wire_type_is_an_error() {
         let error = parse(
             Path::new("test.hpp"),
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD()\n    uint32_t id;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD()\n    uint32_t id;\n};",
         )
         .expect_err("no wire type");
 
@@ -905,15 +747,15 @@ mod tests {
 
     #[test]
     fn a_model_in_a_comment_or_a_string_is_not_a_model() {
-        assert!(models("// CYCLONE_MODEL struct Ghost { };").is_empty());
-        assert!(models("/* CYCLONE_MODEL\nstruct Ghost { }; */").is_empty());
-        assert!(models("const char* s = \"CYCLONE_MODEL struct Ghost { };\";").is_empty());
+        assert!(models("// FOMOXA_MODEL struct Ghost { };").is_empty());
+        assert!(models("/* FOMOXA_MODEL\nstruct Ghost { }; */").is_empty());
+        assert!(models("const char* s = \"FOMOXA_MODEL struct Ghost { };\";").is_empty());
     }
 
     #[test]
     fn a_composite_wire_type_keeps_its_spelling() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(Array<u32>)\n    CYCLONE_CODEC(\"edge\")\n    std::vector<uint32_t> xs;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(Array<u32>)\n    FOMOXA_CODEC(\"edge\")\n    std::vector<uint32_t> xs;\n};",
         );
         assert_eq!(models[0].fields[0].network_type, "Array<u32>");
     }
@@ -921,23 +763,23 @@ mod tests {
     #[test]
     fn markers_do_not_leak_past_another_declaration() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nenum Kind { A };\nstruct After { uint32_t id; };",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nenum Kind { A };\nstruct After { uint32_t id; };",
         );
         assert!(models.is_empty());
     }
 
     #[test]
     fn a_model_carries_its_source_and_line() {
-        let models = models("\n\nCYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct Player {};");
+        let models = models("\n\nFOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct Player {};");
         assert_eq!(models[0].source, Path::new("test.hpp"));
         assert_eq!(models[0].line, 3);
     }
 
     #[test]
-    fn a_method_may_not_carry_a_cyclone_marker() {
+    fn a_method_may_not_carry_a_fomoxa_marker() {
         let error = parse(
             Path::new("test.hpp"),
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(u32)\n    uint32_t GetId();\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(u32)\n    uint32_t GetId();\n};",
         )
         .expect_err("not a field");
         assert!(error.message.contains("not on a field"));
@@ -946,7 +788,7 @@ mod tests {
     #[test]
     fn access_specifiers_do_not_swallow_the_field_after_them() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\npublic:\n    CYCLONE_FIELD(u32)\n    CYCLONE_CODEC(\"edge\")\n    uint32_t id;\nprivate:\n    uint32_t cache;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\npublic:\n    FOMOXA_FIELD(u32)\n    FOMOXA_CODEC(\"edge\")\n    uint32_t id;\nprivate:\n    uint32_t cache;\n};",
         );
         assert_eq!(models[0].fields.len(), 1);
         assert_eq!(models[0].fields[0].name, "id");
@@ -955,7 +797,7 @@ mod tests {
     #[test]
     fn a_field_may_carry_a_default_member_initializer() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(u32)\n    CYCLONE_CODEC(\"edge\")\n    uint32_t id = 0;\n\n    CYCLONE_FIELD(f32)\n    CYCLONE_CODEC(\"edge\")\n    float x{0.0f};\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(u32)\n    FOMOXA_CODEC(\"edge\")\n    uint32_t id = 0;\n\n    FOMOXA_FIELD(f32)\n    FOMOXA_CODEC(\"edge\")\n    float x{0.0f};\n};",
         );
         assert_eq!(models[0].fields.len(), 2);
         assert_eq!(models[0].fields[1].name, "x");
@@ -964,7 +806,7 @@ mod tests {
     #[test]
     fn the_class_keyword_works_the_same_as_struct() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nclass S {\npublic:\n    CYCLONE_FIELD(u32)\n    CYCLONE_CODEC(\"edge\")\n    uint32_t id;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nclass S {\npublic:\n    FOMOXA_FIELD(u32)\n    FOMOXA_CODEC(\"edge\")\n    uint32_t id;\n};",
         );
         assert_eq!(models[0].fields[0].name, "id");
     }
@@ -985,7 +827,7 @@ mod tests {
     #[test]
     fn a_field_with_no_codec_belongs_to_none_but_is_not_an_error() {
         let models = models(
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_FIELD(u32)\n    uint32_t unrouted;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_FIELD(u32)\n    uint32_t unrouted;\n};",
         );
         assert_eq!(models[0].fields.len(), 1);
         assert!(models[0].fields[0].codecs.is_empty());
@@ -995,7 +837,7 @@ mod tests {
     fn a_codec_with_no_field_marker_is_an_error() {
         let error = parse(
             Path::new("test.hpp"),
-            "CYCLONE_MODEL\nCYCLONE_CODEC(\"edge\")\nstruct S {\n    CYCLONE_CODEC(\"edge\")\n    uint32_t id;\n};",
+            "FOMOXA_MODEL\nFOMOXA_CODEC(\"edge\")\nstruct S {\n    FOMOXA_CODEC(\"edge\")\n    uint32_t id;\n};",
         )
         .expect_err("nothing to route");
         assert!(error.message.contains("has nothing to route"));

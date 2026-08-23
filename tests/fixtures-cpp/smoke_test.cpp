@@ -1,4 +1,4 @@
-// Not part of the generated tree or the fixture cyclonec reads - a
+// Not part of the generated tree or the fixture fomoxac reads - a
 // throwaway smoke test compiled by hand (see README's C++ section) to prove
 // the generated headers actually build and round-trip, since no C++
 // toolchain step runs inside `cargo test` itself.
@@ -63,18 +63,22 @@ int main() {
 
     // The handshake: identical schema is Current, and a peer that only knows
     // an older subset of messages with matching fingerprints is Outdated.
-    CycloneHandshake current = cyclone_handshake(CYCLONE_SCHEMA_FINGERPRINT, {});
-    assert(current == CycloneHandshake::Current);
+    FomoxaHandshake current = fomoxa_handshake(FOMOXA_SCHEMA_FINGERPRINT, {});
+    assert(current == FomoxaHandshake::Current);
 
-    CycloneHandshake outdated = cyclone_handshake(
-        CYCLONE_SCHEMA_FINGERPRINT + 1,
-        {CyclonePeerMessage{PLAYER_EDGE_MESSAGE_ID, PLAYER_EDGE_FINGERPRINT}});
-    assert(outdated == CycloneHandshake::Outdated);
+    const auto player_edge_field_count = static_cast<std::uint32_t>(PLAYER_EDGE_PREFIX_COUNT);
 
-    CycloneHandshake reject = cyclone_handshake(
-        CYCLONE_SCHEMA_FINGERPRINT + 1,
-        {CyclonePeerMessage{PLAYER_EDGE_MESSAGE_ID, PLAYER_EDGE_FINGERPRINT + 1}});
-    assert(reject == CycloneHandshake::Reject);
+    FomoxaHandshake outdated =
+        fomoxa_handshake(FOMOXA_SCHEMA_FINGERPRINT + 1,
+                          {FomoxaPeerMessage{PLAYER_EDGE_MESSAGE_ID, player_edge_field_count,
+                                              PLAYER_EDGE_FINGERPRINT}});
+    assert(outdated == FomoxaHandshake::Outdated);
+
+    FomoxaHandshake reject =
+        fomoxa_handshake(FOMOXA_SCHEMA_FINGERPRINT + 1,
+                          {FomoxaPeerMessage{PLAYER_EDGE_MESSAGE_ID, player_edge_field_count,
+                                              PLAYER_EDGE_FINGERPRINT + 1}});
+    assert(reject == FomoxaHandshake::Reject);
 
     std::puts("cpp fixture smoke test: ok");
     return 0;

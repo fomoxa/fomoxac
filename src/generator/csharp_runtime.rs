@@ -1,43 +1,13 @@
-//! The Cyclone runtime, carried verbatim into `Runtime.cs`.
-//!
-//! The C# counterpart of [`super::rust_runtime`] and [`super::go_runtime`] -
-//! same reasoning, same guarantee: the block below is fixed, written once
-//! against RFC-0002, and copied out unchanged. Nothing about byte layout is
-//! computed per model, per field, or per run.
-//!
-//! C# has exceptions, so where Rust returns `Result` and Go returns `(T,
-//! error)`, `Reader`'s methods either return a value or throw
-//! [`DecodeException`] - the idiom every generated `Decode` is written
-//! against: a read either produces the field's value or the method does not
-//! return at all.
-//!
-//! Method names are spelled the way [`super::go_runtime`] spells them
-//! (`WriteI8`, `ReadU32`, ...) rather than the longer names
-//! `cyclonec_old`'s C# backend used (`WriteInt8`, `ReadUInt32`, ...), so that
-//! the same RFC-0002 method has the same name on every backend this project
-//! generates for.
-//!
-//! # What changed from `cyclonec_old`
-//!
-//! One method: [`Reader.FieldAbsent`]. The old runtime gave a generated
-//! decoder no way to tell *this field never arrived* from *this field
-//! arrived truncated* - every read simply threw `DecodeException`, so the
-//! decoder could not implement RFC-0002 §9.1 at all. See `generator::csharp`
-//! for what the generated decoder does with it; the fix is identical in
-//! spirit to [`super::rust_runtime`]'s and [`super::go_runtime`]'s.
-
-/// The runtime block, emitted once, into its own file, right after the
-/// namespace clause is opened.
 pub const RUNTIME: &str = r####"
 // ==========================================================================
-// Cyclone runtime - RFC-0002, carried verbatim.
+// Fomoxa runtime - RFC-0002, carried verbatim.
 //
 // Not generated from your models: this block is identical in every project
-// cyclonec generates for. It is here so the generated namespace is
+// fomoxac generates for. It is here so the generated namespace is
 // self-contained - nothing to add to your .csproj, nothing to import.
 // ==========================================================================
 
-/// A byte stream that does not satisfy the Cyclone Specification.
+/// A byte stream that does not satisfy the Fomoxa Specification.
 public sealed class DecodeException : System.Exception
 {
     private DecodeException(string message) : base(message) { }
@@ -94,7 +64,7 @@ public struct Limits
     };
 }
 
-/// Appends Cyclone-encoded values to a growable buffer.
+/// Appends Fomoxa-encoded values to a growable buffer.
 ///
 /// Every multi-byte value is Little Endian, with no padding, no alignment and
 /// no metadata between values.
@@ -177,7 +147,7 @@ public sealed class Writer
     }
 }
 
-/// Reads Cyclone-encoded values from a borrowed buffer.
+/// Reads Fomoxa-encoded values from a borrowed buffer.
 ///
 /// Malformed input is always a <see cref="DecodeException"/>, never a silent
 /// wrong answer, and a failed read leaves the cursor where it was.

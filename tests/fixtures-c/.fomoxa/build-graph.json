@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "generator": "fomoxac 0.2.0",
+  "schema_fingerprint": "sha256:dc96c2791b5567275e61f17c8461008966d75884844d90ce69c90f6bd87d2e3c",
+  "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
+  "sources": {
+    "src/models/player.h": {
+      "models": [
+        "Player",
+        "PlayerInfo",
+        "Team"
+      ],
+      "outputs": [
+        {
+          "path": "src/generated/player_edge.h",
+          "model": "Player",
+          "codec": "edge",
+          "fingerprint": "sha256:01fc1f8d5768cded1cb94f6d37b2f32412b40376e78e3c36ac8a5e70cee183f4",
+          "sha256": "b4c7976a858e23c4720afdfe6539e77c358e3a568b09cea7b1bcdec9d26b2df0"
+        },
+        {
+          "path": "src/generated/player_unity.h",
+          "model": "Player",
+          "codec": "unity",
+          "fingerprint": "sha256:79d7ff966acb367b1accc39e029fc41874e8c605bd5663b6cf66280bde2469c7",
+          "sha256": "a4d8240cf163e92b01f7fe1df7397e22723c517473c2a4d666d9e3fdae5e6b92"
+        },
+        {
+          "path": "src/generated/player_info_edge.h",
+          "model": "PlayerInfo",
+          "codec": "edge",
+          "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+          "sha256": "9469caa2292b3fc3d6c97842f27baacdd92782262b4bfdd49c1699a4bdbeedce"
+        },
+        {
+          "path": "src/generated/team_edge.h",
+          "model": "Team",
+          "codec": "edge",
+          "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+          "sha256": "19841b681912317b568b956a9f6b0d47bb057db27fce5484b03e64b8bdc0d9d3"
+        }
+      ]
+    }
+  },
+  "shared": [
+    {
+      "path": "src/generated/runtime.h",
+      "kind": "runtime",
+      "sha256": "8fd469f9eb61b63912c15991c99dd0d399f57ff920a3488dd09018257aa9d349"
+    },
+    {
+      "path": "src/generated/arrays.h",
+      "kind": "arrays",
+      "sha256": "f29cee2f23fc8605121473753324d5007c01f319cb6c27979f386167dd8eb3d9"
+    },
+    {
+      "path": "src/generated/handshake.h",
+      "kind": "handshake",
+      "sha256": "2fb873fd67f40d12200b7efb98c08dd6d989291fce4b78975c5c5657ce2c9c0b"
+    }
+  ]
+}

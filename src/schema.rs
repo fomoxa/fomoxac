@@ -1,25 +1,9 @@
-//! `.cyclone/schema.json` - the IR as an artifact.
-//!
-//! What it is for: inspecting and debugging a build, comparing two revisions of
-//! a schema, carrying fingerprints, feeding `cyclone-inspect`, and giving CI
-//! something from the *target branch* to compare a pull request against.
-//!
-//! What it is **not**: a runtime dependency. Nothing a Cyclone program ships
-//! reads this file. Generated codecs and the fingerprint constants beside them
-//! are the whole of what runs, and they are compiled in.
-//!
-//! And it is never an input to generation. `cyclonec generate` re-derives the
-//! schema from source every time; the file on disk is the *previous* answer,
-//! kept only so the new one can be compared against it.
-
 use crate::fingerprint::Fingerprint;
 use crate::ir::{Field, Message, Model, Schema, WireType, SCHEMA_VERSION};
 use crate::json::Json;
 
-/// The path `schema.json` is written to, relative to the project root.
-pub const PATH: &str = ".cyclone/schema.json";
+pub const PATH: &str = ".fomoxa/schema.json";
 
-/// Renders the schema as the JSON text written to disk.
 pub fn to_json(schema: &Schema) -> String {
     document(schema).to_pretty()
 }
@@ -85,6 +69,26 @@ fn message_json(message: &Message) -> Json {
             Json::string(hex64(message.fingerprint.u64())),
         ),
         (
+            "prefixes",
+            Json::Array(
+                message
+                    .prefixes
+                    .iter()
+                    .map(|prefix| Json::string(prefix.tagged()))
+                    .collect(),
+            ),
+        ),
+        (
+            "prefixes_u64",
+            Json::Array(
+                message
+                    .prefixes
+                    .iter()
+                    .map(|prefix| Json::string(hex64(prefix.u64())))
+                    .collect(),
+            ),
+        ),
+        (
             "fields",
             Json::Array(
                 message
@@ -102,22 +106,10 @@ fn message_json(message: &Message) -> Json {
     ])
 }
 
-/// `0x` and sixteen uppercase hex digits - the same spelling the generated
-/// Rust constants use, so a value can be grepped for across both.
 pub fn hex64(value: u64) -> String {
     format!("0x{value:016X}")
 }
 
-/// Reads a `schema.json` back into the IR.
-///
-/// Fingerprints are read, never recomputed: this is somebody else's previous
-/// answer - most often the target branch's - and the whole point of keeping it
-/// is to compare it against what source says now.
-///
-/// # Errors
-///
-/// Malformed JSON, a `schema_version` this generator does not know, or a
-/// missing required member.
 pub fn from_json(text: &str) -> Result<Schema, String> {
     let document = crate::json::parse(text)?;
 
@@ -127,7 +119,7 @@ pub fn from_json(text: &str) -> Result<Schema, String> {
         .ok_or("schema.json has no `schema_version`")?;
     if version != u64::from(SCHEMA_VERSION) {
         return Err(format!(
-            "schema.json is version {version}; this cyclonec reads version {SCHEMA_VERSION}"
+            "schema.json is version {version}; this fomoxac reads version {SCHEMA_VERSION}"
         ));
     }
 
@@ -239,12 +231,25 @@ fn read_message(model: &str, codec: &str, value: &Json) -> Result<Message, Strin
         .map(|field| read_field(model, field))
         .collect::<Result<Vec<Field>, String>>()?;
 
+    let prefixes = match value.get("prefixes").and_then(Json::as_array) {
+        Some(items) => items
+            .iter()
+            .map(|item| {
+                item.as_str()
+                    .ok_or_else(|| format!("message '{name}' has a malformed `prefixes` entry"))
+                    .and_then(Fingerprint::parse)
+            })
+            .collect::<Result<Vec<Fingerprint>, String>>()?,
+        None => Vec::new(),
+    };
+
     Ok(Message {
         model: model.to_owned(),
         codec: codec.to_owned(),
         name,
         id,
         fingerprint,
+        prefixes,
         fields,
     })
 }

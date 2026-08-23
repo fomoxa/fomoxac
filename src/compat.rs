@@ -1,43 +1,9 @@
-//! Schema compatibility: what changed between two schemas, and whether it
-//! breaks the wire.
-//!
-//! A fingerprint answers *same or different* and stops there. When it says
-//! different, this module says **how**, by comparing two schemas field by
-//! field. Nothing here infers a kind of change from a hash - a hash has no
-//! structure to infer from, and guessing is how a checker starts calling
-//! append-only changes breaking, or worse, the other way round.
-//!
-//! | Change | Verdict |
-//! |---|---|
-//! | nothing changed | `CURRENT` |
-//! | a field appended at the end | `COMPATIBLE` |
-//! | a field removed from the end | `BREAKING` |
-//! | a field removed from the middle | `BREAKING` |
-//! | a field inserted in the middle | `BREAKING` |
-//! | fields reordered | `BREAKING` |
-//! | a field's wire type changed | `BREAKING` |
-//! | a whole message added | `COMPATIBLE` |
-//! | a whole message removed | `BREAKING` |
-//!
-//! The table is RFC-0002 §9.1 restated: version skew is valid **only** for
-//! fields appended to the end. Everything else changes what an existing offset
-//! means, and an old peer reading a new stream cannot tell.
-//!
-//! Comparison is per **message** (`Model.codec`), because a message is what a
-//! peer actually encodes. Two codecs of one model can evolve independently, and
-//! frequently do.
-
 use crate::ir::Schema;
 
-/// How a change rates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Verdict {
-    /// Byte-for-byte the same contract.
     Current,
-    /// Different, but an old peer and a new one still understand each other:
-    /// version skew, in the one shape RFC-0002 §9.1 permits.
     Compatible,
-    /// An old peer would misread a new stream, or the other way round.
     Breaking,
 }
 
@@ -51,55 +17,42 @@ impl Verdict {
     }
 }
 
-/// One field-level difference between two versions of a message.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Change {
-    /// A field exists at `index` in the new message and nowhere in the old one
-    /// - it is past the old message's last field.
     Added {
         index: usize,
         name: String,
         ty: String,
     },
-    /// A field the old message had at `index` that the new one does not reach.
     Removed {
         index: usize,
         name: String,
         ty: String,
     },
-    /// Both messages have a field at `index`, and it is not the same field.
     Changed {
         index: usize,
         old: (String, String),
         new: (String, String),
     },
-    /// The message itself is new.
     MessageAdded,
-    /// The message itself is gone.
     MessageRemoved,
 }
 
-/// One message's worth of comparison.
 #[derive(Debug, Clone)]
 pub struct MessageDiff {
-    /// `Model.codec`.
     pub name: String,
     pub verdict: Verdict,
-    /// Why it rates that way, in the words the report prints.
     pub reason: String,
     pub changes: Vec<Change>,
 }
 
-/// Every message of two schemas, compared.
 #[derive(Debug, Clone)]
 pub struct Report {
     pub messages: Vec<MessageDiff>,
-    /// Whether the two schema-level fingerprints matched.
     pub fingerprint_matched: bool,
 }
 
 impl Report {
-    /// The worst verdict in the report - what a CI run exits on.
     pub fn verdict(&self) -> Verdict {
         self.messages
             .iter()
@@ -108,15 +61,10 @@ impl Report {
             .unwrap_or(Verdict::Current)
     }
 
-    /// Whether anything at all differs.
     pub fn is_current(&self) -> bool {
         self.verdict() == Verdict::Current
     }
 
-    /// The report as text.
-    ///
-    /// `unchanged` includes the `✓ Player.edge unchanged` lines; a local
-    /// `generate` prints them, CI does not.
     pub fn render(&self, unchanged: bool) -> String {
         let mut out = String::new();
 
@@ -157,8 +105,6 @@ impl Report {
     }
 }
 
-/// Compares `head` (what source says now) against `base` (the schema being
-/// evolved from).
 pub fn compare(base: &Schema, head: &Schema) -> Report {
     let mut messages = Vec::new();
 
@@ -197,17 +143,18 @@ pub fn compare(base: &Schema, head: &Schema) -> Report {
     }
 }
 
-/// Compares one message's fields, by position - the only identifier the wire
-/// has (RFC-0001 §4.1).
 fn diff(name: &str, base: &[crate::ir::Field], head: &[crate::ir::Field]) -> MessageDiff {
     let mut changes = Vec::new();
 
     for index in 0..base.len().max(head.len()) {
         match (base.get(index), head.get(index)) {
             (Some(old), Some(new)) => {
+                let unchanged = crate::fingerprint::canonical_field_name(&old.name)
+                    == crate::fingerprint::canonical_field_name(&new.name)
+                    && old.ty == new.ty;
                 let old = (old.name.clone(), old.ty.spelling());
                 let new = (new.name.clone(), new.ty.spelling());
-                if old != new {
+                if !unchanged {
                     changes.push(Change::Changed { index, old, new });
                 }
             }
@@ -235,7 +182,6 @@ fn diff(name: &str, base: &[crate::ir::Field], head: &[crate::ir::Field]) -> Mes
     }
 }
 
-/// Turns a list of differences into a verdict and the sentence explaining it.
 fn classify(changes: &[Change], base_len: usize, head_len: usize) -> (Verdict, String) {
     if changes.is_empty() {
         return (Verdict::Current, "no change".to_owned());
@@ -252,24 +198,31 @@ fn classify(changes: &[Change], base_len: usize, head_len: usize) -> (Verdict, S
     });
     let changed_in_place = retyped || renamed;
 
-    // Appending to the end is the one evolution RFC-0002 §9.1 calls valid: a
-    // new peer's extra bytes are ignored by an old reader, and an old peer's
-    // missing bytes leave the new reader's extra fields absent.
-    if !removed && !changed_in_place {
-        let count = changes.len();
-        let plural = if count == 1 { "field" } else { "fields" };
-        return (
-            Verdict::Compatible,
-            format!("append-only {plural} ({count} appended at the end)"),
-        );
+    if !changed_in_place {
+        if !removed {
+            let count = changes.len();
+            let plural = if count == 1 { "field" } else { "fields" };
+            return (
+                Verdict::Compatible,
+                format!("append-only {plural} ({count} appended at the end)"),
+            );
+        }
+        if head_len < base_len && changes.len() == base_len - head_len {
+            let count = changes.len();
+            let plural = if count == 1 { "field" } else { "fields" };
+            return (
+                Verdict::Compatible,
+                format!(
+                    "{count} trailing {plural} removed; the shorter field list is still an \
+                     exact prefix of the longer one, so peers keep interoperating \
+                     (RFC-0002 §9.1)"
+                ),
+            );
+        }
     }
 
     let reason = if removed && !changed_in_place {
-        if head_len < base_len && changes.len() == base_len - head_len {
-            "field removed from the end".to_owned()
-        } else {
-            "field removed".to_owned()
-        }
+        "field removed".to_owned()
     } else if head_len > base_len {
         "field inserted; every field after it moved".to_owned()
     } else if head_len < base_len {
@@ -281,9 +234,6 @@ fn classify(changes: &[Change], base_len: usize, head_len: usize) -> (Verdict, S
     } else if reordered(changes) {
         "field order changed".to_owned()
     } else {
-        // Same types, same positions, different names. The bytes did not move,
-        // but a fingerprint hashes field names (SPEC-FINGERPRINT.md §5), so two
-        // peers either side of this change will refuse each other.
         "field renamed; the bytes are unchanged, but the fingerprint is not, \
          so peers either side of it will refuse each other"
             .to_owned()
@@ -292,8 +242,6 @@ fn classify(changes: &[Change], base_len: usize, head_len: usize) -> (Verdict, S
     (Verdict::Breaking, reason)
 }
 
-/// Whether the changed fields are the same set of fields in a different order,
-/// rather than one of them having been renamed.
 fn reordered(changes: &[Change]) -> bool {
     let mut before: Vec<&(String, String)> = Vec::new();
     let mut after: Vec<&(String, String)> = Vec::new();
@@ -348,6 +296,26 @@ mod tests {
     }
 
     #[test]
+    fn recasing_a_field_is_not_a_change_at_all() {
+        let recased: &[(&str, &str)] = &[("ID", "u32"), ("X", "f32"), ("Y", "f32")];
+        assert_eq!(verdict(V1, recased), Verdict::Current);
+        assert_eq!(
+            schema(V1).message("Player.edge").expect("base").fingerprint,
+            schema(recased)
+                .message("Player.edge")
+                .expect("head")
+                .fingerprint,
+        );
+    }
+
+    #[test]
+    fn a_real_rename_is_still_breaking() {
+        let renamed: &[(&str, &str)] = &[("id", "u32"), ("position_x", "f32"), ("y", "f32")];
+        assert_eq!(verdict(V1, renamed), Verdict::Breaking);
+        assert!(reason(V1, renamed).contains("renamed"));
+    }
+
+    #[test]
     fn no_change_is_current() {
         assert_eq!(verdict(V1, V1), Verdict::Current);
     }
@@ -364,10 +332,19 @@ mod tests {
     }
 
     #[test]
-    fn removing_the_last_field_is_breaking() {
+    fn removing_a_trailing_field_is_compatible() {
         let head = &[("id", "u32"), ("x", "f32")];
-        assert_eq!(verdict(V1, head), Verdict::Breaking);
-        assert!(reason(V1, head).contains("removed from the end"));
+        assert_eq!(verdict(V1, head), Verdict::Compatible);
+        assert!(
+            reason(V1, head).contains("exact prefix"),
+            "{}",
+            reason(V1, head)
+        );
+    }
+
+    #[test]
+    fn removing_every_field_is_still_a_prefix() {
+        assert_eq!(verdict(V1, &[]), Verdict::Compatible);
     }
 
     #[test]
@@ -390,8 +367,6 @@ mod tests {
         assert_eq!(reason(V1, head), "field order changed");
     }
 
-    /// A rename moves no bytes, but it does move the fingerprint, and the
-    /// report says exactly that rather than calling it a reorder.
     #[test]
     fn renaming_a_field_is_breaking_and_says_why() {
         let head = &[("id", "u32"), ("x", "f32"), ("position_y", "f32")];
@@ -410,7 +385,6 @@ mod tests {
         assert_eq!(reason(V1, head), "field wire type changed");
     }
 
-    /// The report reads the way §9 of the brief spells it out.
     #[test]
     fn the_report_explains_the_cause() {
         let report = compare(
