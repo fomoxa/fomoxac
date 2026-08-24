@@ -340,13 +340,13 @@ comment, is not source.
 
 `fomoxac` only *reads* those markers; the host compiler still has to accept
 them. In Rust that means your crate needs `#[network]`/`#[codec]` defined - the
-[`cyclone-attributes`](https://crates.io/crates/cyclone-attributes) crate, or
+[`fomoxa-attributes`](https://crates.io/crates/fomoxa-attributes) crate, or
 your own no-op equivalents (a dependency of your models, not of the generated
 code: what `fomoxac` writes still depends on nothing). Go needs nothing extra
 at all - a comment and a struct tag are already valid Go with no meaning to the
 compiler until `fomoxac` reads them. C# needs a small `Network`/`Codec`
 attribute pair defined somewhere your models can see - a few lines, no
-dependency of their own - the same role `cyclone-attributes` plays for Rust.
+dependency of their own - the same role `fomoxa-attributes` plays for Rust.
 GDScript needs nothing extra either, for the same reason Go doesn't: a
 `# fomoxa:` comment is already valid GDScript with no meaning to Godot's own
 compiler until `fomoxac` reads it. C++ and C both need the same small header

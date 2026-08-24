@@ -1,6 +1,6 @@
 // The `Network`/`Codec` attribute pair the README promises: "a few lines
 // your models depend on, not `fomoxac` itself" - the C# counterpart of the
-// `cyclone-attributes` crate for Rust and `fomoxa.h` for C++/C. `fomoxac`
+// `fomoxa-attributes` crate for Rust and `fomoxa.h` for C++/C. `fomoxac`
 // reads these two names off `src/models/Player.cs` as plain text; neither
 // attribute carries any behavior of its own, so a model compiles unchanged
 // whether or not `fomoxac` ever runs over it.

@@ -1,4 +1,4 @@
-use cyclone_attributes::*;
+use fomoxa_attributes::*;
 
 // A model a user writes, annotated in place. This is the type `fomoxac` scans
 // *and* the type its generated codec encodes and decodes - there is no second

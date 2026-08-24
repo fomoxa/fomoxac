@@ -1,4 +1,4 @@
-use cyclone_attributes::*;
+use fomoxa_attributes::*;
 
 // Nested models and arrays, and the model the version-skew tests decode.
 

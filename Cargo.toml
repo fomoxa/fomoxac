@@ -34,7 +34,7 @@ path = "src/bin/fomoxa_inspect.rs"
 # compiled against that same type - and it could not be that without this.
 # `fomoxac` itself, and everything it writes, still depends on nothing.
 [dev-dependencies]
-cyclone-attributes = "0.1.0"
+fomoxa-attributes = "0.1.1"
 
 [profile.release]
 opt-level = 3

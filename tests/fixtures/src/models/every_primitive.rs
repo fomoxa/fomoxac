@@ -1,4 +1,4 @@
-use cyclone_attributes::*;
+use fomoxa_attributes::*;
 
 // Every primitive RFC-0002 §2 defines, in one model, in one codec - the model
 // the fixed wire vectors are taken over.

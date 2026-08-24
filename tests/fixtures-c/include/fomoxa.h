@@ -5,7 +5,7 @@
  * Fomoxa model/field/codec annotations, shared between C and C++.
  *
  * This header carries no dependency of its own (RFC-0001 §6.5) - it plays
- * the same role for C/C++ that the `cyclone-attributes` crate plays for
+ * the same role for C/C++ that the `fomoxa-attributes` crate plays for
  * Rust and the small `Network`/`Codec` attribute pair plays for C#: a few
  * lines your models depend on, not `fomoxac` itself. `fomoxac` reads the
  * three markers below as source text; every one of them expands to nothing,
