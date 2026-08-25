@@ -4,8 +4,8 @@
 // model: PlayerInfo
 // codec: edge
 // fingerprint: sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd
-// fomoxac-version: 0.2.0
-// generated-at: 2026-08-23T10:24:17Z
+// fomoxac-version: 0.2.1
+// generated-at: 2026-09-21T14:58:50Z
 
 #pragma once
 

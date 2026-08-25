@@ -3,8 +3,8 @@
 // source: src/models/player.h
 // model: Team
 // fingerprint: sha256:75660c480fc1252fed456c7597adf79d345060aeaedef08c092483d5f2fcc61b
-// fomoxac-version: 0.2.0
-// generated-at: 2026-08-23T10:24:17Z
+// fomoxac-version: 0.2.1
+// generated-at: 2026-09-21T14:58:50Z
 
 #pragma once
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.0",
+  "generator": "fomoxac 0.2.1",
   "schema_fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -14,14 +14,14 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "dd2344645ed59a868ce33dd37dd46cdacbd3f0ec0c535d58d440f9f5811878a9"
+          "sha256": "5c6b461b4fef1ba9c67fa1d344d1c3771829ecee9d88c51dc1df1661d7c18ced"
         },
         {
           "path": "src/generated/player_unity.gd",
           "model": "Player",
           "codec": "unity",
           "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
-          "sha256": "70a0b51e095ec13548c32f91bd938f30e521b7ba9c4a2efd85fe5ac2e4a01530"
+          "sha256": "3f13ad9f03a9f575daea9feb6af342367606d5865a0f424eb76c7dc7dc007f72"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "b82edacee7e0b002c37ad4b4d2a0223de98f07a14a84450f64c9f8f436dfcfa8"
+          "sha256": "3c8063d8a74bdba3df600a2319418633dec01b8cadae85e5e67ddee2fa957e22"
         }
       ]
     },
@@ -49,7 +49,7 @@
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "ff90c5ee776638ca3d55302522086b6f1c259e095ac0ec41143a550dbefa7691"
+          "sha256": "8abc8fe88919168e0399711919592acbaa7a83731f9db61f4645bad53c2b8a3b"
         }
       ]
     }
@@ -58,12 +58,12 @@
     {
       "path": "src/generated/runtime.gd",
       "kind": "runtime",
-      "sha256": "3a5e857c86bbd1b8f4349aeb88bfeaf02b59cdbd38095dfab0823b65aa56b8c2"
+      "sha256": "9d5bfd985b6e35ec02c399be74c03ad46bdce993a4b313afc02b750255896b4d"
     },
     {
       "path": "src/generated/handshake.gd",
       "kind": "handshake",
-      "sha256": "68981dd09779b9946fcf081bf4f77359f93517f40bd08bd540f23518568de809"
+      "sha256": "b283d3a753ed3d2275a24ce19f5eb3aa1c6d32dbd3dca43a1e184f47dce5394c"
     }
   ]
 }

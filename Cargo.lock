@@ -10,7 +10,7 @@ checksum = "25ebf071eccdd5586a3f8823dcd108a9441842883e275b9fa32b92e5fb2d144f"
 
 [[package]]
 name = "fomoxac"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "fomoxa-attributes",
 ]

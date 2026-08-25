@@ -4,8 +4,8 @@
 // model: Team
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
-// fomoxac-version: 0.2.0
-// generated-at: 2026-08-23T10:24:17Z
+// fomoxac-version: 0.2.1
+// generated-at: 2026-09-21T14:58:50Z
 
 import { PlayerInfo } from "../models/player.js";
 import { PlayerInfoEdgeCodec } from "./player_info_edge.js";

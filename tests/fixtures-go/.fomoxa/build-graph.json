@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.0",
+  "generator": "fomoxac 0.2.1",
   "schema_fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -16,28 +16,28 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "abadc151f220c022697206a76be490fbe0ac8756e8dd568acc3b5416d10c8975"
+          "sha256": "9af652c1df3bd5daea2befb17a2eb5d902b55ffce9aa0c5797469aa64a4e9b14"
         },
         {
           "path": "src/generated/player_unity.go",
           "model": "Player",
           "codec": "unity",
           "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
-          "sha256": "fa2159d29cd7756d6493422c20fd506bbd77ff3ad209d5f186984de19d4bd713"
+          "sha256": "00b0028d4d59e18859e929ecffd2c1e87a6e36593063055665c5435a269ee63d"
         },
         {
           "path": "src/generated/player_info_edge.go",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "245799e86b20fb014e3fed589b546f8edcc47caacfecafdbb61dd94dc4d32603"
+          "sha256": "5abe1457498e216bed330b4f4ff572d1cba966cdb57fb89d455c0083e08c4fa7"
         },
         {
           "path": "src/generated/team_edge.go",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "0502885dc37ca9da565add5ed9588cd357edabeddbe880326879fcf13159e109"
+          "sha256": "80f23d5652f5de89810f5c1d4f46c479ec2536f2fba8ed47bb147093737d72c0"
         }
       ]
     }
@@ -46,12 +46,12 @@
     {
       "path": "src/generated/runtime.go",
       "kind": "runtime",
-      "sha256": "a6e783ae9e8976e7c1bb0d48005b977a0e0212f126c50391f94e2afc95ee40d9"
+      "sha256": "362a525ad5b9feba73e86547516ed256c77ffd5aab2bb48d1cef742d774dff65"
     },
     {
       "path": "src/generated/handshake.go",
       "kind": "handshake",
-      "sha256": "6d0456731666cef9507a5e6504d295ae4a9545634f97fbbbc416003ec6ffa937"
+      "sha256": "44358b47acf410110a55aaa272542ca1f1abb17dd7b80bd92c8aefb930929896"
     }
   ]
 }

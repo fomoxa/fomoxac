@@ -4,8 +4,8 @@
 // model: EveryPrimitive
 // codec: edge
 // fingerprint: sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512
-// fomoxac-version: 0.2.0
-// generated-at: 2026-08-23T10:24:17Z
+// fomoxac-version: 0.2.1
+// generated-at: 2026-09-21T14:58:50Z
 
 /**
  * The `edge` codec for {@link EveryPrimitive}, generated from its Fomoxa attributes.

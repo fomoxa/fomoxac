@@ -111,11 +111,11 @@ public sealed class Writer
     /// The bit pattern is written unmodified: `NaN` payloads survive and
     /// `-0.0` stays distinct from `0.0`.
     public void WriteF32(float value) =>
-        WriteLittleEndian(System.BitConverter.SingleToUInt32Bits(value), 4);
+        WriteLittleEndian(unchecked((uint)System.BitConverter.SingleToInt32Bits(value)), 4);
 
     /// Writes an `f64` as its raw IEEE 754 bits, 8 bytes Little Endian.
     public void WriteF64(double value) =>
-        WriteLittleEndian(System.BitConverter.DoubleToUInt64Bits(value), 8);
+        WriteLittleEndian(unchecked((ulong)System.BitConverter.DoubleToInt64Bits(value)), 8);
 
     /// Writes a `string` as a `u32` UTF-8 **byte** length, then those bytes.
     ///
@@ -240,10 +240,10 @@ public ref struct Reader
     /// Reads an `f32` from its raw 4-byte IEEE 754 bits.
     ///
     /// The bits are reinterpreted, never normalized.
-    public float ReadF32() => System.BitConverter.UInt32BitsToSingle(ReadU32());
+    public float ReadF32() => System.BitConverter.Int32BitsToSingle(unchecked((int)ReadU32()));
 
     /// Reads an `f64` from its raw 8-byte IEEE 754 bits.
-    public double ReadF64() => System.BitConverter.UInt64BitsToDouble(ReadU64());
+    public double ReadF64() => System.BitConverter.Int64BitsToDouble(unchecked((long)ReadU64()));
 
     /// Reads a `string`: a `u32` UTF-8 byte length, then that many bytes.
     ///
