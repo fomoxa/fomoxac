@@ -3,8 +3,8 @@
 // source: src/models/models.h
 // model: EveryPrimitive
 // fingerprint: sha256:cf954a74f95a1de77c8d1f2c714081bb1d6401eba71eb20037346d13b2e52178
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T09:13:20Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #pragma once
 

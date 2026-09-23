@@ -574,9 +574,27 @@ fn compat_compares_two_named_schemas_without_reading_source() {
 /// under test on a branch - the shape a pull request actually has.
 fn repository(name: &str, change: Option<&str>) -> Option<PathBuf> {
     let directory = project(name);
+    commit_schema_history(&directory, &directory, change)?;
+    Some(directory)
+}
+
+fn repository_with_the_project_in_a_subdirectory(
+    name: &str,
+    change: Option<&str>,
+) -> Option<PathBuf> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("target/tests")
+        .join(name);
+    let _ = std::fs::remove_dir_all(&root);
+    let directory = project(&format!("{name}/tests/fixtures"));
+    commit_schema_history(&root, &directory, change)?;
+    Some(directory)
+}
+
+fn commit_schema_history(root: &Path, directory: &Path, change: Option<&str>) -> Option<()> {
     let git = |arguments: &[&str]| {
         Command::new("git")
-            .current_dir(&directory)
+            .current_dir(root)
             .args(arguments)
             .output()
     };
@@ -587,19 +605,19 @@ fn repository(name: &str, change: Option<&str>) -> Option<PathBuf> {
     let _ = git(&["config", "user.email", "fomoxa@example.test"]);
     let _ = git(&["config", "user.name", "Fomoxa"]);
 
-    fomoxac(&directory, &["generate", "-q"]);
+    fomoxac(directory, &["generate", "-q"]);
     let _ = git(&["add", "-A"]);
     let _ = git(&["commit", "-m", "schema v1"]);
 
     if let Some(fields) = change {
         let _ = git(&["checkout", "-b", "feature/foo"]);
-        rewrite_player(&directory, fields);
-        fomoxac(&directory, &["generate", "-q"]);
+        rewrite_player(directory, fields);
+        fomoxac(directory, &["generate", "-q"]);
         let _ = git(&["add", "-A"]);
         let _ = git(&["commit", "-m", "schema v2"]);
     }
 
-    Some(directory)
+    Some(())
 }
 
 #[test]
@@ -617,6 +635,23 @@ fn ci_compares_against_the_named_target_branch() {
     let report = stdout(&output);
     assert!(output.status.success(), "{report}{}", stderr(&output));
     assert!(report.contains("matches the source"), "{report}");
+    assert!(report.contains("COMPATIBLE"), "{report}");
+}
+
+#[test]
+fn ci_reads_the_target_branch_schema_of_a_project_below_the_repository_root() {
+    let Some(directory) = repository_with_the_project_in_a_subdirectory(
+        "ci-subdirectory",
+        Some(&format!(
+            "{PLAYER_V1}\n    #[network(u32)]\n    #[codec(edge)]\n    pub level: u32,\n"
+        )),
+    ) else {
+        return;
+    };
+
+    let output = fomoxac(&directory, &["ci", "--base-ref", "develop"]);
+    let report = stdout(&output);
+    assert!(output.status.success(), "{report}{}", stderr(&output));
     assert!(report.contains("COMPATIBLE"), "{report}");
 }
 

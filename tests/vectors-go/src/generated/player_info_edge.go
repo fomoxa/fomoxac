@@ -4,8 +4,8 @@
 // model: PlayerInfo
 // codec: edge
 // fingerprint: sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:39:16Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 package generated
 

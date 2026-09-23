@@ -4,8 +4,8 @@
 // model: EveryPrimitive
 // codec: edge
 // fingerprint: sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T08:57:21Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 import { Writer, Reader } from "./runtime";
 import { EveryPrimitive } from "../models/every_primitive";

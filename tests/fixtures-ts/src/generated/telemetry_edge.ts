@@ -4,8 +4,8 @@
 // model: Telemetry
 // codec: edge
 // fingerprint: sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 import { Writer, Reader } from "./runtime";
 import { Telemetry } from "../models/device_state";

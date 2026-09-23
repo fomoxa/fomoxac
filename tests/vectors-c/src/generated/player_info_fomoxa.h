@@ -3,8 +3,8 @@
 // source: src/models/models.h
 // model: PlayerInfo
 // fingerprint: sha256:16c91cab6596e852a98c85c7bf1e55b07334dd687c02626b1dcc4e38de73ed71
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T09:13:20Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #pragma once
 

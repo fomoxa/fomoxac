@@ -4,8 +4,8 @@
 // model: DeviceState
 // codec: edge
 // fingerprint: sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:36:16Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 namespace Generated
 {

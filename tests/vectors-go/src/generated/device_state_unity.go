@@ -4,8 +4,8 @@
 // model: DeviceState
 // codec: unity
 // fingerprint: sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T08:54:13Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 package generated
 

@@ -1,6 +1,6 @@
 [package]
 name = "fomoxac"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "The official Fomoxa source generator: reads Fomoxa attributes, writes one codec file per model/codec, and emits the schema, fingerprints and build graph that go with them."
 license = "Apache-2.0"

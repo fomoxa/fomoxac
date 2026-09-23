@@ -4,8 +4,8 @@
 // model: Telemetry
 // codec: orange_pi
 // fingerprint: sha256:795e4aaf9379b5fef010061b70469a498b522a0856b080be6dfa6cde562b3998
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #![allow(dead_code, unused_imports)]
 

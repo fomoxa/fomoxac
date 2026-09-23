@@ -195,7 +195,7 @@ fn read_schema(path: &std::path::Path) -> Result<Schema, String> {
 
 fn git_show(reference: &str, path: &str) -> Result<Option<String>, String> {
     let output = Command::new("git")
-        .args(["show", &format!("{reference}:{path}")])
+        .args(["show", &format!("{reference}:./{path}")])
         .output()
         .map_err(|error| format!("cannot run git: {error}"))?;
 

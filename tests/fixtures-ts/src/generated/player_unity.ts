@@ -4,8 +4,8 @@
 // model: Player
 // codec: unity
 // fingerprint: sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 import { Writer, Reader } from "./runtime";
 import { Player } from "../models/player";

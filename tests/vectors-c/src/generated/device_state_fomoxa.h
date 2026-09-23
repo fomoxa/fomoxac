@@ -3,8 +3,8 @@
 // source: src/models/models.h
 // model: DeviceState
 // fingerprint: sha256:509323305edef242d320c8b9ea3c5600c8622358cbb5f4ed432664e5aabfc533
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T09:13:20Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #pragma once
 
