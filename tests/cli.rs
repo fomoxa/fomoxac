@@ -1508,7 +1508,10 @@ fn c_model_path_has_no_effect_since_there_is_no_namespace_to_override() {
     );
     let overridden = read(&with_override, "src/generated/player_edge.h");
 
-    assert_eq!(without_override, overridden);
+    assert!(
+        same_but_for_timestamp(&without_override, &overridden),
+        "{without_override}\n---\n{overridden}"
+    );
     // The `#include` path is, as ever, always the model's own physical
     // source location.
     assert!(
