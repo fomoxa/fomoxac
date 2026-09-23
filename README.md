@@ -611,10 +611,12 @@ fomoxac/
 │   ├── vectors-c/               the vector models and a runner, C
 │   ├── vectors/                 fomoxa-vectors.json, and lines.py for the C/C++ runners
 │   └── sdk/                     each runtime's schema type, copied, for net_schema
+├── docs/
+│   └── runtime-design.md       why each Reader and Writer is built as it is, with measurements
 └── SPEC-FINGERPRINT.md         normative: the fingerprint canonical form
 ```
 
-To add a target language, add `parser/<lang>.rs` and the set `generator/<lang>.rs`, `generator/<lang>_runtime.rs`, and `generator/<lang>_handshake.rs`, plus its entry in `generator/net_schema.rs`. Everything above the IR (`ir.rs`, `fingerprint.rs`, `schema.rs`, `compat.rs`, `buildgraph.rs`) is independent of the language.
+To add a target language, add `parser/<lang>.rs` and the set `generator/<lang>.rs`, `generator/<lang>_runtime.rs`, and `generator/<lang>_handshake.rs`, plus its entry in `generator/net_schema.rs`. Read [docs/runtime-design.md](docs/runtime-design.md) before writing or changing a runtime. Everything above the IR (`ir.rs`, `fingerprint.rs`, `schema.rs`, `compat.rs`, `buildgraph.rs`) is independent of the language.
 
 ## Tests
 
@@ -648,6 +650,7 @@ Every runner also builds the runtime schema from the generated `net_schema` file
 ## References
 
 - [SPEC-FINGERPRINT.md](SPEC-FINGERPRINT.md): the normative fingerprint canonical form.
+- [docs/runtime-design.md](docs/runtime-design.md): the design of each backend's `Reader` and `Writer`, the measurements behind it, and the alternatives that were dropped.
 - [`.github/workflows/ci.yml`](.github/workflows/ci.yml): the build and test matrix per language.
 - [`.github/workflows/schema.yml`](.github/workflows/schema.yml): the schema compatibility check on pull requests.
 
