@@ -28,13 +28,14 @@ path = "src/bin/fomoxa_inspect.rs"
 # needs are each a few dozen lines, written here so that the fingerprint
 # algorithm has no version to drift with.
 
-# Test-only, and only for one reason: `tests/fixtures/models/` is annotated
-# source, and `#[network]` has to exist for `rustc` to accept it. The fixture is
-# a real project - one model, annotated in place, with the generated codecs
-# compiled against that same type - and it could not be that without this.
-# `fomoxac` itself, and everything it writes, still depends on nothing.
+# Test-only, for two reasons: `tests/fixtures/models/` is annotated source, and
+# `#[network]` has to exist for `rustc` to accept it; and the fixture sets
+# `net_schema = true`, whose output calls `fomoxa_net::Schema`, copied into
+# `tests/sdk/rust/`. `fomoxac` itself, and every codec it writes, still depends
+# on nothing.
 [dev-dependencies]
 fomoxa-attributes = "0.1.1"
+fomoxa-net = { path = "tests/sdk/rust" }
 
 [profile.release]
 opt-level = 3

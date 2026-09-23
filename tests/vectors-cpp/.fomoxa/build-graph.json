@@ -68,6 +68,11 @@
       "path": "src/generated/handshake.hpp",
       "kind": "handshake",
       "sha256": "f1d765324bb7716e960ac9c84dd85dedd70f6d28e48819af68852e12ae1a0b58"
+    },
+    {
+      "path": "src/generated/net_schema.hpp",
+      "kind": "net_schema",
+      "sha256": "8a1f9f6f885fe9dca52a733f552057cfc0919049344546eafbc3083db77d965d"
     }
   ]
 }

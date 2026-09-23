@@ -238,6 +238,7 @@ src = "src"
 out = "src/generated"
 model_path = "crate::models"            # optional
 validate_message_fingerprint = true     # optional, default false
+net_schema = true                       # optional, default false
 ```
 
 | Key | Type | Default | Meaning |
@@ -246,6 +247,7 @@ validate_message_fingerprint = true     # optional, default false
 | `out` | string | `"generated"` | Where generated files are written. |
 | `model_path` | string | (computed per language; see the flag table below) | Overrides how a generated codec locates a model type. |
 | `validate_message_fingerprint` | boolean | `false` | If `true`, every generated frame gains a `[MessageId: u32][MessageFingerprint: u64]` prefix, and `fomoxa_write_envelope`/`fomoxa_read_envelope` are generated to write and check it. |
+| `net_schema` | boolean | `false` | If `true`, one more file builds the Fomoxa runtime's schema object from the handshake table; see [The runtime schema](#the-runtime-schema). |
 
 Keys may sit at the top level of the file or under a `[fomoxa]` table; other tables are ignored. A line starting with `#` outside a quoted string is a comment.
 
@@ -414,6 +416,26 @@ No schema is ever sent over the wire, because both peers have their own compiled
 
 By default no frame carries a fingerprint. Setting `validate_message_fingerprint = true` in `fomoxa.toml` adds a `[MessageId: u32][MessageFingerprint: u64]` prefix to every generated frame, and generates `fomoxa_write_envelope`/`fomoxa_read_envelope` to write and check it.
 
+### The runtime schema
+
+A Fomoxa runtime needs the schema fingerprint and, for every message, its id, fingerprint and prefix chain before it can handshake. The handshake file already holds all of them in `FOMOXA_MESSAGES`, but the runtime takes them as its own schema type, and copying them across by hand is how a message ends up missing from the handshake. Setting `net_schema = true` in `fomoxa.toml` generates that copy: one file that builds the runtime's schema from every message in `FOMOXA_MESSAGES`, under the schema fingerprint.
+
+| Language | Runtime | File | Entry point |
+|---|---|---|---|
+| Rust | `fomoxa-net` | `net_schema.rs` | `fomoxa_net_schema() -> Result<fomoxa_net::Schema, fomoxa_net::SchemaError>`, re-exported from the module root |
+| Go | `github.com/fomoxa/go` | `net_schema.go` | `FomoxaNetSchema() (*fomoxa.Schema, error)` |
+| C# | `Fomoxa.Net` | `NetSchema.cs` | `NetSchema.Build()` returns `Fomoxa.Net.Schema` |
+| C++ | Fomoxa C | `net_schema.hpp` | `&FOMOXA_NET_SCHEMA`, a `constexpr fmx_schema` |
+| C | Fomoxa C | `net_schema.h` | `&FOMOXA_NET_SCHEMA`, a `static const fmx_schema` |
+| TypeScript | `@fomoxa/net` | `net_schema.ts` | `fomoxaNetSchema()` returns `Schema` |
+| JavaScript | `@fomoxa/net` | `net_schema.js` | `fomoxaNetSchema()` |
+
+```csharp
+var server = new FomoxaServer(listener, Generated.NetSchema.Build(), new SessionConfig());
+```
+
+This is the only generated file that depends on a runtime package, which is why it is opt-in: the codecs and the handshake file still compile without one. `generate` refuses to write it for a schema whose hello would not fit the 1 MiB handshake body, or for a message with more than 65,535 fields. Setting the key back to `false` removes the file on the next run.
+
 ## Schema evolution
 
 `.fomoxa/schema.json` is the schema written to disk as JSON. It is the input to `fomoxa-inspect` and to `fomoxac compat`/`fomoxac ci`, and the baseline the next run compares against. Generation never reads it as input: every `generate` run recomputes the schema from source, then compares the result with whatever `.fomoxa/schema.json` already held.
@@ -571,11 +593,12 @@ fomoxac/
 │   ├── vectors-go/              the vector models and a runner, Go
 │   ├── vectors-cpp/             the vector models and a runner, C++
 │   ├── vectors-c/               the vector models and a runner, C
-│   └── vectors/                 fomoxa-vectors.json, and lines.py for the C/C++ runners
+│   ├── vectors/                 fomoxa-vectors.json, and lines.py for the C/C++ runners
+│   └── sdk/                     each runtime's schema type, copied, for net_schema
 └── SPEC-FINGERPRINT.md         normative: the fingerprint canonical form
 ```
 
-To add a target language, add `parser/<lang>.rs` and the set `generator/<lang>.rs`, `generator/<lang>_runtime.rs`, and `generator/<lang>_handshake.rs`. Everything above the IR (`ir.rs`, `fingerprint.rs`, `schema.rs`, `compat.rs`, `buildgraph.rs`) is independent of the language.
+To add a target language, add `parser/<lang>.rs` and the set `generator/<lang>.rs`, `generator/<lang>_runtime.rs`, and `generator/<lang>_handshake.rs`, plus its entry in `generator/net_schema.rs`. Everything above the IR (`ir.rs`, `fingerprint.rs`, `schema.rs`, `compat.rs`, `buildgraph.rs`) is independent of the language.
 
 ## Tests
 
@@ -596,9 +619,11 @@ cargo test
 
 - `tests/fixtures-cpp/` and `tests/fixtures-c/`: compiled with g++ (`-std=c++17`) and gcc (`-std=c99`) under `-Wall -Wextra -Wpedantic -Werror`, and their hand-written smoke tests run against the compiled output.
 - `tests/fixtures-ts/`: type-checked under `strict` with `tsc`, compiled, and its smoke test run with `node`.
+- `tests/fixtures-js/`: its smoke test run directly with `node`, with no build step.
 
 Every other backend is checked against the same vectors, byte for byte, in CI: each `accept` vector is decoded and re-encoded to its `reencode` bytes, each `reject` vector fails with its named error, and every message's id and fingerprint match the file. The runners are `tests/vectors-cs/Program.cs`, `tests/vectors-go/main.go`, `tests/vectors-cpp/vectors_test.cpp`, `tests/vectors-c/vectors_test.c` (fed by `tests/vectors/lines.py`, and built under AddressSanitizer and UndefinedBehaviorSanitizer), `tests/fixtures-ts/vectors_test.ts` and `tests/fixtures-js/vectors_test.js`. A round-trip smoke test alone cannot show this: an encoder and a decoder that are wrong the same way still round-trip.
-- `tests/fixtures-js/`: its smoke test run directly with `node`, with no build step.
+
+Every runner also builds the runtime schema from the generated `net_schema` file, against a copy of that runtime's schema type kept in `tests/sdk/` (`Fomoxa.Net`, `github.com/fomoxa/go`, `fomoxa-net`, Fomoxa C, `@fomoxa/net`) so that CI never fetches another repository, and checks that it declares every message of the handshake table with the same fingerprint and prefix chain. The C#, Go, TypeScript and JavaScript runners also compare each prefix chain with the vectors. `tests/generated.rs` does the same for Rust, with `tests/sdk/rust/` as a dev-dependency.
 
 `.github/workflows/ci.yml` runs on every push and pull request. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test`, then for each of the seven fixture trees a freshness check (`generate --check`) and, where CI has the toolchain, a real build and run. It provisions Rust (`stable`), Go `1.21`, .NET `8.0.x`, and Node `22`.
 

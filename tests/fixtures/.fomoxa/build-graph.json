@@ -97,9 +97,14 @@
       "sha256": "df2cd7349a8d172e39dc14bb3607ab512de240697fded9737f0e56cbe49ffbdf"
     },
     {
+      "path": "src/generated/net_schema.rs",
+      "kind": "net_schema",
+      "sha256": "73d5c9eba49bcbfe13e28fcf45b8f3a166f63922137e9ef1663455968a386ca6"
+    },
+    {
       "path": "src/generated/mod.rs",
       "kind": "root",
-      "sha256": "51839e4ea1db3ce7a67bb2cc31103b836c56bad930855e2a132ca0fad8802d9f"
+      "sha256": "a8b77bef3bfbd42a0ecdc3183932fd4e5c19902aff17a5735b69e1d73ae60e2a"
     }
   ]
 }

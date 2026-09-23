@@ -102,6 +102,11 @@
       "path": "src/generated/handshake.js",
       "kind": "handshake",
       "sha256": "247aa8a10a60d0c5eaac9435f759e9ce9e5e6f1c33c7a204c6bb2af466ac9ad1"
+    },
+    {
+      "path": "src/generated/net_schema.js",
+      "kind": "net_schema",
+      "sha256": "a9a6c17f617832bdf6e060c4bce10397bb403c65a26ed27906b9eda054cd9ecc"
     }
   ]
 }

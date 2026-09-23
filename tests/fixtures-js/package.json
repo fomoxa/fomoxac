@@ -1,5 +1,8 @@
 {
     "name": "fomoxa-fixtures-js",
     "private": true,
-    "type": "module"
+    "type": "module",
+    "dependencies": {
+        "@fomoxa/net": "file:../sdk/typescript"
+    }
 }

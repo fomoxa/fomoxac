@@ -14,6 +14,7 @@ pub mod handshake;
 pub mod javascript;
 pub mod javascript_handshake;
 pub mod javascript_runtime;
+pub mod net_schema;
 pub mod rust;
 pub mod rust_runtime;
 pub mod typescript;
@@ -139,7 +140,7 @@ pub fn without_timestamp(text: &str) -> String {
     out
 }
 
-pub fn module_root(modules: &[String], codecs: &[(String, String)]) -> String {
+pub fn module_root(modules: &[String], codecs: &[(String, String)], net_schema: bool) -> String {
     let mut out = Header {
         note: Some(
             "The generated module tree. Mount it the ordinary way - from src/, this\n\
@@ -163,6 +164,9 @@ pub fn module_root(modules: &[String], codecs: &[(String, String)]) -> String {
     out.push_str("\n// Re-exported so that a codec can be named without knowing which file it\n");
     out.push_str("// landed in.\n");
     out.push_str("pub use self::handshake::*;\n");
+    if net_schema {
+        out.push_str(&format!("pub use self::{}::*;\n", net_schema::RUST_MODULE));
+    }
     out.push_str("pub use self::runtime::{DecodeError, Limits, Reader, Writer};\n");
     for (module, codec) in codecs {
         out.push_str(&format!("pub use self::{module}::{codec};\n"));
@@ -216,6 +220,7 @@ mod tests {
                 "player_edge".to_owned(),
             ],
             &[("player_edge".to_owned(), "PlayerEdgeCodec".to_owned())],
+            false,
         );
 
         assert!(text.contains("pub mod runtime;\n"), "{text}");
@@ -230,5 +235,22 @@ mod tests {
             "{text}"
         );
         assert!(!text.contains("include!"), "{text}");
+        assert!(!text.contains("net_schema"), "{text}");
+    }
+
+    #[test]
+    fn the_root_re_exports_the_net_schema_when_asked() {
+        let text = module_root(
+            &[
+                "runtime".to_owned(),
+                "handshake".to_owned(),
+                "net_schema".to_owned(),
+            ],
+            &[],
+            true,
+        );
+
+        assert!(text.contains("pub mod net_schema;\n"), "{text}");
+        assert!(text.contains("pub use self::net_schema::*;\n"), "{text}");
     }
 }

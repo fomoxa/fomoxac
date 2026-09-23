@@ -9,6 +9,7 @@
 #include "src/generated/every_primitive_fomoxa.h"
 #include "src/generated/player_edge.h"
 #include "src/generated/player_fomoxa.h"
+#include "src/generated/net_schema.h"
 #include "src/generated/player_info_edge.h"
 #include "src/generated/team_edge.h"
 #include "src/generated/team_fomoxa.h"
@@ -131,6 +132,23 @@ static int error_kind(const char *name, FomoxaDecodeErrorKind *kind) {
     return 0;
 }
 
+static void check_net_schema(void) {
+    size_t index;
+
+    check(fmx_schema_check(&FOMOXA_NET_SCHEMA) == FMX_OK, "net schema", "-", "fmx_schema_check rejected it");
+    check(FOMOXA_NET_SCHEMA.fingerprint == FOMOXA_SCHEMA_FINGERPRINT, "net schema", "-", "fingerprint differs from the handshake");
+    check(FOMOXA_NET_SCHEMA.message_count == FOMOXA_MESSAGES_COUNT, "net schema", "-", "message count differs from the handshake");
+    for (index = 0; index < FOMOXA_MESSAGES_COUNT; ++index) {
+        const FomoxaMessage *expected = &FOMOXA_MESSAGES[index];
+        const fmx_message_schema *found = fmx_schema_message(&FOMOXA_NET_SCHEMA, expected->id);
+        int matches = found != NULL && found->fingerprint == expected->fingerprint &&
+                      found->prefix_count == expected->prefix_count &&
+                      (expected->prefix_count == 0 ||
+                       memcmp(found->prefixes, expected->prefixes, expected->prefix_count * sizeof(uint64_t)) == 0);
+        check(matches, "net schema", expected->name, "does not match the handshake table");
+    }
+}
+
 int main(void) {
     char line[LINE_CAPACITY];
     static unsigned char payload[BYTES_CAPACITY];
@@ -182,6 +200,8 @@ int main(void) {
     }
 
     fomoxa_writer_free(&shared_writer);
+    check_net_schema();
+
     printf("%d/%d checks passed\n", checks - failures, checks);
     return failures == 0 && checks > 0 ? 0 : 1;
 }

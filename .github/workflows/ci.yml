@@ -122,10 +122,13 @@ jobs:
         working-directory: tests/vectors-cpp
         run: |
           set -o pipefail
+          gcc -std=c99 -Wall -Wextra -Wpedantic -Werror \
+            -fsanitize=address,undefined -fno-sanitize-recover=all \
+            -I ../sdk/c/include -c ../sdk/c/src/schema.c -o /tmp/fomoxa-sdk-schema.o
           g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror \
             -fsanitize=address,undefined -fno-sanitize-recover=all \
-            -I . -I include -I src \
-            vectors_test.cpp -o /tmp/fomoxa-cpp-vectors
+            -I . -I include -I src -I ../sdk/c/include \
+            vectors_test.cpp /tmp/fomoxa-sdk-schema.o -o /tmp/fomoxa-cpp-vectors
           python3 ../vectors/lines.py | /tmp/fomoxa-cpp-vectors
 
       # gcc is available on the same runner image, so the C backend gets the
@@ -152,8 +155,8 @@ jobs:
           set -o pipefail
           gcc -std=c99 -Wall -Wextra -Wpedantic -Werror \
             -fsanitize=address,undefined -fno-sanitize-recover=all \
-            -I . -I include -I src \
-            vectors_test.c -o /tmp/fomoxa-c-vectors
+            -I . -I include -I src -I ../sdk/c/include \
+            vectors_test.c ../sdk/c/src/schema.c -o /tmp/fomoxa-c-vectors
           python3 ../vectors/lines.py | /tmp/fomoxa-c-vectors
 
       # Same shape as the Go and C# fixtures above: current, and actually
@@ -186,4 +189,6 @@ jobs:
 
       - name: the JavaScript codecs reproduce tests/vectors/fomoxa-vectors.json
         working-directory: tests/fixtures-js
-        run: node vectors_test.js
+        run: |
+          npm install
+          node vectors_test.js

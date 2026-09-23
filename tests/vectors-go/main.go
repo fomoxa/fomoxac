@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	fomoxa "github.com/fomoxa/go"
+
 	"fomoxac-vectors-go/src/generated"
 	"fomoxac-vectors-go/src/models"
 )
@@ -24,8 +26,9 @@ type vector struct {
 }
 
 type message struct {
-	ID          string `json:"id"`
-	Fingerprint string `json:"fingerprint"`
+	ID          string   `json:"id"`
+	Fingerprint string   `json:"fingerprint"`
+	Prefixes    []string `json:"prefixes"`
 }
 
 type document struct {
@@ -171,6 +174,40 @@ func decodeHex(text string) []byte {
 	return decoded
 }
 
+func fingerprint64(tagged string) uint64 {
+	value, _ := strconv.ParseUint(strings.TrimPrefix(tagged, "sha256:")[:16], 16, 64)
+	return value
+}
+
+func checkNetSchema(vectors document) {
+	schema, err := generated.FomoxaNetSchema()
+	if err != nil {
+		check(false, "net schema: %v", err)
+		return
+	}
+	check(schema.Fingerprint() == generated.FomoxaSchemaFingerprint, "net schema: fingerprint %016x, handshake says %016x", schema.Fingerprint(), generated.FomoxaSchemaFingerprint)
+	check(len(schema.Messages()) == len(generated.FomoxaMessages), "net schema: %d messages, handshake declares %d", len(schema.Messages()), len(generated.FomoxaMessages))
+
+	declared := make(map[uint32]fomoxa.Message, len(schema.Messages()))
+	for _, declaredMessage := range schema.Messages() {
+		declared[declaredMessage.ID] = declaredMessage
+	}
+	for name := range identities {
+		entry := vectors.Messages[name]
+		id, _ := strconv.ParseUint(strings.TrimPrefix(entry.ID, "0x"), 16, 32)
+		found, ok := declared[uint32(id)]
+		if !ok {
+			check(false, "net schema: %s (%08x) is missing", name, id)
+			continue
+		}
+		matches := found.Fingerprint == fingerprint64(entry.Fingerprint) && len(found.Prefixes) == len(entry.Prefixes)
+		for index := 0; matches && index < len(entry.Prefixes); index++ {
+			matches = found.Prefixes[index] == fingerprint64(entry.Prefixes[index])
+		}
+		check(matches, "net schema: %s is %016x %x, vectors say %s %v", name, found.Fingerprint, found.Prefixes, entry.Fingerprint, entry.Prefixes)
+	}
+}
+
 func main() {
 	path := filepath.Join("..", "vectors", "fomoxa-vectors.json")
 	if len(os.Args) > 1 {
@@ -215,6 +252,8 @@ func main() {
 		actual, err := sharedRoundTrips[accept.Message](decodeHex(accept.Hex))
 		check(err == nil && bytes.Equal(actual, expected), "shared writer %s: %x, expected %x", accept.Name, actual, expected)
 	}
+
+	checkNetSchema(vectors)
 
 	fmt.Printf("%d/%d checks passed\n", checks-failures, checks)
 	if failures > 0 {

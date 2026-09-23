@@ -372,6 +372,22 @@ fn a_removed_model_takes_its_generated_file_with_it() {
     assert!(!read(&directory, "src/generated/mod.rs").contains("team_edge"));
 }
 
+#[test]
+fn turning_net_schema_off_takes_its_file_with_it() {
+    let directory = project("net-schema-off");
+    fomoxac(&directory, &["generate"]);
+    assert!(read(&directory, "src/generated/net_schema.rs").contains("pub fn fomoxa_net_schema()"));
+    assert!(read(&directory, "src/generated/mod.rs").contains("pub use self::net_schema::*;"));
+
+    let config = read(&directory, "fomoxa.toml").replace("net_schema = true", "net_schema = false");
+    std::fs::write(directory.join("fomoxa.toml"), config).expect("write");
+
+    let output = fomoxac(&directory, &["generate"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(!directory.join("src/generated/net_schema.rs").exists());
+    assert!(!read(&directory, "src/generated/mod.rs").contains("net_schema"));
+}
+
 // ====================================================================== errors
 
 #[test]

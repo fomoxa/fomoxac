@@ -73,6 +73,11 @@
       "path": "src/generated/handshake.h",
       "kind": "handshake",
       "sha256": "88c3c496b5dc50ff3157ff99db3194ed08259a1568c2c027238d55c9f0707641"
+    },
+    {
+      "path": "src/generated/net_schema.h",
+      "kind": "net_schema",
+      "sha256": "2cabd1c0a0293b1009afcda089078e42a02ffc2f340c4ec9625bafca73293e6e"
     }
   ]
 }

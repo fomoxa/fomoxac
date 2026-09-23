@@ -1,6 +1,9 @@
 {
     "name": "fomoxa-fixtures-ts",
     "private": true,
+    "dependencies": {
+        "@fomoxa/net": "file:../sdk/typescript"
+    },
     "devDependencies": {
         "@types/node": "^22.0.0",
         "typescript": "^5.7.0"

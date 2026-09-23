@@ -11,6 +11,8 @@ import { TeamEdgeCodec } from "./src/generated/team_edge";
 import { DeviceStateEdgeCodec } from "./src/generated/device_state_edge";
 import { DeviceStateUnityCodec } from "./src/generated/device_state_unity";
 import { EveryPrimitiveEdgeCodec } from "./src/generated/every_primitive_edge";
+import { FOMOXA_MESSAGES, FOMOXA_SCHEMA_FINGERPRINT } from "./src/generated/handshake";
+import { fomoxaNetSchema } from "./src/generated/net_schema";
 
 interface Codec<T> {
     MESSAGE_ID: number;
@@ -140,6 +142,28 @@ for (const vector of vectors.accept as Vector[]) {
     const expected = toHex(roundTrips[vector.message](hex(vector.hex)));
     const actual = toHex(sharedRoundTrips[vector.message](hex(vector.hex)));
     check(actual === expected, `shared writer ${vector.name}: ${actual}, expected ${expected}`);
+}
+
+function fingerprint64(tagged: string): bigint {
+    return BigInt(`0x${tagged.slice("sha256:".length, "sha256:".length + 16)}`);
+}
+
+try {
+    const schema = fomoxaNetSchema();
+    check(schema.fingerprint === FOMOXA_SCHEMA_FINGERPRINT, `net schema: fingerprint ${schema.fingerprint.toString(16)}, handshake says ${FOMOXA_SCHEMA_FINGERPRINT.toString(16)}`);
+    check(schema.messages.length === FOMOXA_MESSAGES.length, `net schema: ${schema.messages.length} messages, handshake declares ${FOMOXA_MESSAGES.length}`);
+    for (const [name, message] of Object.entries(vectors.messages) as [string, { id: string; fingerprint: string; prefixes: string[] }][]) {
+        const found = schema.byId.get(Number.parseInt(message.id.slice(2), 16));
+        const expected = message.prefixes.map(fingerprint64);
+        const matches =
+            found !== undefined &&
+            found.fingerprint === fingerprint64(message.fingerprint) &&
+            found.prefixes.length === expected.length &&
+            found.prefixes.every((prefix, index) => prefix === expected[index]);
+        check(matches, `net schema: ${name} does not match the vectors`);
+    }
+} catch (error) {
+    check(false, `net schema: ${describe(error)}`);
 }
 
 console.log(`${checks - failures}/${checks} checks passed`);

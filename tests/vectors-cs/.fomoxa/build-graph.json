@@ -68,6 +68,11 @@
       "path": "src/generated/Handshake.cs",
       "kind": "handshake",
       "sha256": "ce1f9378c972727c2ecbb8ac7da05bbc001653a9787dab6655c502fdd57709b2"
+    },
+    {
+      "path": "src/generated/NetSchema.cs",
+      "kind": "net_schema",
+      "sha256": "d6a094b6411fd913d6dca2fdf971bc9da00613b0317bd2e6fa341c191ed3d352"
     }
   ]
 }

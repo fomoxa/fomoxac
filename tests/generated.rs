@@ -565,3 +565,21 @@ fn per_frame_validation_is_off_by_default() {
     const { assert!(!FOMOXA_VALIDATE_MESSAGE_FINGERPRINT) };
     assert_eq!(encode(&player(), PlayerEdgeCodec::encode).len(), 12);
 }
+
+#[test]
+fn the_net_schema_declares_every_message_in_the_handshake_table() {
+    let schema = fomoxa_net_schema().expect("fomoxa-net accepts the generated schema");
+
+    assert_eq!(schema.fingerprint(), FOMOXA_SCHEMA_FINGERPRINT);
+    assert_eq!(schema.messages().len(), FOMOXA_MESSAGES.len());
+    for message in FOMOXA_MESSAGES {
+        let declared = schema.message(message.id).expect(message.name);
+        assert_eq!(
+            declared.fingerprint(),
+            message.fingerprint,
+            "{}",
+            message.name
+        );
+        assert_eq!(declared.prefixes(), message.prefixes, "{}", message.name);
+    }
+}

@@ -55,6 +55,7 @@ pub struct Options {
     pub root: PathBuf,
     pub model_path: Option<String>,
     pub validate_message_fingerprint: bool,
+    pub net_schema: bool,
 }
 
 impl Options {
@@ -84,6 +85,7 @@ impl Options {
             root,
             model_path: paths.model_path.clone().or(config.model_path),
             validate_message_fingerprint: config.validate_message_fingerprint.unwrap_or(false),
+            net_schema: config.net_schema.unwrap_or(false),
         })
     }
 
@@ -233,6 +235,7 @@ pub fn plan(options: &Options) -> Result<Plan, String> {
         Language::TypeScript => plan_typescript(options, &schema)?,
         Language::JavaScript => plan_javascript(options, &schema)?,
     };
+    check_distinct_paths(&files)?;
 
     files.push(PlannedFile {
         path: options.schema_path(),
@@ -285,6 +288,14 @@ fn plan_rust(
         contents: handshake,
         timestamped: true,
     });
+    if options.net_schema {
+        files.push(PlannedFile {
+            path: options.out.join(generator::net_schema::RUST_FILE_NAME),
+            contents: generator::net_schema::rust(schema)?,
+            timestamped: true,
+        });
+        modules.push(generator::net_schema::RUST_MODULE.to_owned());
+    }
 
     for model in &schema.models {
         for message in &model.messages {
@@ -318,22 +329,26 @@ fn plan_rust(
     check_module_names(&modules)?;
     files.push(PlannedFile {
         path: options.out.join(generator::MODULE_ROOT),
-        contents: generator::module_root(&modules, &codecs),
+        contents: generator::module_root(&modules, &codecs, options.net_schema),
         timestamped: true,
     });
 
     let shared: Vec<Shared> = files
         .iter()
         .filter(|file| {
-            matches!(
-                file.path.file_name().and_then(|name| name.to_str()),
-                Some("runtime.rs") | Some("handshake.rs") | Some(generator::MODULE_ROOT)
-            )
+            (options.net_schema && is_net_schema(&file.path))
+                || matches!(
+                    file.path.file_name().and_then(|name| name.to_str()),
+                    Some("runtime.rs") | Some("handshake.rs") | Some(generator::MODULE_ROOT)
+                )
         })
         .map(|file| Shared {
             path: display(&file.path),
             sha256: buildgraph::digest(&file.contents),
             kind: match file.path.file_name().and_then(|name| name.to_str()) {
+                Some(name) if generator::net_schema::FILE_NAMES.contains(&name) => {
+                    generator::net_schema::KIND
+                }
                 Some("runtime.rs") => "runtime",
                 Some("handshake.rs") => "handshake",
                 _ => "root",
@@ -444,6 +459,13 @@ fn plan_go(
         contents: handshake,
         timestamped: true,
     });
+    if options.net_schema {
+        files.push(PlannedFile {
+            path: options.out.join(generator::net_schema::GO_FILE_NAME),
+            contents: generator::net_schema::go(schema, &package)?,
+            timestamped: true,
+        });
+    }
 
     for model in &schema.models {
         for message in &model.messages {
@@ -471,15 +493,19 @@ fn plan_go(
     let shared: Vec<Shared> = files
         .iter()
         .filter(|file| {
-            matches!(
-                file.path.file_name().and_then(|name| name.to_str()),
-                Some("runtime.go") | Some(generator::go_handshake::FILE_NAME)
-            )
+            (options.net_schema && is_net_schema(&file.path))
+                || matches!(
+                    file.path.file_name().and_then(|name| name.to_str()),
+                    Some("runtime.go") | Some(generator::go_handshake::FILE_NAME)
+                )
         })
         .map(|file| Shared {
             path: display(&file.path),
             sha256: buildgraph::digest(&file.contents),
             kind: match file.path.file_name().and_then(|name| name.to_str()) {
+                Some(name) if generator::net_schema::FILE_NAMES.contains(&name) => {
+                    generator::net_schema::KIND
+                }
                 Some("runtime.go") => "runtime",
                 _ => "handshake",
             },
@@ -564,6 +590,13 @@ fn plan_csharp(
         contents: handshake,
         timestamped: true,
     });
+    if options.net_schema {
+        files.push(PlannedFile {
+            path: options.out.join(generator::net_schema::CSHARP_FILE_NAME),
+            contents: generator::net_schema::csharp(schema, &namespace)?,
+            timestamped: true,
+        });
+    }
 
     for model in &schema.models {
         for message in &model.messages {
@@ -591,16 +624,20 @@ fn plan_csharp(
     let shared: Vec<Shared> = files
         .iter()
         .filter(|file| {
-            matches!(
-                file.path.file_name().and_then(|name| name.to_str()),
-                Some(generator::csharp::RUNTIME_FILE_NAME)
-                    | Some(generator::csharp_handshake::FILE_NAME)
-            )
+            (options.net_schema && is_net_schema(&file.path))
+                || matches!(
+                    file.path.file_name().and_then(|name| name.to_str()),
+                    Some(generator::csharp::RUNTIME_FILE_NAME)
+                        | Some(generator::csharp_handshake::FILE_NAME)
+                )
         })
         .map(|file| Shared {
             path: display(&file.path),
             sha256: buildgraph::digest(&file.contents),
             kind: match file.path.file_name().and_then(|name| name.to_str()) {
+                Some(name) if generator::net_schema::FILE_NAMES.contains(&name) => {
+                    generator::net_schema::KIND
+                }
                 Some(generator::csharp::RUNTIME_FILE_NAME) => "runtime",
                 _ => "handshake",
             },
@@ -688,6 +725,13 @@ fn plan_cpp(
         contents: handshake,
         timestamped: true,
     });
+    if options.net_schema {
+        files.push(PlannedFile {
+            path: options.out.join(generator::net_schema::CPP_FILE_NAME),
+            contents: generator::net_schema::cpp(schema, &namespace)?,
+            timestamped: true,
+        });
+    }
 
     for model in &schema.models {
         for message in &model.messages {
@@ -715,15 +759,19 @@ fn plan_cpp(
     let shared: Vec<Shared> = files
         .iter()
         .filter(|file| {
-            matches!(
-                file.path.file_name().and_then(|name| name.to_str()),
-                Some("runtime.hpp") | Some(generator::cpp_handshake::FILE_NAME)
-            )
+            (options.net_schema && is_net_schema(&file.path))
+                || matches!(
+                    file.path.file_name().and_then(|name| name.to_str()),
+                    Some("runtime.hpp") | Some(generator::cpp_handshake::FILE_NAME)
+                )
         })
         .map(|file| Shared {
             path: display(&file.path),
             sha256: buildgraph::digest(&file.contents),
             kind: match file.path.file_name().and_then(|name| name.to_str()) {
+                Some(name) if generator::net_schema::FILE_NAMES.contains(&name) => {
+                    generator::net_schema::KIND
+                }
                 Some("runtime.hpp") => "runtime",
                 _ => "handshake",
             },
@@ -814,6 +862,13 @@ fn plan_c(options: &Options, schema: &Schema) -> Result<BackendPlan, String> {
         contents: handshake,
         timestamped: true,
     });
+    if options.net_schema {
+        files.push(PlannedFile {
+            path: options.out.join(generator::net_schema::C_FILE_NAME),
+            contents: generator::net_schema::c(schema)?,
+            timestamped: true,
+        });
+    }
 
     for model in &schema.models {
         files.push(PlannedFile {
@@ -847,17 +902,21 @@ fn plan_c(options: &Options, schema: &Schema) -> Result<BackendPlan, String> {
     let shared: Vec<Shared> = files
         .iter()
         .filter(|file| {
-            matches!(
-                file.path.file_name().and_then(|name| name.to_str()),
-                Some("runtime.h")
-                    | Some(generator::c::ARRAYS_FILE_NAME)
-                    | Some(generator::c_handshake::FILE_NAME)
-            )
+            (options.net_schema && is_net_schema(&file.path))
+                || matches!(
+                    file.path.file_name().and_then(|name| name.to_str()),
+                    Some("runtime.h")
+                        | Some(generator::c::ARRAYS_FILE_NAME)
+                        | Some(generator::c_handshake::FILE_NAME)
+                )
         })
         .map(|file| Shared {
             path: display(&file.path),
             sha256: buildgraph::digest(&file.contents),
             kind: match file.path.file_name().and_then(|name| name.to_str()) {
+                Some(name) if generator::net_schema::FILE_NAMES.contains(&name) => {
+                    generator::net_schema::KIND
+                }
                 Some("runtime.h") => "runtime",
                 Some(generator::c::ARRAYS_FILE_NAME) => "arrays",
                 _ => "handshake",
@@ -933,6 +992,15 @@ fn plan_typescript(options: &Options, schema: &Schema) -> Result<BackendPlan, St
         contents: handshake,
         timestamped: true,
     });
+    if options.net_schema {
+        files.push(PlannedFile {
+            path: options
+                .out
+                .join(generator::net_schema::TYPESCRIPT_FILE_NAME),
+            contents: generator::net_schema::typescript(schema)?,
+            timestamped: true,
+        });
+    }
 
     for model in &schema.models {
         for message in &model.messages {
@@ -961,15 +1029,19 @@ fn plan_typescript(options: &Options, schema: &Schema) -> Result<BackendPlan, St
     let shared: Vec<Shared> = files
         .iter()
         .filter(|file| {
-            matches!(
-                file.path.file_name().and_then(|name| name.to_str()),
-                Some("runtime.ts") | Some(generator::typescript_handshake::FILE_NAME)
-            )
+            (options.net_schema && is_net_schema(&file.path))
+                || matches!(
+                    file.path.file_name().and_then(|name| name.to_str()),
+                    Some("runtime.ts") | Some(generator::typescript_handshake::FILE_NAME)
+                )
         })
         .map(|file| Shared {
             path: display(&file.path),
             sha256: buildgraph::digest(&file.contents),
             kind: match file.path.file_name().and_then(|name| name.to_str()) {
+                Some(name) if generator::net_schema::FILE_NAMES.contains(&name) => {
+                    generator::net_schema::KIND
+                }
                 Some("runtime.ts") => "runtime",
                 _ => "handshake",
             },
@@ -1038,6 +1110,15 @@ fn plan_javascript(options: &Options, schema: &Schema) -> Result<BackendPlan, St
         contents: handshake,
         timestamped: true,
     });
+    if options.net_schema {
+        files.push(PlannedFile {
+            path: options
+                .out
+                .join(generator::net_schema::JAVASCRIPT_FILE_NAME),
+            contents: generator::net_schema::javascript(schema)?,
+            timestamped: true,
+        });
+    }
 
     for model in &schema.models {
         for message in &model.messages {
@@ -1066,15 +1147,19 @@ fn plan_javascript(options: &Options, schema: &Schema) -> Result<BackendPlan, St
     let shared: Vec<Shared> = files
         .iter()
         .filter(|file| {
-            matches!(
-                file.path.file_name().and_then(|name| name.to_str()),
-                Some("runtime.js") | Some(generator::javascript_handshake::FILE_NAME)
-            )
+            (options.net_schema && is_net_schema(&file.path))
+                || matches!(
+                    file.path.file_name().and_then(|name| name.to_str()),
+                    Some("runtime.js") | Some(generator::javascript_handshake::FILE_NAME)
+                )
         })
         .map(|file| Shared {
             path: display(&file.path),
             sha256: buildgraph::digest(&file.contents),
             kind: match file.path.file_name().and_then(|name| name.to_str()) {
+                Some(name) if generator::net_schema::FILE_NAMES.contains(&name) => {
+                    generator::net_schema::KIND
+                }
                 Some("runtime.js") => "runtime",
                 _ => "handshake",
             },
@@ -1211,6 +1296,26 @@ pub fn apply(plan: &Plan, check: bool, quiet: bool) -> Result<bool, String> {
     }
 
     Ok(current)
+}
+
+fn check_distinct_paths(files: &[PlannedFile]) -> Result<(), String> {
+    let mut seen: BTreeSet<&Path> = BTreeSet::new();
+    for file in files {
+        if !seen.insert(&file.path) {
+            return Err(format!(
+                "two generated files would both be written to {} - rename the model or codec \
+                 involved",
+                display(&file.path)
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn is_net_schema(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| generator::net_schema::FILE_NAMES.contains(&name))
 }
 
 fn obsolete(options: &Options, files: &[PlannedFile]) -> Vec<PathBuf> {

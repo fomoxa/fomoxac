@@ -9,4 +9,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="../sdk/csharp/*.cs" />
+  </ItemGroup>
+
 </Project>

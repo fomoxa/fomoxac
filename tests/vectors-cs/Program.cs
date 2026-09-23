@@ -103,6 +103,8 @@ internal static class Program
             CheckSharedWriter(vector);
         }
 
+        CheckNetSchema(root.GetProperty("messages"));
+
         Console.WriteLine($"{checks - failures}/{checks} checks passed");
         return failures == 0 ? 0 : 1;
     }
@@ -118,6 +120,40 @@ internal static class Program
             Check(fingerprint == expected.Value.Fingerprint, $"{expected.Key}: fingerprint 0x{expected.Value.Fingerprint:X16}, vectors say 0x{fingerprint:X16}");
         }
     }
+
+    private static void CheckNetSchema(JsonElement messages)
+    {
+        Fomoxa.Net.Schema schema;
+        try
+        {
+            schema = NetSchema.Build();
+        }
+        catch (Exception error)
+        {
+            Check(false, $"net schema: {error.GetType().Name}: {error.Message}");
+            return;
+        }
+
+        Check(schema.Fingerprint == Handshake.FomoxaSchemaFingerprint, $"net schema: fingerprint 0x{schema.Fingerprint:X16}, handshake says 0x{Handshake.FomoxaSchemaFingerprint:X16}");
+        Check(schema.Messages.Count == Handshake.FomoxaMessages.Length, $"net schema: {schema.Messages.Count} messages, handshake declares {Handshake.FomoxaMessages.Length}");
+
+        foreach (string name in Identities.Keys)
+        {
+            JsonElement entry = messages.GetProperty(name);
+            uint id = Convert.ToUInt32(entry.GetProperty("id").GetString().Substring(2), 16);
+            Fomoxa.Net.MessageSchema found = schema.Message(id);
+            if (found == null)
+            {
+                Check(false, $"net schema: {name} (0x{id:X8}) is missing");
+                continue;
+            }
+            ulong[] expected = entry.GetProperty("prefixes").EnumerateArray().Select(prefix => Fingerprint64(prefix.GetString())).ToArray();
+            bool matches = found.Fingerprint == Fingerprint64(entry.GetProperty("fingerprint").GetString()) && found.PrefixFingerprints.SequenceEqual(expected);
+            Check(matches, $"net schema: {name} does not match the vectors");
+        }
+    }
+
+    private static ulong Fingerprint64(string tagged) => Convert.ToUInt64(tagged.Substring("sha256:".Length, 16), 16);
 
     private static void CheckAccept(JsonElement vector)
     {

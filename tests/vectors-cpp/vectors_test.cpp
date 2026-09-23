@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <functional>
@@ -10,6 +11,7 @@
 #include "generated/device_state_edge.hpp"
 #include "generated/device_state_unity.hpp"
 #include "generated/every_primitive_edge.hpp"
+#include "generated/net_schema.hpp"
 #include "generated/player_edge.hpp"
 #include "generated/player_info_edge.hpp"
 #include "generated/team_edge.hpp"
@@ -120,6 +122,19 @@ std::string to_hex(const Bytes& bytes) {
 
 }
 
+void check_net_schema() {
+    check(fmx_schema_check(&FOMOXA_NET_SCHEMA) == FMX_OK, "net schema: fmx_schema_check rejected it");
+    check(FOMOXA_NET_SCHEMA.fingerprint == FOMOXA_SCHEMA_FINGERPRINT, "net schema: fingerprint differs from the handshake");
+    check(FOMOXA_NET_SCHEMA.message_count == FOMOXA_MESSAGES.size(), "net schema: message count differs from the handshake");
+    for (const FomoxaMessage& expected : FOMOXA_MESSAGES) {
+        const fmx_message_schema* found = fmx_schema_message(&FOMOXA_NET_SCHEMA, expected.id);
+        bool matches = found != nullptr && found->fingerprint == expected.fingerprint &&
+                       found->prefix_count == expected.prefix_count &&
+                       std::equal(expected.prefixes, expected.prefixes + expected.prefix_count, found->prefixes);
+        check(matches, std::string("net schema: ") + expected.name + " does not match the handshake table");
+    }
+}
+
 int main() {
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -163,6 +178,8 @@ int main() {
                   "reject " + name + ": " + (error.ok() ? std::string("decoded") : error.message()) + ", expected " + last);
         }
     }
+
+    check_net_schema();
 
     std::printf("%d/%d checks passed\n", checks - failures, checks);
     return failures == 0 && checks > 0 ? 0 : 1;
