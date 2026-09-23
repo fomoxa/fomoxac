@@ -171,9 +171,21 @@ public sealed class Writer
         {
             throw new System.ArgumentNullException(nameof(value));
         }
-        WriteU32((uint)value.Length);
-        new System.ReadOnlySpan<byte>(value).CopyTo(Reserve(value.Length));
+        WriteBytes(new System.ReadOnlySpan<byte>(value));
     }
+
+    public void WriteBytes(System.ReadOnlySpan<byte> value)
+    {
+        WriteU32((uint)value.Length);
+        value.CopyTo(Reserve(value.Length));
+    }
+
+    public void WriteBytes(System.ArraySegment<byte> value) =>
+        WriteBytes(new System.ReadOnlySpan<byte>(value.Array, value.Offset, value.Count));
+
+    public void WriteBytes(System.ReadOnlyMemory<byte> value) => WriteBytes(value.Span);
+
+    public void WriteBytes(System.Memory<byte> value) => WriteBytes((System.ReadOnlySpan<byte>)value.Span);
 
     /// Writes an `Array<T>`'s element count (RFC-0002 §6) - the caller
     /// writes each element itself, in order, right after.
@@ -214,6 +226,8 @@ public ref struct Reader
     private static readonly System.Text.UTF8Encoding StrictUtf8 = new System.Text.UTF8Encoding(false, true);
 
     private readonly System.ReadOnlySpan<byte> _buffer;
+    private readonly System.ReadOnlyMemory<byte> _source;
+    private readonly bool _hasSource;
     private int _position;
     private readonly Limits _limits;
 
@@ -224,9 +238,31 @@ public ref struct Reader
     public Reader(System.ReadOnlySpan<byte> buffer, Limits limits)
     {
         _buffer = buffer;
+        _source = default;
+        _hasSource = false;
         _position = 0;
         _limits = limits;
     }
+
+    public Reader(System.ReadOnlyMemory<byte> buffer) : this(buffer, Limits.Unlimited) { }
+
+    public Reader(System.ReadOnlyMemory<byte> buffer, Limits limits)
+    {
+        _buffer = buffer.Span;
+        _source = buffer;
+        _hasSource = true;
+        _position = 0;
+        _limits = limits;
+    }
+
+    public Reader(byte[] buffer) : this(new System.ReadOnlyMemory<byte>(buffer), Limits.Unlimited) { }
+
+    public Reader(byte[] buffer, Limits limits) : this(new System.ReadOnlyMemory<byte>(buffer), limits) { }
+
+    public Reader(System.ArraySegment<byte> buffer) : this(buffer, Limits.Unlimited) { }
+
+    public Reader(System.ArraySegment<byte> buffer, Limits limits)
+        : this(new System.ReadOnlyMemory<byte>(buffer.Array, buffer.Offset, buffer.Count), limits) { }
 
     /// The cursor position, in bytes from the start.
     public int Position => _position;
@@ -313,16 +349,18 @@ public ref struct Reader
     {
         int start = _position;
         uint len = ReadLength(_limits.MaxStringLength);
+        return DecodeUtf8(TakeChecked(len, start), start);
+    }
+
+    public void ReadString(ref string value)
+    {
+        int start = _position;
+        uint len = ReadLength(_limits.MaxStringLength);
         System.ReadOnlySpan<byte> bytes = TakeChecked(len, start);
 
-        try
+        if (value == null || !IsSameText(bytes, value))
         {
-            return StrictUtf8.GetString(bytes);
-        }
-        catch (System.Text.DecoderFallbackException)
-        {
-            _position = start;
-            throw DecodeException.InvalidUtf8();
+            value = DecodeUtf8(bytes, start);
         }
     }
 
@@ -332,6 +370,50 @@ public ref struct Reader
         int start = _position;
         uint len = ReadLength(_limits.MaxBytesLength);
         return TakeChecked(len, start).ToArray();
+    }
+
+    public void ReadBytes(ref byte[] value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        if (value == null || value.Length != bytes.Length)
+        {
+            value = bytes.Length == 0 ? System.Array.Empty<byte>() : new byte[bytes.Length];
+        }
+        bytes.CopyTo(value);
+    }
+
+    public void ReadBytes(ref System.ArraySegment<byte> value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        byte[] array = value.Array;
+        if (array == null || array.Length < bytes.Length)
+        {
+            array = new byte[bytes.Length];
+        }
+        bytes.CopyTo(array);
+        value = new System.ArraySegment<byte>(array, 0, bytes.Length);
+    }
+
+    public void ReadBytes(ref System.Memory<byte> value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        byte[] array = System.Runtime.InteropServices.MemoryMarshal.TryGetArray<byte>(value, out System.ArraySegment<byte> segment)
+            ? segment.Array
+            : null;
+        if (array == null || array.Length < bytes.Length)
+        {
+            array = new byte[bytes.Length];
+        }
+        bytes.CopyTo(array);
+        value = new System.Memory<byte>(array, 0, bytes.Length);
+    }
+
+    public void ReadBytes(ref System.ReadOnlyMemory<byte> value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        value = _hasSource
+            ? _source.Slice(_position - bytes.Length, bytes.Length)
+            : bytes.ToArray();
     }
 
     /// Reads an `Array<T>`'s element count (RFC-0002 §6), checked against
@@ -348,6 +430,78 @@ public ref struct Reader
             throw DecodeException.LengthOverflow(count, int.MaxValue);
         }
         return (int)count;
+    }
+
+    private System.ReadOnlySpan<byte> TakeBytes()
+    {
+        int start = _position;
+        uint len = ReadLength(_limits.MaxBytesLength);
+        return TakeChecked(len, start);
+    }
+
+    private string DecodeUtf8(System.ReadOnlySpan<byte> bytes, int start)
+    {
+        try
+        {
+            return StrictUtf8.GetString(bytes);
+        }
+        catch (System.Text.DecoderFallbackException)
+        {
+            _position = start;
+            throw DecodeException.InvalidUtf8();
+        }
+    }
+
+    private static bool IsSameText(System.ReadOnlySpan<byte> bytes, string value)
+    {
+        int at = 0;
+        for (int index = 0; index < value.Length; index++)
+        {
+            int scalar = value[index];
+            if (scalar >= 0xD800 && scalar <= 0xDFFF)
+            {
+                if (scalar > 0xDBFF || index + 1 == value.Length)
+                {
+                    return false;
+                }
+                int low = value[index + 1];
+                if (low < 0xDC00 || low > 0xDFFF)
+                {
+                    return false;
+                }
+                scalar = 0x10000 + ((scalar - 0xD800) << 10) + (low - 0xDC00);
+                index++;
+            }
+
+            int width = scalar < 0x80 ? 1 : scalar < 0x800 ? 2 : scalar < 0x10000 ? 3 : 4;
+            if (bytes.Length - at < width)
+            {
+                return false;
+            }
+            switch (width)
+            {
+                case 1:
+                    if (bytes[at] != scalar) return false;
+                    break;
+                case 2:
+                    if (bytes[at] != (0xC0 | (scalar >> 6))
+                        || bytes[at + 1] != (0x80 | (scalar & 0x3F))) return false;
+                    break;
+                case 3:
+                    if (bytes[at] != (0xE0 | (scalar >> 12))
+                        || bytes[at + 1] != (0x80 | ((scalar >> 6) & 0x3F))
+                        || bytes[at + 2] != (0x80 | (scalar & 0x3F))) return false;
+                    break;
+                default:
+                    if (bytes[at] != (0xF0 | (scalar >> 18))
+                        || bytes[at + 1] != (0x80 | ((scalar >> 12) & 0x3F))
+                        || bytes[at + 2] != (0x80 | ((scalar >> 6) & 0x3F))
+                        || bytes[at + 3] != (0x80 | (scalar & 0x3F))) return false;
+                    break;
+            }
+            at += width;
+        }
+        return at == bytes.Length;
     }
 
     private uint ReadLength(long limit)
@@ -387,6 +541,20 @@ public ref struct Reader
         System.ReadOnlySpan<byte> bytes = _buffer.Slice(_position, len);
         _position += len;
         return bytes;
+    }
+}
+
+public static class ArrayField
+{
+    public static System.Collections.Generic.List<T> Reuse<T>(System.Collections.Generic.IEnumerable<T> existing, int count) =>
+        existing as System.Collections.Generic.List<T> ?? new System.Collections.Generic.List<T>(System.Math.Min(count, 4096));
+
+    public static void Trim<T>(System.Collections.Generic.List<T> list, int count)
+    {
+        if (list.Count > count)
+        {
+            list.RemoveRange(count, list.Count - count);
+        }
     }
 }
 "####;

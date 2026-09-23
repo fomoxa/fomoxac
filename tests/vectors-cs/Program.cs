@@ -10,6 +10,49 @@ internal static class Program
 {
     private delegate byte[] RoundTrip(byte[] payload);
 
+    private delegate void DecodeInto(ref Reader reader, object value);
+
+    private sealed class Codec
+    {
+        public Func<object> Create;
+        public DecodeInto Decode;
+        public Action<Writer, object> Encode;
+    }
+
+    private static readonly Dictionary<string, Codec> Codecs = new Dictionary<string, Codec>
+    {
+        ["Player.edge"] = new Codec
+        {
+            Create = () => new Player(),
+            Decode = (ref Reader reader, object value) => { var typed = (Player)value; PlayerEdgeCodec.Decode(ref reader, ref typed); },
+            Encode = (writer, value) => PlayerEdgeCodec.Encode(writer, (Player)value),
+        },
+        ["DeviceState.edge"] = new Codec
+        {
+            Create = () => new DeviceState(),
+            Decode = (ref Reader reader, object value) => { var typed = (DeviceState)value; DeviceStateEdgeCodec.Decode(ref reader, ref typed); },
+            Encode = (writer, value) => DeviceStateEdgeCodec.Encode(writer, (DeviceState)value),
+        },
+        ["DeviceState.unity"] = new Codec
+        {
+            Create = () => new DeviceState(),
+            Decode = (ref Reader reader, object value) => { var typed = (DeviceState)value; DeviceStateUnityCodec.Decode(ref reader, ref typed); },
+            Encode = (writer, value) => DeviceStateUnityCodec.Encode(writer, (DeviceState)value),
+        },
+        ["EveryPrimitive.edge"] = new Codec
+        {
+            Create = () => new EveryPrimitive(),
+            Decode = (ref Reader reader, object value) => { var typed = (EveryPrimitive)value; EveryPrimitiveEdgeCodec.Decode(ref reader, ref typed); },
+            Encode = (writer, value) => EveryPrimitiveEdgeCodec.Encode(writer, (EveryPrimitive)value),
+        },
+        ["Team.edge"] = new Codec
+        {
+            Create = () => new Team(),
+            Decode = (ref Reader reader, object value) => { var typed = (Team)value; TeamEdgeCodec.Decode(ref reader, ref typed); },
+            Encode = (writer, value) => TeamEdgeCodec.Encode(writer, (Team)value),
+        },
+    };
+
     private static readonly Writer SharedWriter = new Writer(1);
 
     private static readonly Dictionary<string, RoundTrip> RoundTrips = new Dictionary<string, RoundTrip>
@@ -102,6 +145,9 @@ internal static class Program
         {
             CheckSharedWriter(vector);
         }
+
+        CheckReusedTargets(root.GetProperty("accept"));
+        CheckRuntimeViews();
 
         CheckNetSchema(root.GetProperty("messages"));
 
@@ -219,6 +265,136 @@ internal static class Program
             }
         }
         Check(SharedWriter.WrittenSpan.SequenceEqual(expected), $"shared writer {name}: {ToHex(SharedWriter.ToArray())}, expected {ToHex(expected)}");
+    }
+
+    private static void CheckReusedTargets(JsonElement accept)
+    {
+        List<JsonElement> vectors = accept.EnumerateArray().ToList();
+        var targets = new Dictionary<string, object>();
+        for (int pass = 0; pass < 2; pass++)
+        {
+            IEnumerable<JsonElement> order = pass == 0 ? vectors : Enumerable.Reverse(vectors);
+            foreach (JsonElement vector in order)
+            {
+                string name = vector.GetProperty("name").GetString();
+                string message = vector.GetProperty("message").GetString();
+                byte[] payload = Hex(vector.GetProperty("hex").GetString());
+                byte[] expected = Hex(vector.GetProperty("reencode").GetString());
+                Codec codec = Codecs[message];
+                if (!targets.TryGetValue(message, out object target))
+                {
+                    target = codec.Create();
+                    targets[message] = target;
+                }
+
+                var reader = new Reader(payload);
+                codec.Decode(ref reader, target);
+                SharedWriter.Clear();
+                codec.Encode(SharedWriter, target);
+                Check(SharedWriter.WrittenSpan.SequenceEqual(expected), $"reused target {name}: {ToHex(SharedWriter.ToArray())}, expected {ToHex(expected)}");
+
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                var again = new Reader(payload);
+                codec.Decode(ref again, target);
+                long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                Check(allocated == 0, $"reused target {name}: decoding the same bytes again allocated {allocated} bytes");
+            }
+        }
+    }
+
+    private static void CheckRuntimeViews()
+    {
+        byte[] blob = { 1, 2, 3, 4, 5 };
+        byte[] expected = { 5, 0, 0, 0, 1, 2, 3, 4, 5 };
+        var writer = new Writer(1);
+        writer.WriteBytes(new ReadOnlyMemory<byte>(blob));
+        Check(writer.WrittenSpan.SequenceEqual(expected), "WriteBytes(ReadOnlyMemory<byte>)");
+        writer.Clear();
+        writer.WriteBytes(new Memory<byte>(blob));
+        Check(writer.WrittenSpan.SequenceEqual(expected), "WriteBytes(Memory<byte>)");
+        writer.Clear();
+        writer.WriteBytes(new ArraySegment<byte>(new byte[] { 9, 1, 2, 3, 4, 5, 9 }, 1, 5));
+        Check(writer.WrittenSpan.SequenceEqual(expected), "WriteBytes(ArraySegment<byte>)");
+        writer.Clear();
+        writer.WriteBytes(new ReadOnlySpan<byte>(blob));
+        Check(writer.WrittenSpan.SequenceEqual(expected), "WriteBytes(ReadOnlySpan<byte>)");
+
+        byte[] framed = new byte[] { 0xEE }.Concat(expected).ToArray();
+        var memoryReader = new Reader(new ReadOnlyMemory<byte>(framed, 1, expected.Length));
+        ReadOnlyMemory<byte> view = default;
+        memoryReader.ReadBytes(ref view);
+        bool aliases = System.Runtime.InteropServices.MemoryMarshal.TryGetArray(view, out ArraySegment<byte> viewSegment)
+            && ReferenceEquals(viewSegment.Array, framed) && viewSegment.Offset == 5 && viewSegment.Count == 5;
+        Check(aliases, "ReadBytes(ref ReadOnlyMemory<byte>) over memory is a slice of the input");
+
+        var spanReader = new Reader(new ReadOnlySpan<byte>(expected));
+        ReadOnlyMemory<byte> copied = default;
+        spanReader.ReadBytes(ref copied);
+        Check(copied.Span.SequenceEqual(blob), "ReadBytes(ref ReadOnlyMemory<byte>) over a span copies");
+
+        byte[] reusedArray = new byte[5];
+        byte[] arrayTarget = reusedArray;
+        var arrayReader = new Reader(expected);
+        arrayReader.ReadBytes(ref arrayTarget);
+        Check(ReferenceEquals(arrayTarget, reusedArray) && arrayTarget.SequenceEqual(blob), "ReadBytes(ref byte[]) reuses an array of the same length");
+
+        byte[] segmentStorage = new byte[16];
+        var segmentTarget = new ArraySegment<byte>(segmentStorage, 0, 2);
+        var segmentReader = new Reader(expected);
+        segmentReader.ReadBytes(ref segmentTarget);
+        Check(ReferenceEquals(segmentTarget.Array, segmentStorage) && segmentTarget.Count == 5 && segmentTarget.SequenceEqual(blob), "ReadBytes(ref ArraySegment<byte>) reuses a large enough array");
+
+        Memory<byte> memoryTarget = new Memory<byte>(new byte[2]);
+        var growReader = new Reader(expected);
+        growReader.ReadBytes(ref memoryTarget);
+        Check(memoryTarget.Length == 5 && memoryTarget.Span.SequenceEqual(blob), "ReadBytes(ref Memory<byte>) grows a small array");
+
+        CheckStringReuse("ascii", "Captain");
+        CheckStringReuse("non-ascii", "Đội trưởng 🚀");
+        CheckStringReuse("long", new string('x', 300) + "é");
+
+        string previous = "before";
+        string replaced = previous;
+        var replacingReader = new Reader(StringPayload("after"));
+        replacingReader.ReadString(ref replaced);
+        Check(replaced == "after", "ReadString(ref string) replaces a different string");
+
+        byte[] invalid = { 2, 0, 0, 0, 0xC3, 0x28 };
+        var invalidReader = new Reader(invalid);
+        string untouched = "kept";
+        try
+        {
+            invalidReader.ReadString(ref untouched);
+            Check(false, "ReadString(ref string) accepted invalid UTF-8");
+        }
+        catch (DecodeException raised)
+        {
+            Check(raised.Message.StartsWith("invalid utf-8", StringComparison.Ordinal) && invalidReader.Position == 0 && untouched == "kept", "ReadString(ref string) rejects invalid UTF-8 and leaves the cursor and the value");
+        }
+    }
+
+    private static void CheckStringReuse(string label, string text)
+    {
+        byte[] payload = StringPayload(text);
+        string held = new string(text.AsSpan());
+        string target = held;
+        var reader = new Reader(payload);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        reader.ReadString(ref target);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Check(ReferenceEquals(target, held) && allocated == 0, $"ReadString(ref string) keeps an equal {label} string without allocating ({allocated} bytes)");
+
+        string empty = null;
+        var fresh = new Reader(payload);
+        fresh.ReadString(ref empty);
+        Check(empty == text, $"ReadString(ref string) decodes a {label} string into null");
+    }
+
+    private static byte[] StringPayload(string text)
+    {
+        var writer = new Writer();
+        writer.WriteString(text);
+        return writer.ToArray();
     }
 
     private static void CheckReject(JsonElement vector)

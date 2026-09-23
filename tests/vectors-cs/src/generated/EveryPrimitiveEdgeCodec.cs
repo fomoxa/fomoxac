@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:36:16Z
+// generated-at: 2026-09-23T08:50:35Z
 
 namespace Generated
 {
@@ -81,8 +81,26 @@ public static class EveryPrimitiveEdgeCodec
         value.Sequence = reader.FieldAbsent() ? 0 : reader.ReadU64();
         value.Ratio = reader.FieldAbsent() ? 0f : reader.ReadF32();
         value.Precise = reader.FieldAbsent() ? 0d : reader.ReadF64();
-        value.Label = reader.FieldAbsent() ? "" : reader.ReadString();
-        value.Blob = reader.FieldAbsent() ? System.Array.Empty<byte>() : reader.ReadBytes();
+        var labelValue = value.Label;
+        if (reader.FieldAbsent())
+        {
+            labelValue = "";
+        }
+        else
+        {
+            reader.ReadString(ref labelValue);
+        }
+        value.Label = labelValue;
+        var blobValue = value.Blob;
+        if (reader.FieldAbsent())
+        {
+            blobValue = System.Array.Empty<byte>();
+        }
+        else
+        {
+            reader.ReadBytes(ref blobValue);
+        }
+        value.Blob = blobValue;
     }
 }
 

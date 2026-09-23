@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:47:01Z
+// generated-at: 2026-09-23T08:50:35Z
 
 namespace Generated
 {
@@ -68,27 +68,54 @@ public static class TeamEdgeCodec
         PlayerInfoEdgeCodec.Decode(ref reader, ref captainValue);
         value.Captain = captainValue;
         int tagsValueCount = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();
-        var tagsValueList = new System.Collections.Generic.List<string>(System.Math.Min(tagsValueCount, 4096));
+        var tagsValueList = ArrayField.Reuse(value.Tags, tagsValueCount);
         for (int i = 0; i < tagsValueCount; i++)
         {
-            tagsValueList.Add(reader.ReadString());
+            var element = i < tagsValueList.Count ? tagsValueList[i] : default;
+            reader.ReadString(ref element);
+            if (i < tagsValueList.Count)
+            {
+                tagsValueList[i] = element;
+            }
+            else
+            {
+                tagsValueList.Add(element);
+            }
         }
+        ArrayField.Trim(tagsValueList, tagsValueCount);
         value.Tags = tagsValueList;
         int scoresValueCount = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();
-        var scoresValueList = new System.Collections.Generic.List<uint>(System.Math.Min(scoresValueCount, 4096));
+        var scoresValueList = ArrayField.Reuse(value.Scores, scoresValueCount);
         for (int i = 0; i < scoresValueCount; i++)
         {
-            scoresValueList.Add(reader.ReadU32());
+            var element = reader.ReadU32();
+            if (i < scoresValueList.Count)
+            {
+                scoresValueList[i] = element;
+            }
+            else
+            {
+                scoresValueList.Add(element);
+            }
         }
+        ArrayField.Trim(scoresValueList, scoresValueCount);
         value.Scores = scoresValueList;
         int rosterValueCount = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();
-        var rosterValueList = new System.Collections.Generic.List<Models.PlayerInfo>(System.Math.Min(rosterValueCount, 4096));
+        var rosterValueList = ArrayField.Reuse(value.Roster, rosterValueCount);
         for (int i = 0; i < rosterValueCount; i++)
         {
-            var element = new Models.PlayerInfo();
+            var element = i < rosterValueList.Count ? rosterValueList[i] : new Models.PlayerInfo();
             PlayerInfoEdgeCodec.Decode(ref reader, ref element);
-            rosterValueList.Add(element);
+            if (i < rosterValueList.Count)
+            {
+                rosterValueList[i] = element;
+            }
+            else
+            {
+                rosterValueList.Add(element);
+            }
         }
+        ArrayField.Trim(rosterValueList, rosterValueCount);
         value.Roster = rosterValueList;
     }
 }

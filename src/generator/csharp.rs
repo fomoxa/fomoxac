@@ -353,20 +353,37 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
         let local = local_name(&field.name);
         let count_local = format!("{local}Count");
         let list_local = format!("{local}List");
-        let element_type_csharp = element_type_name(element_type, imports);
 
         out.push_str(&format!(
             "        int {count_local} = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();\n"
         ));
         out.push_str(&format!(
-            "        var {list_local} = new System.Collections.Generic.List<{element_type_csharp}>(System.Math.Min({count_local}, 4096));\n"
+            "        var {list_local} = ArrayField.Reuse({place}, {count_local});\n"
         ));
         out.push_str(&format!(
             "        for (int i = 0; i < {count_local}; i++)\n        {{\n"
         ));
         decode_element_into(out, element_type, &list_local, codec, imports);
         out.push_str("        }\n");
+        out.push_str(&format!(
+            "        ArrayField.Trim({list_local}, {count_local});\n"
+        ));
         out.push_str(&format!("        {place} = {list_local};\n"));
+        return;
+    }
+
+    if matches!(field.ty, WireType::Str | WireType::Bytes) {
+        let (_, reader_method, _) = primitive(&field.ty).expect("a string or bytes field");
+        let local = local_name(&field.name);
+        out.push_str(&format!("        var {local} = {place};\n"));
+        out.push_str("        if (reader.FieldAbsent())\n        {\n");
+        out.push_str(&format!("            {local} = {};\n", zero(&field.ty)));
+        out.push_str("        }\n        else\n        {\n");
+        out.push_str(&format!(
+            "            reader.{reader_method}(ref {local});\n"
+        ));
+        out.push_str("        }\n");
+        out.push_str(&format!("        {place} = {local};\n"));
         return;
     }
 
@@ -388,26 +405,32 @@ fn decode_element_into(
         Some(name) => {
             let csharp_type = imports.qualify(name);
             let nested = codec_type_name(name, codec);
-            out.push_str(&format!("            var element = new {csharp_type}();\n"));
+            out.push_str(&format!(
+                "            var element = i < {list_local}.Count ? {list_local}[i] : new {csharp_type}();\n"
+            ));
             out.push_str(&format!(
                 "            {nested}.Decode(ref reader, ref element);\n"
             ));
-            out.push_str(&format!("            {list_local}.Add(element);\n"));
         }
         None => {
             let (_, reader_method, _) = primitive(ty).expect("models handled above");
-            out.push_str(&format!(
-                "            {list_local}.Add(reader.{reader_method}());\n"
-            ));
+            if matches!(ty, WireType::Str | WireType::Bytes) {
+                out.push_str(&format!(
+                    "            var element = i < {list_local}.Count ? {list_local}[i] : default;\n"
+                ));
+                out.push_str(&format!(
+                    "            reader.{reader_method}(ref element);\n"
+                ));
+            } else {
+                out.push_str(&format!(
+                    "            var element = reader.{reader_method}();\n"
+                ));
+            }
         }
     }
-}
-
-fn element_type_name(ty: &WireType, imports: &Imports<'_>) -> String {
-    match primitive(ty) {
-        Some((_, _, csharp_type)) => csharp_type.to_owned(),
-        None => imports.qualify(ty.model_name().expect("a non-primitive, non-array type")),
-    }
+    out.push_str(&format!(
+        "            if (i < {list_local}.Count)\n            {{\n                {list_local}[i] = element;\n            }}\n            else\n            {{\n                {list_local}.Add(element);\n            }}\n"
+    ));
 }
 
 fn as_model(ty: &WireType) -> Option<&str> {
@@ -514,13 +537,25 @@ mod tests {
     }
 
     #[test]
-    fn a_string_zeroes_to_an_empty_string() {
+    fn a_string_zeroes_to_an_empty_string_and_otherwise_decodes_over_the_held_one() {
         let text = generated(&[("Name", "string")]);
         assert!(text.contains("writer.WriteString(value.Name);"), "{text}");
+        assert!(text.contains("var nameValue = value.Name;"), "{text}");
+        assert!(text.contains("nameValue = \"\";"), "{text}");
+        assert!(text.contains("reader.ReadString(ref nameValue);"), "{text}");
+        assert!(text.contains("value.Name = nameValue;"), "{text}");
+    }
+
+    #[test]
+    fn a_bytes_field_decodes_over_the_held_value_whatever_its_view_type() {
+        let text = generated(&[("Blob", "bytes")]);
+        assert!(text.contains("writer.WriteBytes(value.Blob);"), "{text}");
+        assert!(text.contains("var blobValue = value.Blob;"), "{text}");
         assert!(
-            text.contains("value.Name = reader.FieldAbsent() ? \"\" : reader.ReadString();"),
+            text.contains("blobValue = System.Array.Empty<byte>();"),
             "{text}"
         );
+        assert!(text.contains("reader.ReadBytes(ref blobValue);"), "{text}");
     }
 
     #[test]
@@ -557,20 +592,32 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("List<string>(System.Math.Min(tagsValueCount, 4096));"),
+            text.contains("var tagsValueList = ArrayField.Reuse(value.Tags, tagsValueCount);"),
             "{text}"
         );
         assert!(
-            text.contains("tagsValueList.Add(reader.ReadString());"),
+            text.contains("var element = i < tagsValueList.Count ? tagsValueList[i] : default;"),
+            "{text}"
+        );
+        assert!(text.contains("reader.ReadString(ref element);"), "{text}");
+        assert!(text.contains("tagsValueList[i] = element;"), "{text}");
+        assert!(text.contains("tagsValueList.Add(element);"), "{text}");
+        assert!(
+            text.contains("ArrayField.Trim(tagsValueList, tagsValueCount);"),
             "{text}"
         );
         assert!(text.contains("value.Tags = tagsValueList;"), "{text}");
     }
 
     #[test]
-    fn an_array_of_models_creates_a_fresh_element_each_iteration() {
+    fn an_array_of_models_decodes_into_held_elements_and_creates_only_new_ones() {
         let text = generated(&[("Roster", "Array<PlayerInfo>")]);
-        assert!(text.contains("var element = new PlayerInfo();"), "{text}");
+        assert!(
+            text.contains(
+                "var element = i < rosterValueList.Count ? rosterValueList[i] : new PlayerInfo();"
+            ),
+            "{text}"
+        );
         assert!(
             text.contains("PlayerInfoEdgeCodec.Decode(ref reader, ref element);"),
             "{text}"
