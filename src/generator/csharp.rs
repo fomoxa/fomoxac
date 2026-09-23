@@ -359,7 +359,7 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
             "        int {count_local} = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();\n"
         ));
         out.push_str(&format!(
-            "        var {list_local} = new System.Collections.Generic.List<{element_type_csharp}>({count_local});\n"
+            "        var {list_local} = new System.Collections.Generic.List<{element_type_csharp}>(System.Math.Min({count_local}, 4096));\n"
         ));
         out.push_str(&format!(
             "        for (int i = 0; i < {count_local}; i++)\n        {{\n"
@@ -556,7 +556,10 @@ mod tests {
             ),
             "{text}"
         );
-        assert!(text.contains("List<string>(tagsValueCount);"), "{text}");
+        assert!(
+            text.contains("List<string>(System.Math.Min(tagsValueCount, 4096));"),
+            "{text}"
+        );
         assert!(
             text.contains("tagsValueList.Add(reader.ReadString());"),
             "{text}"

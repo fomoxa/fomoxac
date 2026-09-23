@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// generated-at: 2026-09-23T02:47:01Z
 
 namespace Generated
 {
@@ -68,21 +68,21 @@ public static class TeamEdgeCodec
         PlayerInfoEdgeCodec.Decode(ref reader, ref captainValue);
         value.Captain = captainValue;
         int tagsValueCount = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();
-        var tagsValueList = new System.Collections.Generic.List<string>(tagsValueCount);
+        var tagsValueList = new System.Collections.Generic.List<string>(System.Math.Min(tagsValueCount, 4096));
         for (int i = 0; i < tagsValueCount; i++)
         {
             tagsValueList.Add(reader.ReadString());
         }
         value.Tags = tagsValueList;
         int scoresValueCount = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();
-        var scoresValueList = new System.Collections.Generic.List<uint>(scoresValueCount);
+        var scoresValueList = new System.Collections.Generic.List<uint>(System.Math.Min(scoresValueCount, 4096));
         for (int i = 0; i < scoresValueCount; i++)
         {
             scoresValueList.Add(reader.ReadU32());
         }
         value.Scores = scoresValueList;
         int rosterValueCount = reader.FieldAbsent() ? 0 : reader.ReadArrayCount();
-        var rosterValueList = new System.Collections.Generic.List<Models.PlayerInfo>(rosterValueCount);
+        var rosterValueList = new System.Collections.Generic.List<Models.PlayerInfo>(System.Math.Min(rosterValueCount, 4096));
         for (int i = 0; i < rosterValueCount; i++)
         {
             var element = new Models.PlayerInfo();

@@ -503,7 +503,7 @@ Go compiles by package. Every file `fomoxac` writes in one run shares one `packa
 
 ### C#
 
-C# compiles by project. A generated codec never writes a `using` directive. It writes a fully qualified reference (e.g. `Models.Player`) when the model lives outside the run's own namespace, which is the directory name of `--out` in PascalCase, and a bare reference otherwise. `Decode` takes `ref Reader` and throws `DecodeException` on failure. A C# property cannot be passed by `ref`, so a nested model field is decoded through a local variable: read it out, decode into it by `ref`, and assign it back. The field must therefore already hold an instance before `Decode` runs.
+C# compiles by project. A generated codec never writes a `using` directive. It writes a fully qualified reference (e.g. `Models.Player`) when the model lives outside the run's own namespace, which is the directory name of `--out` in PascalCase, and a bare reference otherwise. `Decode` takes `ref Reader` and throws `DecodeException` on failure. A C# property cannot be passed by `ref`, so a nested model field is decoded through a local variable: read it out, decode into it by `ref`, and assign it back. The field must therefore already hold an instance before `Decode` runs. `Writer` writes into one `byte[]` that `Clear()` keeps, so a writer reused across messages stops allocating once its buffer has grown to the largest message; `WrittenSpan` and `WrittenMemory` expose the written bytes without copying, and `ToArray()` copies them. An array count read from the stream preallocates at most 4096 elements, the same bound the Rust backend uses.
 
 ### C++
 

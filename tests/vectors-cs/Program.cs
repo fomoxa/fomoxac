@@ -10,6 +10,8 @@ internal static class Program
 {
     private delegate byte[] RoundTrip(byte[] payload);
 
+    private static readonly Writer SharedWriter = new Writer(1);
+
     private static readonly Dictionary<string, RoundTrip> RoundTrips = new Dictionary<string, RoundTrip>
     {
         ["Player.edge"] = payload =>
@@ -96,6 +98,11 @@ internal static class Program
             CheckReject(vector);
         }
 
+        foreach (JsonElement vector in root.GetProperty("accept").EnumerateArray())
+        {
+            CheckSharedWriter(vector);
+        }
+
         Console.WriteLine($"{checks - failures}/{checks} checks passed");
         return failures == 0 ? 0 : 1;
     }
@@ -127,6 +134,55 @@ internal static class Program
         {
             Check(false, $"accept {name}: {error.GetType().Name}: {error.Message}");
         }
+    }
+
+    private static void CheckSharedWriter(JsonElement vector)
+    {
+        string name = vector.GetProperty("name").GetString();
+        string message = vector.GetProperty("message").GetString();
+        byte[] payload = Hex(vector.GetProperty("hex").GetString());
+        byte[] expected = RoundTrips[message](payload);
+        SharedWriter.Clear();
+        var reader = new Reader(payload);
+        switch (message)
+        {
+            case "Player.edge":
+            {
+                var value = new Player();
+                PlayerEdgeCodec.Decode(ref reader, ref value);
+                PlayerEdgeCodec.Encode(SharedWriter, value);
+                break;
+            }
+            case "DeviceState.edge":
+            {
+                var value = new DeviceState();
+                DeviceStateEdgeCodec.Decode(ref reader, ref value);
+                DeviceStateEdgeCodec.Encode(SharedWriter, value);
+                break;
+            }
+            case "DeviceState.unity":
+            {
+                var value = new DeviceState();
+                DeviceStateUnityCodec.Decode(ref reader, ref value);
+                DeviceStateUnityCodec.Encode(SharedWriter, value);
+                break;
+            }
+            case "EveryPrimitive.edge":
+            {
+                var value = new EveryPrimitive();
+                EveryPrimitiveEdgeCodec.Decode(ref reader, ref value);
+                EveryPrimitiveEdgeCodec.Encode(SharedWriter, value);
+                break;
+            }
+            case "Team.edge":
+            {
+                var value = new Team();
+                TeamEdgeCodec.Decode(ref reader, ref value);
+                TeamEdgeCodec.Encode(SharedWriter, value);
+                break;
+            }
+        }
+        Check(SharedWriter.WrittenSpan.SequenceEqual(expected), $"shared writer {name}: {ToHex(SharedWriter.ToArray())}, expected {ToHex(expected)}");
     }
 
     private static void CheckReject(JsonElement vector)
