@@ -5,7 +5,7 @@
 // codec: unity
 // fingerprint: sha256:79d7ff966acb367b1accc39e029fc41874e8c605bd5663b6cf66280bde2469c7
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// generated-at: 2026-09-23T09:13:20Z
 
 #pragma once
 
@@ -46,8 +46,8 @@ static inline bool PlayerUnityCodec_encode(FomoxaWriter *writer, const struct Pl
 // the stream ended inside is an error. Bytes left over after the last field
 // belong to a newer writer's model and are ignored.
 //
-// `*value` must not already hold data from a previous, unfreed decode - see
-// runtime.h's module docs.
+// `*value` must be zero-initialized, freed, or filled by an earlier decode,
+// whose buffers this one reuses.
 static inline FomoxaDecodeError PlayerUnityCodec_decode(FomoxaReader *reader, struct Player *value) {
     if (fomoxa_reader_field_absent(reader)) {
         value->Id = 0;
@@ -56,9 +56,10 @@ static inline FomoxaDecodeError PlayerUnityCodec_decode(FomoxaReader *reader, st
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     if (fomoxa_reader_field_absent(reader)) {
+        free((void *)value->Name);
         value->Name = NULL;
     } else {
-        FomoxaDecodeError error = fomoxa_reader_read_string(reader, &value->Name);
+        FomoxaDecodeError error = fomoxa_reader_read_string_into(reader, &value->Name);
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     return fomoxa_decode_ok();

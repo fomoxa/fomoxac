@@ -41,6 +41,48 @@ DEFINE_ROUND_TRIP(device_state_unity, DeviceState, DeviceStateUnityCodec)
 DEFINE_ROUND_TRIP(every_primitive_edge, EveryPrimitive, EveryPrimitiveEdgeCodec)
 DEFINE_ROUND_TRIP(team_edge, Team, TeamEdgeCodec)
 
+static struct Player held_player;
+static struct DeviceState held_device_state_edge;
+static struct DeviceState held_device_state_unity;
+static struct EveryPrimitive held_every_primitive;
+static struct Team held_team;
+
+#define DEFINE_REUSED_ROUND_TRIP(function, Codec, held)                                  \
+    static FomoxaDecodeError function(const unsigned char *payload, size_t size,         \
+                                      FomoxaWriter *out) {                               \
+        FomoxaReader reader;                                                              \
+        FomoxaDecodeError error;                                                          \
+        fomoxa_reader_init(&reader, payload, size, fomoxa_limits_unlimited());            \
+        error = Codec##_decode(&reader, &held);                                           \
+        if (fomoxa_decode_error_ok(&error)) {                                             \
+            Codec##_encode(out, &held);                                                   \
+        }                                                                                 \
+        return error;                                                                     \
+    }
+
+DEFINE_REUSED_ROUND_TRIP(reused_player_edge, PlayerEdgeCodec, held_player)
+DEFINE_REUSED_ROUND_TRIP(reused_device_state_edge, DeviceStateEdgeCodec, held_device_state_edge)
+DEFINE_REUSED_ROUND_TRIP(reused_device_state_unity, DeviceStateUnityCodec, held_device_state_unity)
+DEFINE_REUSED_ROUND_TRIP(reused_every_primitive_edge, EveryPrimitiveEdgeCodec, held_every_primitive)
+DEFINE_REUSED_ROUND_TRIP(reused_team_edge, TeamEdgeCodec, held_team)
+
+#define HELD_POINTERS 64
+
+static size_t held_pointers(const void **out) {
+    size_t count = 0;
+    size_t i;
+    out[count++] = held_device_state_unity.DisplayName;
+    out[count++] = held_every_primitive.Label;
+    out[count++] = held_every_primitive.Blob.data;
+    out[count++] = held_team.Tags.items;
+    out[count++] = held_team.Scores.items;
+    out[count++] = held_team.Roster.items;
+    for (i = 0; i < held_team.Tags.count && count < HELD_POINTERS; ++i) {
+        out[count++] = held_team.Tags.items[i];
+    }
+    return count;
+}
+
 typedef struct {
     const char *message;
     RoundTrip round_trip;
@@ -86,6 +128,22 @@ static size_t from_hex(const char *text, unsigned char *out) {
         out[count++] = (unsigned char)strtoul(pair, NULL, 16);
     }
     return count;
+}
+
+static const RoundTripEntry reused_round_trips[] = {
+    {"Player.edge", reused_player_edge},
+    {"DeviceState.edge", reused_device_state_edge},
+    {"DeviceState.unity", reused_device_state_unity},
+    {"EveryPrimitive.edge", reused_every_primitive_edge},
+    {"Team.edge", reused_team_edge},
+};
+
+static RoundTrip find_reused_round_trip(const char *message) {
+    size_t i;
+    for (i = 0; i < sizeof reused_round_trips / sizeof reused_round_trips[0]; ++i) {
+        if (strcmp(reused_round_trips[i].message, message) == 0) return reused_round_trips[i].round_trip;
+    }
+    return NULL;
 }
 
 static RoundTrip find_round_trip(const char *message) {
@@ -190,8 +248,34 @@ int main(void) {
                 check(fomoxa_decode_error_ok(&shared_error) && shared_writer.len == expected_size &&
                           (expected_size == 0 || memcmp(shared_writer.data, expected, expected_size) == 0),
                       "shared writer", name, "re-encoded bytes differ");
+                {
+                    RoundTrip reused = find_reused_round_trip(third);
+                    FomoxaWriter reused_writer;
+                    FomoxaDecodeError reused_error;
+                    const void *before[HELD_POINTERS];
+                    const void *after[HELD_POINTERS];
+                    size_t before_count;
+                    size_t after_count;
+                    fomoxa_writer_init(&reused_writer);
+                    reused_error = reused(payload, payload_size, &reused_writer);
+                    check(fomoxa_decode_error_ok(&reused_error) && reused_writer.len == expected_size &&
+                              (expected_size == 0 || memcmp(reused_writer.data, expected, expected_size) == 0),
+                          "reused target", name, "re-encoded bytes differ");
+                    before_count = held_pointers(before);
+                    fomoxa_writer_reset(&reused_writer);
+                    reused_error = reused(payload, payload_size, &reused_writer);
+                    after_count = held_pointers(after);
+                    check(fomoxa_decode_error_ok(&reused_error) && before_count == after_count &&
+                              memcmp(before, after, before_count * sizeof before[0]) == 0,
+                          "reused target", name, "decoding the same bytes again moved a held buffer");
+                    fomoxa_writer_free(&reused_writer);
+                }
             } else {
                 FomoxaDecodeErrorKind wanted;
+                FomoxaWriter reused_writer;
+                fomoxa_writer_init(&reused_writer);
+                find_reused_round_trip(third)(payload, payload_size, &reused_writer);
+                fomoxa_writer_free(&reused_writer);
                 int known = error_kind(fifth, &wanted);
                 check(known && !fomoxa_decode_error_ok(&error) && error.kind == wanted, kind, name, fifth);
             }
@@ -200,6 +284,11 @@ int main(void) {
     }
 
     fomoxa_writer_free(&shared_writer);
+    Player_free(&held_player);
+    DeviceState_free(&held_device_state_edge);
+    DeviceState_free(&held_device_state_unity);
+    EveryPrimitive_free(&held_every_primitive);
+    Team_free(&held_team);
     check_net_schema();
 
     printf("%d/%d checks passed\n", checks - failures, checks);

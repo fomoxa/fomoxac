@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:41:21Z
+// generated-at: 2026-09-23T09:13:20Z
 
 #pragma once
 
@@ -62,8 +62,8 @@ static inline bool TeamEdgeCodec_encode(FomoxaWriter *writer, const struct Team 
 // the stream ended inside is an error. Bytes left over after the last field
 // belong to a newer writer's model and are ignored.
 //
-// `*value` must not already hold data from a previous, unfreed decode - see
-// runtime.h's module docs.
+// `*value` must be zero-initialized, freed, or filled by an earlier decode,
+// whose buffers this one reuses.
 static inline FomoxaDecodeError TeamEdgeCodec_decode(FomoxaReader *reader, struct Team *value) {
     {
         FomoxaDecodeError error = PlayerInfoEdgeCodec_decode(reader, &value->Captain);
@@ -75,85 +75,124 @@ static inline FomoxaDecodeError TeamEdgeCodec_decode(FomoxaReader *reader, struc
             FomoxaDecodeError error = fomoxa_reader_read_array_count(reader, &count);
             if (!fomoxa_decode_error_ok(&error)) return error;
         }
-        FomoxaArray_string array;
-        array.items = NULL;
-        array.count = 0;
-        if (count > 0) {
-            array.items = (const char * *)calloc(count, sizeof(const char *));
-            if (array.items == NULL) {
-                FomoxaDecodeError error = fomoxa_decode_ok();
-                error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
-                return error;
-            }
-            array.count = count;
+        FomoxaArray_string *array = &value->Tags;
+        while (array->count > count) {
+            --array->count;
+            free((void *)array->items[array->count]);
         }
+        if (count == 0) {
+            free(array->items);
+            array->items = NULL;
+        }
+        size_t capacity = array->count;
         for (size_t i = 0; i < count; ++i) {
-            FomoxaDecodeError error = fomoxa_reader_read_string(reader, &array.items[i]);
-            if (!fomoxa_decode_error_ok(&error)) {
-                FomoxaArray_string_free(&array);
-                return error;
-            }
-        }
-        value->Tags = array;
-    }
-    {
-        size_t count = 0;
-        if (!fomoxa_reader_field_absent(reader)) {
-            FomoxaDecodeError error = fomoxa_reader_read_array_count(reader, &count);
-            if (!fomoxa_decode_error_ok(&error)) return error;
-        }
-        FomoxaArray_u32 array;
-        array.items = NULL;
-        array.count = 0;
-        if (count > 0) {
-            array.items = (uint32_t *)calloc(count, sizeof(uint32_t));
-            if (array.items == NULL) {
-                FomoxaDecodeError error = fomoxa_decode_ok();
-                error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
-                return error;
-            }
-            array.count = count;
-        }
-        for (size_t i = 0; i < count; ++i) {
-            FomoxaDecodeError error = fomoxa_reader_read_u32(reader, &array.items[i]);
-            if (!fomoxa_decode_error_ok(&error)) {
-                FomoxaArray_u32_free(&array);
-                return error;
-            }
-        }
-        value->Scores = array;
-    }
-    {
-        size_t count = 0;
-        if (!fomoxa_reader_field_absent(reader)) {
-            FomoxaDecodeError error = fomoxa_reader_read_array_count(reader, &count);
-            if (!fomoxa_decode_error_ok(&error)) return error;
-        }
-        FomoxaArray_PlayerInfo array;
-        array.items = NULL;
-        array.count = 0;
-        if (count > 0) {
-            array.items = (struct PlayerInfo *)calloc(count, sizeof(struct PlayerInfo));
-            if (array.items == NULL) {
-                FomoxaDecodeError error = fomoxa_decode_ok();
-                error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
-                return error;
-            }
-            array.count = count;
-        }
-        for (size_t i = 0; i < count; ++i) {
-            FomoxaDecodeError error = PlayerInfoEdgeCodec_decode(reader, &array.items[i]);
-            if (!fomoxa_decode_error_ok(&error)) {
-                for (size_t j = 0; j < array.count; ++j) {
-                    PlayerInfo_free(&array.items[j]);
+            if (i == array->count) {
+                if (i == capacity) {
+                    size_t grown = capacity < 8 ? 8 : capacity * 2;
+                    if (grown > count) grown = count;
+                    const char **items = NULL;
+                    if (grown <= SIZE_MAX / sizeof(const char *)) {
+                        items = (const char **)realloc(array->items, grown * sizeof(const char *));
+                    }
+                    if (items == NULL) {
+                        FomoxaDecodeError error = fomoxa_decode_ok();
+                        error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
+                        return error;
+                    }
+                    array->items = items;
+                    capacity = grown;
                 }
-                free(array.items);
-                array.items = NULL;
-                array.count = 0;
-                return error;
+                memset(&array->items[i], 0, sizeof(const char *));
+                array->count = i + 1;
+            }
+            {
+                FomoxaDecodeError error = fomoxa_reader_read_string_into(reader, &array->items[i]);
+                if (!fomoxa_decode_error_ok(&error)) return error;
             }
         }
-        value->Roster = array;
+    }
+    {
+        size_t count = 0;
+        if (!fomoxa_reader_field_absent(reader)) {
+            FomoxaDecodeError error = fomoxa_reader_read_array_count(reader, &count);
+            if (!fomoxa_decode_error_ok(&error)) return error;
+        }
+        FomoxaArray_u32 *array = &value->Scores;
+        if (array->count > count) {
+            array->count = count;
+        }
+        if (count == 0) {
+            free(array->items);
+            array->items = NULL;
+        }
+        size_t capacity = array->count;
+        for (size_t i = 0; i < count; ++i) {
+            if (i == array->count) {
+                if (i == capacity) {
+                    size_t grown = capacity < 8 ? 8 : capacity * 2;
+                    if (grown > count) grown = count;
+                    uint32_t *items = NULL;
+                    if (grown <= SIZE_MAX / sizeof(uint32_t)) {
+                        items = (uint32_t *)realloc(array->items, grown * sizeof(uint32_t));
+                    }
+                    if (items == NULL) {
+                        FomoxaDecodeError error = fomoxa_decode_ok();
+                        error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
+                        return error;
+                    }
+                    array->items = items;
+                    capacity = grown;
+                }
+                memset(&array->items[i], 0, sizeof(uint32_t));
+                array->count = i + 1;
+            }
+            {
+                FomoxaDecodeError error = fomoxa_reader_read_u32(reader, &array->items[i]);
+                if (!fomoxa_decode_error_ok(&error)) return error;
+            }
+        }
+    }
+    {
+        size_t count = 0;
+        if (!fomoxa_reader_field_absent(reader)) {
+            FomoxaDecodeError error = fomoxa_reader_read_array_count(reader, &count);
+            if (!fomoxa_decode_error_ok(&error)) return error;
+        }
+        FomoxaArray_PlayerInfo *array = &value->Roster;
+        while (array->count > count) {
+            --array->count;
+            PlayerInfo_free(&array->items[array->count]);
+        }
+        if (count == 0) {
+            free(array->items);
+            array->items = NULL;
+        }
+        size_t capacity = array->count;
+        for (size_t i = 0; i < count; ++i) {
+            if (i == array->count) {
+                if (i == capacity) {
+                    size_t grown = capacity < 8 ? 8 : capacity * 2;
+                    if (grown > count) grown = count;
+                    struct PlayerInfo *items = NULL;
+                    if (grown <= SIZE_MAX / sizeof(struct PlayerInfo)) {
+                        items = (struct PlayerInfo *)realloc(array->items, grown * sizeof(struct PlayerInfo));
+                    }
+                    if (items == NULL) {
+                        FomoxaDecodeError error = fomoxa_decode_ok();
+                        error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
+                        return error;
+                    }
+                    array->items = items;
+                    capacity = grown;
+                }
+                memset(&array->items[i], 0, sizeof(struct PlayerInfo));
+                array->count = i + 1;
+            }
+            {
+                FomoxaDecodeError error = PlayerInfoEdgeCodec_decode(reader, &array->items[i]);
+                if (!fomoxa_decode_error_ok(&error)) return error;
+            }
+        }
     }
     return fomoxa_decode_ok();
 }

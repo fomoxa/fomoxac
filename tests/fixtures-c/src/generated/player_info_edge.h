@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// generated-at: 2026-09-23T09:13:20Z
 
 #pragma once
 
@@ -44,8 +44,8 @@ static inline bool PlayerInfoEdgeCodec_encode(FomoxaWriter *writer, const struct
 // the stream ended inside is an error. Bytes left over after the last field
 // belong to a newer writer's model and are ignored.
 //
-// `*value` must not already hold data from a previous, unfreed decode - see
-// runtime.h's module docs.
+// `*value` must be zero-initialized, freed, or filled by an earlier decode,
+// whose buffers this one reuses.
 static inline FomoxaDecodeError PlayerInfoEdgeCodec_decode(FomoxaReader *reader, struct PlayerInfo *value) {
     if (fomoxa_reader_field_absent(reader)) {
         value->Level = 0;

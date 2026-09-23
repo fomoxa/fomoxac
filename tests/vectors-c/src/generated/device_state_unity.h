@@ -5,7 +5,7 @@
 // codec: unity
 // fingerprint: sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:41:21Z
+// generated-at: 2026-09-23T09:13:20Z
 
 #pragma once
 
@@ -46,8 +46,8 @@ static inline bool DeviceStateUnityCodec_encode(FomoxaWriter *writer, const stru
 // the stream ended inside is an error. Bytes left over after the last field
 // belong to a newer writer's model and are ignored.
 //
-// `*value` must not already hold data from a previous, unfreed decode - see
-// runtime.h's module docs.
+// `*value` must be zero-initialized, freed, or filled by an earlier decode,
+// whose buffers this one reuses.
 static inline FomoxaDecodeError DeviceStateUnityCodec_decode(FomoxaReader *reader, struct DeviceState *value) {
     if (fomoxa_reader_field_absent(reader)) {
         value->Id = 0;
@@ -56,9 +56,10 @@ static inline FomoxaDecodeError DeviceStateUnityCodec_decode(FomoxaReader *reade
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     if (fomoxa_reader_field_absent(reader)) {
+        free((void *)value->DisplayName);
         value->DisplayName = NULL;
     } else {
-        FomoxaDecodeError error = fomoxa_reader_read_string(reader, &value->DisplayName);
+        FomoxaDecodeError error = fomoxa_reader_read_string_into(reader, &value->DisplayName);
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     return fomoxa_decode_ok();

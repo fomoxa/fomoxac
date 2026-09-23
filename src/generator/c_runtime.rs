@@ -696,6 +696,79 @@ static inline FomoxaDecodeError fomoxa_reader_read_bytes(FomoxaReader *reader,
     return fomoxa_decode_ok();
 }
 
+static inline FomoxaDecodeError fomoxa_reader_read_string_into(FomoxaReader *reader,
+                                                                   const char **inout) {
+    size_t start = reader->pos;
+    size_t len = 0;
+    FomoxaDecodeError error = fomoxa_reader_read_len(reader, reader->limits.max_string_len, &len);
+    if (!fomoxa_decode_error_ok(&error)) {
+        return error;
+    }
+
+    const unsigned char *bytes = NULL;
+    error = fomoxa_reader_take(reader, len, &bytes);
+    if (!fomoxa_decode_error_ok(&error)) {
+        reader->pos = start;
+        return error;
+    }
+    if (!fomoxa_is_valid_utf8(bytes, len)) {
+        reader->pos = start;
+        error = fomoxa_decode_ok();
+        error.kind = FOMOXA_DECODE_INVALID_UTF8;
+        return error;
+    }
+    if (*inout != NULL && strlen(*inout) == len && memcmp(*inout, bytes, len) == 0) {
+        return fomoxa_decode_ok();
+    }
+
+    char *value = (char *)realloc((void *)*inout, len + 1);
+    if (value == NULL) {
+        reader->pos = start;
+        error = fomoxa_decode_ok();
+        error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
+        return error;
+    }
+    memcpy(value, bytes, len);
+    value[len] = '\0';
+    *inout = value;
+    return fomoxa_decode_ok();
+}
+
+static inline FomoxaDecodeError fomoxa_reader_read_bytes_into(FomoxaReader *reader,
+                                                                  FomoxaBytes *inout) {
+    size_t start = reader->pos;
+    size_t len = 0;
+    FomoxaDecodeError error = fomoxa_reader_read_len(reader, reader->limits.max_bytes_len, &len);
+    if (!fomoxa_decode_error_ok(&error)) {
+        return error;
+    }
+
+    const unsigned char *bytes = NULL;
+    error = fomoxa_reader_take(reader, len, &bytes);
+    if (!fomoxa_decode_error_ok(&error)) {
+        reader->pos = start;
+        return error;
+    }
+
+    if (len == 0) {
+        fomoxa_bytes_free(inout);
+        return fomoxa_decode_ok();
+    }
+    if (inout->len != len) {
+        unsigned char *value = (unsigned char *)realloc(inout->data, len);
+        if (value == NULL) {
+            reader->pos = start;
+            error = fomoxa_decode_ok();
+            error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
+            return error;
+        }
+        inout->data = value;
+        inout->len = len;
+    }
+    memcpy(inout->data, bytes, len);
+    return fomoxa_decode_ok();
+}
+
 /* Reads an `Array<T>`'s element count (RFC-0002 SS6), checked against
  * `limits.max_array_count` before the caller reads a single element. */
 static inline FomoxaDecodeError fomoxa_reader_read_array_count(FomoxaReader *reader,

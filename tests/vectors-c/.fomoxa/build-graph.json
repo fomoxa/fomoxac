@@ -18,42 +18,42 @@
           "model": "DeviceState",
           "codec": "edge",
           "fingerprint": "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91",
-          "sha256": "7564c4b1687cea64ba283d994157f6f8355a9d7daf69040b9c4c6310914ed98e"
+          "sha256": "306e41b8e2ae8059b7d589dd6f26e0a39453cfe6ac717df153eb687f98ac1120"
         },
         {
           "path": "src/generated/device_state_unity.h",
           "model": "DeviceState",
           "codec": "unity",
           "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
-          "sha256": "7b29ad3ef61cf3c6a03417a95d8fbf8c74654d0f6baef849c389b2a2c688bb2f"
+          "sha256": "08129d6ab6a6d7d818bdedad39ee2e042646ab2e273150509c624addfcd2a499"
         },
         {
           "path": "src/generated/every_primitive_edge.h",
           "model": "EveryPrimitive",
           "codec": "edge",
           "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
-          "sha256": "52595c747650e3d7c224c5dc0d1c1c3e9d84dcebb3a69ed38873ebd4a5fbc779"
+          "sha256": "8318ea5d913b691667673c0bb8cc5cf051731791843bd4c0388c6b0252d1e39e"
         },
         {
           "path": "src/generated/player_edge.h",
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "f39bf3b0b87e91547d0a8a35fba4a2ef6739325b54f327a4ae1157094ac5bd31"
+          "sha256": "565ec2506222ff5c0b081d2d90fbd8a2ce28f710528ef1badebd10659bf6b258"
         },
         {
           "path": "src/generated/player_info_edge.h",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "fb4023ad820c88537030e85839c14c00c75dc3e7c70177c653b61bfa0c4b2c02"
+          "sha256": "6d7774b8a5f77455fd8cb0ddf3bec7580aef75bb5894d0728bdfc57cc7c7c817"
         },
         {
           "path": "src/generated/team_edge.h",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "03b6b16790758790fc956d7754f423869adf524577d8748d118f34c42521a233"
+          "sha256": "7423a81d948325795ea7747a1f3e56a71a730e9fc882fec06d54aa5cc614f232"
         }
       ]
     }
@@ -62,7 +62,7 @@
     {
       "path": "src/generated/runtime.h",
       "kind": "runtime",
-      "sha256": "24cff83dd8cfb19adfaf4df934a56b804aa736c5fe95829ecdf32c7671e1ab69"
+      "sha256": "44969a2cfb1b7e451ff300f1b750b3d1e13b4ec710d0ab6d8e300e2ce348713c"
     },
     {
       "path": "src/generated/arrays.h",

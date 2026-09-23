@@ -16,28 +16,28 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:01fc1f8d5768cded1cb94f6d37b2f32412b40376e78e3c36ac8a5e70cee183f4",
-          "sha256": "efc6f0fe4410448a4665056d83a98951378bd80431fc928f9cd8cc161c729392"
+          "sha256": "d0077f599877937e67bc604830c9ca332a64fd2c97da918ddd61691e1376688d"
         },
         {
           "path": "src/generated/player_unity.h",
           "model": "Player",
           "codec": "unity",
           "fingerprint": "sha256:79d7ff966acb367b1accc39e029fc41874e8c605bd5663b6cf66280bde2469c7",
-          "sha256": "c6dfd2e521925ff5945ab3649b2b78a6bd6edd45fbf8545167e3a09bc8dd4a8f"
+          "sha256": "6a9027eddfe3d2c425c5836c64f5d2d83ef5a935a6e1c5aab35e4fdb00739844"
         },
         {
           "path": "src/generated/player_info_edge.h",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "cbed1da7f1368b2e08d55f00ea4d49f84ca23a83c74c270909c4d96d24a20f80"
+          "sha256": "a90804c6e497ec3fb22cfe71aec4f45027687f44477e80f3382daf9e39af5857"
         },
         {
           "path": "src/generated/team_edge.h",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "5cc767233666b8e8d2d5d608c74313cad602360c462c31e587197843f409aaa1"
+          "sha256": "e3818d07d5a4860ee8851c83544b9ff565d8440aa1a4f0e4c48defdd9d968063"
         }
       ]
     }
@@ -46,7 +46,7 @@
     {
       "path": "src/generated/runtime.h",
       "kind": "runtime",
-      "sha256": "24cff83dd8cfb19adfaf4df934a56b804aa736c5fe95829ecdf32c7671e1ab69"
+      "sha256": "44969a2cfb1b7e451ff300f1b750b3d1e13b4ec710d0ab6d8e300e2ce348713c"
     },
     {
       "path": "src/generated/arrays.h",

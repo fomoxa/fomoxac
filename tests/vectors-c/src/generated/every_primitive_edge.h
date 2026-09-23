@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:41:21Z
+// generated-at: 2026-09-23T09:13:20Z
 
 #pragma once
 
@@ -68,8 +68,8 @@ static inline bool EveryPrimitiveEdgeCodec_encode(FomoxaWriter *writer, const st
 // the stream ended inside is an error. Bytes left over after the last field
 // belong to a newer writer's model and are ignored.
 //
-// `*value` must not already hold data from a previous, unfreed decode - see
-// runtime.h's module docs.
+// `*value` must be zero-initialized, freed, or filled by an earlier decode,
+// whose buffers this one reuses.
 static inline FomoxaDecodeError EveryPrimitiveEdgeCodec_decode(FomoxaReader *reader, struct EveryPrimitive *value) {
     if (fomoxa_reader_field_absent(reader)) {
         value->Flag = false;
@@ -138,16 +138,16 @@ static inline FomoxaDecodeError EveryPrimitiveEdgeCodec_decode(FomoxaReader *rea
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     if (fomoxa_reader_field_absent(reader)) {
+        free((void *)value->Label);
         value->Label = NULL;
     } else {
-        FomoxaDecodeError error = fomoxa_reader_read_string(reader, &value->Label);
+        FomoxaDecodeError error = fomoxa_reader_read_string_into(reader, &value->Label);
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     if (fomoxa_reader_field_absent(reader)) {
-        value->Blob.data = NULL;
-        value->Blob.len = 0;
+        fomoxa_bytes_free(&value->Blob);
     } else {
-        FomoxaDecodeError error = fomoxa_reader_read_bytes(reader, &value->Blob);
+        FomoxaDecodeError error = fomoxa_reader_read_bytes_into(reader, &value->Blob);
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     return fomoxa_decode_ok();
