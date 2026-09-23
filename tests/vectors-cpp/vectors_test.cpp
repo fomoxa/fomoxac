@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <functional>
+#include <new>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -17,6 +19,22 @@
 #include "generated/team_edge.hpp"
 
 using namespace generated;
+
+namespace {
+
+std::size_t allocations = 0;
+
+}
+
+void* operator new(std::size_t size) {
+    ++allocations;
+    if (void* memory = std::malloc(size == 0 ? 1 : size)) return memory;
+    throw std::bad_alloc();
+}
+
+void operator delete(void* memory) noexcept { std::free(memory); }
+
+void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
 
 namespace {
 
@@ -52,6 +70,34 @@ RoundTrip shared_round_trip() {
         return error;
     };
 }
+
+std::size_t reused_allocations = 0;
+
+template <typename Codec, typename Model>
+RoundTrip reused_round_trip() {
+    return [](const Bytes& payload, Bytes& out) {
+        static Model held{};
+        Reader reader(payload.data(), payload.size());
+        DecodeError error = Codec::decode(reader, held);
+        if (!error.ok()) return error;
+        shared_writer.clear();
+        Codec::encode(shared_writer, held);
+        out = shared_writer.bytes();
+        std::size_t before = allocations;
+        Reader again(payload.data(), payload.size());
+        error = Codec::decode(again, held);
+        reused_allocations = allocations - before;
+        return error;
+    };
+}
+
+const std::map<std::string, RoundTrip> kReusedRoundTrips = {
+    {"Player.edge", reused_round_trip<PlayerEdgeCodec, models::Player>()},
+    {"DeviceState.edge", reused_round_trip<DeviceStateEdgeCodec, models::DeviceState>()},
+    {"DeviceState.unity", reused_round_trip<DeviceStateUnityCodec, models::DeviceState>()},
+    {"EveryPrimitive.edge", reused_round_trip<EveryPrimitiveEdgeCodec, models::EveryPrimitive>()},
+    {"Team.edge", reused_round_trip<TeamEdgeCodec, models::Team>()},
+};
 
 const std::map<std::string, RoundTrip> kSharedRoundTrips = {
     {"Player.edge", shared_round_trip<PlayerEdgeCodec, models::Player>()},
@@ -173,6 +219,12 @@ int main() {
             DecodeError shared_error = kSharedRoundTrips.at(message)(payload, shared);
             check(shared_error.ok() && shared == expected,
                   "shared writer " + name + ": " + to_hex(shared) + ", expected " + to_hex(expected));
+            Bytes reused;
+            DecodeError reused_error = kReusedRoundTrips.at(message)(payload, reused);
+            check(reused_error.ok() && reused == expected,
+                  "reused target " + name + ": " + to_hex(reused) + ", expected " + to_hex(expected));
+            check(reused_allocations == 0,
+                  "reused target " + name + ": decoding the same bytes again allocated " + std::to_string(reused_allocations) + " times");
         } else if (kind == "reject") {
             check(!error.ok() && error.kind == kErrorKinds.at(last),
                   "reject " + name + ": " + (error.ok() ? std::string("decoded") : error.message()) + ", expected " + last);

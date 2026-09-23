@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:56:58Z
+// generated-at: 2026-09-23T09:04:51Z
 
 #pragma once
 
@@ -71,42 +71,53 @@ struct TeamEdgeCodec {
             if (!reader.field_absent()) {
                 if (DecodeError error = reader.read_array_count(count); !error.ok()) return error;
             }
-            std::vector<std::string> elements;
+            auto& elements = value.Tags;
+            if (elements.size() > count) {
+                elements.erase(elements.begin() + static_cast<std::ptrdiff_t>(count), elements.end());
+            }
             elements.reserve(count < 4096 ? count : 4096);
             for (std::size_t i = 0; i < count; ++i) {
-                std::string element{};
-                if (DecodeError error = reader.read_string(element); !error.ok()) return error;
-                elements.push_back(std::move(element));
+                if (i == elements.size()) {
+                    elements.emplace_back();
+                }
+                if (DecodeError error = reader.read_string(elements[i]); !error.ok()) return error;
             }
-            value.Tags = std::move(elements);
         }
         {
             std::size_t count = 0;
             if (!reader.field_absent()) {
                 if (DecodeError error = reader.read_array_count(count); !error.ok()) return error;
             }
-            std::vector<std::uint32_t> elements;
+            auto& elements = value.Scores;
+            if (elements.size() > count) {
+                elements.erase(elements.begin() + static_cast<std::ptrdiff_t>(count), elements.end());
+            }
             elements.reserve(count < 4096 ? count : 4096);
             for (std::size_t i = 0; i < count; ++i) {
+                if (i == elements.size()) {
+                    elements.emplace_back();
+                }
                 std::uint32_t element{};
                 if (DecodeError error = reader.read_u32(element); !error.ok()) return error;
-                elements.push_back(std::move(element));
+                elements[i] = element;
             }
-            value.Scores = std::move(elements);
         }
         {
             std::size_t count = 0;
             if (!reader.field_absent()) {
                 if (DecodeError error = reader.read_array_count(count); !error.ok()) return error;
             }
-            std::vector<::models::PlayerInfo> elements;
+            auto& elements = value.Roster;
+            if (elements.size() > count) {
+                elements.erase(elements.begin() + static_cast<std::ptrdiff_t>(count), elements.end());
+            }
             elements.reserve(count < 4096 ? count : 4096);
             for (std::size_t i = 0; i < count; ++i) {
-                ::models::PlayerInfo element{};
-                if (DecodeError error = PlayerInfoEdgeCodec::decode(reader, element); !error.ok()) return error;
-                elements.push_back(std::move(element));
+                if (i == elements.size()) {
+                    elements.emplace_back();
+                }
+                if (DecodeError error = PlayerInfoEdgeCodec::decode(reader, elements[i]); !error.ok()) return error;
             }
-            value.Roster = std::move(elements);
         }
         return DecodeError{};
     }

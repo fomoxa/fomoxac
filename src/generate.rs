@@ -794,7 +794,7 @@ fn cpp_runtime_file(namespace: &str) -> String {
     out.push_str("#pragma once\n\n");
     out.push_str(
         "#include <cstddef>\n#include <cstdint>\n#include <cstdio>\n#include <cstring>\n\
-         #include <string>\n#include <vector>\n\n",
+         #include <string>\n#include <string_view>\n#include <vector>\n\n",
     );
     out.push_str(&format!("namespace {namespace} {{\n"));
     out.push_str(generator::cpp_runtime::RUNTIME);
