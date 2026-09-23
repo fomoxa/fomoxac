@@ -5,7 +5,7 @@
 // codec: unity
 // fingerprint: sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:39:16Z
+// generated-at: 2026-09-23T08:54:13Z
 
 package generated
 
@@ -59,7 +59,7 @@ func (DeviceStateUnityCodec) Decode(r *Reader, value *models.DeviceState) error 
 	if r.FieldAbsent() {
 		value.DisplayName = ""
 	} else {
-		value.DisplayName, err = r.ReadString()
+		err = r.ReadStringInto(&value.DisplayName)
 		if err != nil {
 			return err
 		}

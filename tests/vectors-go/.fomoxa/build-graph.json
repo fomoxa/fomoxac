@@ -25,14 +25,14 @@
           "model": "DeviceState",
           "codec": "unity",
           "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
-          "sha256": "3d7e443b1404ecef3ffd87a5464f6a34ef10e1b44fa2750ec5dff792fb16ed95"
+          "sha256": "bdb067e57d5d3f7b8a1d33828c6d25ef07b39b6a019f246155c96a420f00fee8"
         },
         {
           "path": "src/generated/every_primitive_edge.go",
           "model": "EveryPrimitive",
           "codec": "edge",
           "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
-          "sha256": "f5ba4e3f2d797170189f85f12b3788964993b2742b718cc639f9634842b9cb7d"
+          "sha256": "fd1e3c8ca75b3d30cb6c08f6228781142a89abb59d8544e906fb207885c8dae8"
         },
         {
           "path": "src/generated/player_edge.go",
@@ -53,7 +53,7 @@
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "909c5ef17083d5072f3726b92e55869d57a483d624fdd68d3db1d3b67eaf6816"
+          "sha256": "20f00a62f09e698c3c5beaccceea0f6e8518b6093bd3fdf2ba07cad67ca585a5"
         }
       ]
     }
@@ -62,7 +62,7 @@
     {
       "path": "src/generated/runtime.go",
       "kind": "runtime",
-      "sha256": "7b51416541b787e1bc67f60f259e23ccec77ff2ff88c1fe6f5c41a4bdc3d4739"
+      "sha256": "41486030521e665cbfc29076a59333cf646fb73f9a96e93a8a452e09d385124e"
     },
     {
       "path": "src/generated/handshake.go",

@@ -302,55 +302,52 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
         out.push_str(&format!("\t\t{count_local}, err = r.ReadArrayCount()\n"));
         out.push_str("\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n");
         out.push_str("\t}\n");
+        out.push_str(&format!("\t{elements_local} := {place}\n"));
         out.push_str(&format!(
-            "\t{elements_local} := make([]{go_type}, 0, fomoxaPreallocate({count_local}))\n"
+            "\tif len({elements_local}) > {count_local} {{\n\t\t{elements_local} = {elements_local}[:{count_local}]\n\t}}\n"
+        ));
+        out.push_str(&format!(
+            "\tif cap({elements_local}) < {count_local} {{\n\t\tgrown := make([]{go_type}, len({elements_local}), fomoxaPreallocate({count_local}))\n\t\tcopy(grown, {elements_local})\n\t\t{elements_local} = grown\n\t}}\n"
         ));
         out.push_str(&format!("\tfor i := 0; i < {count_local}; i++ {{\n"));
-        decode_scalar(out, element_type, "element", codec, imports, "\t\t");
         out.push_str(&format!(
-            "\t\t{elements_local} = append({elements_local}, element)\n"
+            "\t\tif i == len({elements_local}) {{\n\t\t\tvar element {go_type}\n\t\t\t{elements_local} = append({elements_local}, element)\n\t\t}}\n"
         ));
+        decode_in_place(
+            out,
+            element_type,
+            &format!("{elements_local}[i]"),
+            codec,
+            "\t\t",
+        );
         out.push_str("\t}\n");
         out.push_str(&format!("\t{place} = {elements_local}\n"));
         return;
     }
 
-    let (_, reader_method, _) = primitive(&field.ty).expect("models and arrays handled above");
     out.push_str("\tif r.FieldAbsent() {\n");
     out.push_str(&format!("\t\t{place} = {}\n", zero(&field.ty)));
     out.push_str("\t} else {\n");
-    out.push_str(&format!("\t\t{place}, err = r.{reader_method}()\n"));
-    out.push_str("\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n");
+    decode_in_place(out, &field.ty, &place, codec, "\t\t");
     out.push_str("\t}\n");
 }
 
-fn decode_scalar(
-    out: &mut String,
-    ty: &WireType,
-    var: &str,
-    codec: &str,
-    imports: &Imports<'_>,
-    pad: &str,
-) {
-    match as_model(ty) {
-        Some(name) => {
-            let go_type = imports.qualify(name);
+fn decode_in_place(out: &mut String, ty: &WireType, place: &str, codec: &str, pad: &str) {
+    match ty {
+        WireType::Model(name) => {
             let nested = codec_type_name(name, codec);
-            out.push_str(&format!("{pad}var {var} {go_type}\n"));
-            out.push_str(&format!("{pad}err = ({nested}{{}}).Decode(r, &{var})\n"));
-            out.push_str(&format!(
-                "{pad}if err != nil {{\n{pad}\treturn err\n{pad}}}\n"
-            ));
+            out.push_str(&format!("{pad}err = ({nested}{{}}).Decode(r, &{place})\n"));
         }
-        None => {
-            let (_, reader_method, go_type) = primitive(ty).expect("models handled above");
-            out.push_str(&format!("{pad}var {var} {go_type}\n"));
-            out.push_str(&format!("{pad}{var}, err = r.{reader_method}()\n"));
-            out.push_str(&format!(
-                "{pad}if err != nil {{\n{pad}\treturn err\n{pad}}}\n"
-            ));
+        WireType::Str => out.push_str(&format!("{pad}err = r.ReadStringInto(&{place})\n")),
+        WireType::Bytes => out.push_str(&format!("{pad}err = r.ReadBytesInto(&{place})\n")),
+        _ => {
+            let (_, reader_method, _) = primitive(ty).expect("arrays handled by the caller");
+            out.push_str(&format!("{pad}{place}, err = r.{reader_method}()\n"));
         }
     }
+    out.push_str(&format!(
+        "{pad}if err != nil {{\n{pad}\treturn err\n{pad}}}\n"
+    ));
 }
 
 fn element_type_name(ty: &WireType, imports: &Imports<'_>) -> String {

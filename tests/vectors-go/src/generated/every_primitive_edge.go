@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-23T02:39:16Z
+// generated-at: 2026-09-23T08:54:13Z
 
 package generated
 
@@ -161,7 +161,7 @@ func (EveryPrimitiveEdgeCodec) Decode(r *Reader, value *models.EveryPrimitive) e
 	if r.FieldAbsent() {
 		value.Label = ""
 	} else {
-		value.Label, err = r.ReadString()
+		err = r.ReadStringInto(&value.Label)
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func (EveryPrimitiveEdgeCodec) Decode(r *Reader, value *models.EveryPrimitive) e
 	if r.FieldAbsent() {
 		value.Blob = nil
 	} else {
-		value.Blob, err = r.ReadBytes()
+		err = r.ReadBytesInto(&value.Blob)
 		if err != nil {
 			return err
 		}

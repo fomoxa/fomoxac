@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"testing"
 
 	fomoxa "github.com/fomoxa/go"
 
@@ -140,6 +141,115 @@ var sharedRoundTrips = map[string]func([]byte) ([]byte, error){
 	},
 }
 
+type reusableCodec struct {
+	create func() any
+	decode func(*generated.Reader, any) error
+	encode func(*generated.Writer, any)
+}
+
+var reusableCodecs = map[string]reusableCodec{
+	"Player.edge": {
+		create: func() any { return &models.Player{} },
+		decode: func(r *generated.Reader, value any) error {
+			return generated.PlayerEdgeCodec{}.Decode(r, value.(*models.Player))
+		},
+		encode: func(w *generated.Writer, value any) { generated.PlayerEdgeCodec{}.Encode(w, value.(*models.Player)) },
+	},
+	"DeviceState.edge": {
+		create: func() any { return &models.DeviceState{} },
+		decode: func(r *generated.Reader, value any) error {
+			return generated.DeviceStateEdgeCodec{}.Decode(r, value.(*models.DeviceState))
+		},
+		encode: func(w *generated.Writer, value any) {
+			generated.DeviceStateEdgeCodec{}.Encode(w, value.(*models.DeviceState))
+		},
+	},
+	"DeviceState.unity": {
+		create: func() any { return &models.DeviceState{} },
+		decode: func(r *generated.Reader, value any) error {
+			return generated.DeviceStateUnityCodec{}.Decode(r, value.(*models.DeviceState))
+		},
+		encode: func(w *generated.Writer, value any) {
+			generated.DeviceStateUnityCodec{}.Encode(w, value.(*models.DeviceState))
+		},
+	},
+	"EveryPrimitive.edge": {
+		create: func() any { return &models.EveryPrimitive{} },
+		decode: func(r *generated.Reader, value any) error {
+			return generated.EveryPrimitiveEdgeCodec{}.Decode(r, value.(*models.EveryPrimitive))
+		},
+		encode: func(w *generated.Writer, value any) {
+			generated.EveryPrimitiveEdgeCodec{}.Encode(w, value.(*models.EveryPrimitive))
+		},
+	},
+	"Team.edge": {
+		create: func() any { return &models.Team{} },
+		decode: func(r *generated.Reader, value any) error {
+			return generated.TeamEdgeCodec{}.Decode(r, value.(*models.Team))
+		},
+		encode: func(w *generated.Writer, value any) { generated.TeamEdgeCodec{}.Encode(w, value.(*models.Team)) },
+	},
+}
+
+func checkReusedTargets(accepts []vector) {
+	targets := map[string]any{}
+	for pass := 0; pass < 2; pass++ {
+		for index := range accepts {
+			accept := accepts[index]
+			if pass == 1 {
+				accept = accepts[len(accepts)-1-index]
+			}
+			codec := reusableCodecs[accept.Message]
+			target, found := targets[accept.Message]
+			if !found {
+				target = codec.create()
+				targets[accept.Message] = target
+			}
+			payload := decodeHex(accept.Hex)
+			expected := decodeHex(accept.Reencode)
+			err := codec.decode(generated.NewReader(payload), target)
+			sharedWriter.Reset()
+			codec.encode(sharedWriter, target)
+			check(err == nil && bytes.Equal(sharedWriter.Bytes(), expected), "reused target %s: %v %x, expected %x", accept.Name, err, sharedWriter.Bytes(), expected)
+
+			reader := generated.NewReader(nil)
+			allocations := testing.AllocsPerRun(10, func() {
+				reader.Reset(payload)
+				_ = codec.decode(reader, target)
+			})
+			check(allocations == 0, "reused target %s: decoding the same bytes again allocated %.0f times", accept.Name, allocations)
+		}
+	}
+}
+
+func checkReaderReuse() {
+	writer := generated.NewWriter()
+	writer.WriteString("Đội trưởng 🚀")
+	writer.WriteBytes([]byte{1, 2, 3})
+	payload := append([]byte(nil), writer.Bytes()...)
+
+	text := strings.Clone("Đội trưởng 🚀")
+	blob := make([]byte, 0, 8)
+	reader := generated.NewReader(payload)
+	errText := reader.ReadStringInto(&text)
+	errBlob := reader.ReadBytesInto(&blob)
+	check(errText == nil && errBlob == nil && text == "Đội trưởng 🚀" && bytes.Equal(blob, []byte{1, 2, 3}) && cap(blob) == 8, "ReadStringInto / ReadBytesInto keep equal text and reuse capacity")
+
+	allocations := testing.AllocsPerRun(10, func() {
+		reader.Reset(payload)
+		_ = reader.ReadStringInto(&text)
+		_ = reader.ReadBytesInto(&blob)
+	})
+	check(allocations == 0, "ReadStringInto / ReadBytesInto allocated %.0f times on unchanged input", allocations)
+
+	invalid := []byte{2, 0, 0, 0, 0xC3, 0x28}
+	kept := "kept"
+	invalidReader := generated.NewReader(invalid)
+	err := invalidReader.ReadStringInto(&kept)
+	var decodeError *generated.DecodeError
+	check(errors.As(err, &decodeError) && invalidReader.Position() == 0 && kept == "kept", "ReadStringInto rejects invalid UTF-8 and leaves the cursor and the value")
+}
+
 var identities = map[string]identity{
 	"Player.edge":         {generated.PlayerEdgeCodecMessageID, generated.PlayerEdgeCodecFingerprint},
 	"PlayerInfo.edge":     {generated.PlayerInfoEdgeCodecMessageID, generated.PlayerInfoEdgeCodecFingerprint},
@@ -252,6 +362,9 @@ func main() {
 		actual, err := sharedRoundTrips[accept.Message](decodeHex(accept.Hex))
 		check(err == nil && bytes.Equal(actual, expected), "shared writer %s: %x, expected %x", accept.Name, actual, expected)
 	}
+
+	checkReusedTargets(vectors.Accept)
+	checkReaderReuse()
 
 	checkNetSchema(vectors)
 
