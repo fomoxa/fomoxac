@@ -499,7 +499,7 @@ The build graph shows where a generated file came from, even after its source mo
 
 ### Go
 
-Go compiles by package. Every file `fomoxac` writes in one run shares one `package` clause, named after the directory of `--out`. There is no module root to declare, and code refers to a codec directly, e.g. `generated.PlayerEdgeCodec{}`. By default a codec's `import` of its model type is computed from the nearest `go.mod`'s `module` line plus the model source's own directory, so `go.mod` has to be at the project root, next to `fomoxa.toml`. `Decode` returns `error`, checked after each read.
+Go compiles by package. Every file `fomoxac` writes in one run shares one `package` clause, named after the directory of `--out`. There is no module root to declare, and code refers to a codec directly, e.g. `generated.PlayerEdgeCodec{}`. By default a codec's `import` of its model type is computed from the nearest `go.mod`'s `module` line plus the model source's own directory, so `go.mod` has to be at the project root, next to `fomoxa.toml`. `Decode` returns `error`, checked after each read. `Writer.Reset()` keeps the buffer for the next message and `NewWriterSize(n)` starts with room for `n` bytes; a writer reused this way encodes without allocating. The generated code builds where `int` is 32 bits: there the permissive `UnlimitedLimits` is the largest `int` rather than `math.MaxUint32`, and CI runs the vectors under `GOARCH=386`.
 
 ### C#
 

@@ -81,12 +81,15 @@ type Limits struct {
 	MaxArrayCount int
 }
 
-// UnlimitedLimits is the permissive default: math.MaxUint32 for every field.
+// UnlimitedLimits is the permissive default: math.MaxUint32 for every field,
+// or the largest int where int is 32 bits wide.
 var UnlimitedLimits = Limits{
-	MaxStringLen:  math.MaxUint32,
-	MaxBytesLen:   math.MaxUint32,
-	MaxArrayCount: math.MaxUint32,
+	MaxStringLen:  maxLength,
+	MaxBytesLen:   maxLength,
+	MaxArrayCount: maxLength,
 }
+
+const maxLength = int(^uint(0) >> 1 & math.MaxUint32)
 
 // Writer appends Fomoxa-encoded values to a growable buffer.
 //
@@ -99,6 +102,21 @@ type Writer struct {
 // NewWriter creates an empty writer.
 func NewWriter() *Writer {
 	return &Writer{}
+}
+
+func NewWriterSize(capacity int) *Writer {
+	return &Writer{buf: make([]byte, 0, capacity)}
+}
+
+func (w *Writer) Reset() {
+	w.buf = w.buf[:0]
+}
+
+func fomoxaPreallocate(count int) int {
+	if count > 4096 {
+		return 4096
+	}
+	return count
 }
 
 // Bytes returns the bytes written so far.
@@ -417,6 +435,13 @@ func (r *Reader) readLength(limit int) (int, error) {
 	length, err := r.ReadU32()
 	if err != nil {
 		return 0, err
+	}
+	if uint64(length) > uint64(maxLength) {
+		r.pos = start
+		if limit >= maxLength {
+			return 0, errUnexpectedEOF(maxLength, r.Remaining())
+		}
+		return 0, errLengthOverflow(maxLength, limit)
 	}
 	if int(length) > limit {
 		r.pos = start

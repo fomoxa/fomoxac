@@ -303,7 +303,7 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
         out.push_str("\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n");
         out.push_str("\t}\n");
         out.push_str(&format!(
-            "\t{elements_local} := make([]{go_type}, 0, {count_local})\n"
+            "\t{elements_local} := make([]{go_type}, 0, fomoxaPreallocate({count_local}))\n"
         ));
         out.push_str(&format!("\tfor i := 0; i < {count_local}; i++ {{\n"));
         decode_scalar(out, element_type, "element", codec, imports, "\t\t");

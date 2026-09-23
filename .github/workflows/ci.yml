@@ -74,6 +74,13 @@ jobs:
           go vet ./...
           go run .
 
+      - name: the Go codecs reproduce the vectors where int is 32 bits
+        working-directory: tests/vectors-go
+        run: |
+          GOARCH=386 go vet ./...
+          GOARCH=386 go build -o /tmp/fomoxa-go-vectors-386 .
+          /tmp/fomoxa-go-vectors-386
+
       # Same shape as the Go fixture above: current, and actually buildable.
       # `cargo test` never invokes the .NET SDK either.
       - name: the committed C# fixture is current

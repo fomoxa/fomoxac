@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// generated-at: 2026-09-23T02:54:55Z
 
 package generated
 
@@ -72,7 +72,7 @@ func (TeamEdgeCodec) Decode(r *Reader, value *models.Team) error {
 			return err
 		}
 	}
-	tagsElements := make([]string, 0, tagsCount)
+	tagsElements := make([]string, 0, fomoxaPreallocate(tagsCount))
 	for i := 0; i < tagsCount; i++ {
 		var element string
 		element, err = r.ReadString()
@@ -89,7 +89,7 @@ func (TeamEdgeCodec) Decode(r *Reader, value *models.Team) error {
 			return err
 		}
 	}
-	scoresElements := make([]uint32, 0, scoresCount)
+	scoresElements := make([]uint32, 0, fomoxaPreallocate(scoresCount))
 	for i := 0; i < scoresCount; i++ {
 		var element uint32
 		element, err = r.ReadU32()
@@ -106,7 +106,7 @@ func (TeamEdgeCodec) Decode(r *Reader, value *models.Team) error {
 			return err
 		}
 	}
-	rosterElements := make([]models.PlayerInfo, 0, rosterCount)
+	rosterElements := make([]models.PlayerInfo, 0, fomoxaPreallocate(rosterCount))
 	for i := 0; i < rosterCount; i++ {
 		var element models.PlayerInfo
 		err = (PlayerInfoEdgeCodec{}).Decode(r, &element)

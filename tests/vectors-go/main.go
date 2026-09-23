@@ -87,6 +87,56 @@ var roundTrips = map[string]func([]byte) ([]byte, error){
 	},
 }
 
+var sharedWriter = generated.NewWriterSize(1)
+
+var sharedRoundTrips = map[string]func([]byte) ([]byte, error){
+	"Player.edge": func(payload []byte) ([]byte, error) {
+		var value models.Player
+		if err := (generated.PlayerEdgeCodec{}).Decode(generated.NewReader(payload), &value); err != nil {
+			return nil, err
+		}
+		sharedWriter.Reset()
+		generated.PlayerEdgeCodec{}.Encode(sharedWriter, &value)
+		return sharedWriter.Bytes(), nil
+	},
+	"DeviceState.edge": func(payload []byte) ([]byte, error) {
+		var value models.DeviceState
+		if err := (generated.DeviceStateEdgeCodec{}).Decode(generated.NewReader(payload), &value); err != nil {
+			return nil, err
+		}
+		sharedWriter.Reset()
+		generated.DeviceStateEdgeCodec{}.Encode(sharedWriter, &value)
+		return sharedWriter.Bytes(), nil
+	},
+	"DeviceState.unity": func(payload []byte) ([]byte, error) {
+		var value models.DeviceState
+		if err := (generated.DeviceStateUnityCodec{}).Decode(generated.NewReader(payload), &value); err != nil {
+			return nil, err
+		}
+		sharedWriter.Reset()
+		generated.DeviceStateUnityCodec{}.Encode(sharedWriter, &value)
+		return sharedWriter.Bytes(), nil
+	},
+	"EveryPrimitive.edge": func(payload []byte) ([]byte, error) {
+		var value models.EveryPrimitive
+		if err := (generated.EveryPrimitiveEdgeCodec{}).Decode(generated.NewReader(payload), &value); err != nil {
+			return nil, err
+		}
+		sharedWriter.Reset()
+		generated.EveryPrimitiveEdgeCodec{}.Encode(sharedWriter, &value)
+		return sharedWriter.Bytes(), nil
+	},
+	"Team.edge": func(payload []byte) ([]byte, error) {
+		var value models.Team
+		if err := (generated.TeamEdgeCodec{}).Decode(generated.NewReader(payload), &value); err != nil {
+			return nil, err
+		}
+		sharedWriter.Reset()
+		generated.TeamEdgeCodec{}.Encode(sharedWriter, &value)
+		return sharedWriter.Bytes(), nil
+	},
+}
+
 var identities = map[string]identity{
 	"Player.edge":         {generated.PlayerEdgeCodecMessageID, generated.PlayerEdgeCodecFingerprint},
 	"PlayerInfo.edge":     {generated.PlayerInfoEdgeCodecMessageID, generated.PlayerInfoEdgeCodecFingerprint},
@@ -158,6 +208,12 @@ func main() {
 		var decodeError *generated.DecodeError
 		matched := errors.As(err, &decodeError) && decodeError.Kind == errorKinds[reject.Error]
 		check(matched, "reject %s: %v, expected %s", reject.Name, err, reject.Error)
+	}
+
+	for _, accept := range vectors.Accept {
+		expected, _ := roundTrips[accept.Message](decodeHex(accept.Hex))
+		actual, err := sharedRoundTrips[accept.Message](decodeHex(accept.Hex))
+		check(err == nil && bytes.Equal(actual, expected), "shared writer %s: %x, expected %x", accept.Name, actual, expected)
 	}
 
 	fmt.Printf("%d/%d checks passed\n", checks-failures, checks)

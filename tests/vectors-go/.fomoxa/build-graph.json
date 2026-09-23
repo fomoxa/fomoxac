@@ -53,7 +53,7 @@
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "c2c77a95febc3d369a15998cc29651c67896c1c7de27184566bdb8b865fb7f27"
+          "sha256": "909c5ef17083d5072f3726b92e55869d57a483d624fdd68d3db1d3b67eaf6816"
         }
       ]
     }
@@ -62,7 +62,7 @@
     {
       "path": "src/generated/runtime.go",
       "kind": "runtime",
-      "sha256": "362a525ad5b9feba73e86547516ed256c77ffd5aab2bb48d1cef742d774dff65"
+      "sha256": "7b51416541b787e1bc67f60f259e23ccec77ff2ff88c1fe6f5c41a4bdc3d4739"
     },
     {
       "path": "src/generated/handshake.go",
