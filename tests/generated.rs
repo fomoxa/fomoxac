@@ -583,3 +583,77 @@ fn the_net_schema_declares_every_message_in_the_handshake_table() {
         assert_eq!(declared.prefixes(), message.prefixes, "{}", message.name);
     }
 }
+
+#[test]
+fn decoding_into_a_held_value_reuses_its_allocations() {
+    let long = Team {
+        captain: PlayerInfo { level: 9 },
+        tags: vec!["alpha".to_owned(), "beta".to_owned(), "gamma".to_owned()],
+        scores: vec![1, 2, 3, 4],
+        roster: vec![PlayerInfo { level: 1 }, PlayerInfo { level: 2 }],
+    };
+    let short = Team {
+        captain: PlayerInfo { level: 3 },
+        tags: vec!["beta".to_owned()],
+        scores: vec![7],
+        roster: vec![PlayerInfo { level: 5 }],
+    };
+    let long_bytes = encode(&long, TeamEdgeCodec::encode);
+    let short_bytes = encode(&short, TeamEdgeCodec::encode);
+
+    let mut held = Team::default();
+    TeamEdgeCodec::decode(&mut Reader::new(&long_bytes), &mut held).expect("decode");
+    let tags = held.tags.as_ptr();
+    let first_tag = held.tags[0].as_ptr();
+    let scores = held.scores.as_ptr();
+    let roster = held.roster.as_ptr();
+
+    TeamEdgeCodec::decode(&mut Reader::new(&short_bytes), &mut held).expect("decode");
+    assert_eq!(encode(&held, TeamEdgeCodec::encode), short_bytes);
+    assert_eq!(held.tags, ["beta"]);
+    assert_eq!(held.tags.as_ptr(), tags);
+    assert_eq!(held.tags[0].as_ptr(), first_tag);
+    assert_eq!(held.scores.as_ptr(), scores);
+    assert_eq!(held.roster.as_ptr(), roster);
+
+    TeamEdgeCodec::decode(&mut Reader::new(&long_bytes), &mut held).expect("decode");
+    assert_eq!(encode(&held, TeamEdgeCodec::encode), long_bytes);
+    assert_eq!(held.tags.as_ptr(), tags);
+}
+
+#[test]
+fn read_string_into_reuses_capacity_and_rejects_invalid_utf8() {
+    let mut writer = Writer::new();
+    writer.write_string("Đội trưởng");
+    let bytes = writer.into_bytes();
+
+    let mut value = String::with_capacity(64);
+    value.push_str("something else");
+    let buffer = value.as_ptr();
+    Reader::new(&bytes)
+        .read_string_into(&mut value)
+        .expect("decode");
+    assert_eq!(value, "Đội trưởng");
+    assert_eq!(value.as_ptr(), buffer);
+
+    let invalid = [2, 0, 0, 0, 0xC3, 0x28];
+    let mut reader = Reader::new(&invalid);
+    assert_eq!(
+        reader.read_string_into(&mut value),
+        Err(DecodeError::InvalidUtf8)
+    );
+    assert_eq!(reader.position(), 0);
+    assert_eq!(value, "Đội trưởng");
+
+    let mut blob = Vec::with_capacity(16);
+    blob.extend_from_slice(&[9, 9, 9, 9, 9]);
+    let blob_buffer = blob.as_ptr();
+    let mut writer = Writer::new();
+    writer.write_bytes(&[1, 2, 3]);
+    let bytes = writer.into_bytes();
+    Reader::new(&bytes)
+        .read_bytes_into(&mut blob)
+        .expect("decode");
+    assert_eq!(blob, [1, 2, 3]);
+    assert_eq!(blob.as_ptr(), blob_buffer);
+}
