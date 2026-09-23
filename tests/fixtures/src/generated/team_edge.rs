@@ -4,8 +4,8 @@
 // model: Team
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #![allow(dead_code, unused_imports)]
 
@@ -64,28 +64,40 @@ impl TeamEdgeCodec {
     pub fn decode(reader: &mut Reader, value: &mut Team) -> ::core::result::Result<(), DecodeError> {
         PlayerInfoEdgeCodec::decode(reader, &mut value.captain)?;
         {
-            let count = if reader.field_absent() { 0 } else { reader.read_array_count()? };
-            let mut elements = ::std::vec::Vec::with_capacity(count.min(4096));
-            for _ in 0..count {
-                elements.push(reader.read_string()?);
+            let count0 = if reader.field_absent() { 0 } else { reader.read_array_count()? };
+            let elements0 = &mut value.tags;
+            elements0.truncate(count0);
+            elements0.reserve(count0.min(4096).saturating_sub(elements0.len()));
+            for index0 in 0..count0 {
+                if index0 == elements0.len() {
+                    elements0.push(::core::default::Default::default());
+                }
+                reader.read_string_into(&mut elements0[index0])?;
             }
-            value.tags = elements;
         }
         {
-            let count = if reader.field_absent() { 0 } else { reader.read_array_count()? };
-            let mut elements = ::std::vec::Vec::with_capacity(count.min(4096));
-            for _ in 0..count {
-                elements.push(reader.read_u32()?);
+            let count0 = if reader.field_absent() { 0 } else { reader.read_array_count()? };
+            let elements0 = &mut value.scores;
+            elements0.truncate(count0);
+            elements0.reserve(count0.min(4096).saturating_sub(elements0.len()));
+            for index0 in 0..count0 {
+                if index0 == elements0.len() {
+                    elements0.push(::core::default::Default::default());
+                }
+                elements0[index0] = reader.read_u32()?;
             }
-            value.scores = elements;
         }
         {
-            let count = if reader.field_absent() { 0 } else { reader.read_array_count()? };
-            let mut elements = ::std::vec::Vec::with_capacity(count.min(4096));
-            for _ in 0..count {
-                elements.push({ let mut element = <PlayerInfo as ::core::default::Default>::default(); PlayerInfoEdgeCodec::decode(reader, &mut element)?; element });
+            let count0 = if reader.field_absent() { 0 } else { reader.read_array_count()? };
+            let elements0 = &mut value.roster;
+            elements0.truncate(count0);
+            elements0.reserve(count0.min(4096).saturating_sub(elements0.len()));
+            for index0 in 0..count0 {
+                if index0 == elements0.len() {
+                    elements0.push(::core::default::Default::default());
+                }
+                PlayerInfoEdgeCodec::decode(reader, &mut elements0[index0])?;
             }
-            value.roster = elements;
         }
         ::core::result::Result::Ok(())
     }

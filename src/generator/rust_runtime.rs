@@ -418,6 +418,57 @@ impl<'a> Reader<'a> {
         }
     }
 
+    pub fn read_string_into(
+        &mut self,
+        value: &mut ::std::string::String,
+    ) -> ::core::result::Result<(), DecodeError> {
+        let start = self.pos;
+        let len = self.read_len(self.limits.max_string_len)?;
+
+        let bytes = match self.take(len) {
+            ::core::result::Result::Ok(bytes) => bytes,
+            ::core::result::Result::Err(error) => {
+                self.pos = start;
+                return ::core::result::Result::Err(error);
+            }
+        };
+
+        if value.as_bytes() == bytes {
+            return ::core::result::Result::Ok(());
+        }
+        match ::core::str::from_utf8(bytes) {
+            ::core::result::Result::Ok(text) => {
+                value.clear();
+                value.push_str(text);
+                ::core::result::Result::Ok(())
+            }
+            ::core::result::Result::Err(_) => {
+                self.pos = start;
+                ::core::result::Result::Err(DecodeError::InvalidUtf8)
+            }
+        }
+    }
+
+    pub fn read_bytes_into(
+        &mut self,
+        value: &mut ::std::vec::Vec<u8>,
+    ) -> ::core::result::Result<(), DecodeError> {
+        let start = self.pos;
+        let len = self.read_len(self.limits.max_bytes_len)?;
+
+        match self.take(len) {
+            ::core::result::Result::Ok(bytes) => {
+                value.clear();
+                value.extend_from_slice(bytes);
+                ::core::result::Result::Ok(())
+            }
+            ::core::result::Result::Err(error) => {
+                self.pos = start;
+                ::core::result::Result::Err(error)
+            }
+        }
+    }
+
     /// Reads an `Array<T>`'s element count (RFC-0002 §6), checked against
     /// [`Limits::max_array_count`] before the caller reads a single element.
     pub fn read_array_count(&mut self) -> ::core::result::Result<usize, DecodeError> {

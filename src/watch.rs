@@ -105,6 +105,7 @@ mod tests {
             root: directory.to_path_buf(),
             model_path: None,
             validate_message_fingerprint: false,
+            net_schema: false,
         }
     }
 
@@ -169,6 +170,7 @@ mod tests {
             root: directory.clone(),
             model_path: None,
             validate_message_fingerprint: false,
+            net_schema: false,
         };
 
         let error = run(

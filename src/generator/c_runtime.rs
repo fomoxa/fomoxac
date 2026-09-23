@@ -162,6 +162,10 @@ static inline void fomoxa_writer_free(FomoxaWriter *writer) {
  * eventually `free()` it. `*out_len` is set to the number of bytes written.
  * The writer is left empty, so a later `fomoxa_writer_free` on it is a
  * no-op. */
+static inline void fomoxa_writer_reset(FomoxaWriter *writer) {
+    writer->len = 0;
+}
+
 static inline unsigned char *fomoxa_writer_take(FomoxaWriter *writer, size_t *out_len) {
     unsigned char *data = writer->data;
     *out_len = writer->len;
@@ -689,6 +693,79 @@ static inline FomoxaDecodeError fomoxa_reader_read_bytes(FomoxaReader *reader,
     memcpy(value, bytes, len);
     out->data = value;
     out->len = len;
+    return fomoxa_decode_ok();
+}
+
+static inline FomoxaDecodeError fomoxa_reader_read_string_into(FomoxaReader *reader,
+                                                                   const char **inout) {
+    size_t start = reader->pos;
+    size_t len = 0;
+    FomoxaDecodeError error = fomoxa_reader_read_len(reader, reader->limits.max_string_len, &len);
+    if (!fomoxa_decode_error_ok(&error)) {
+        return error;
+    }
+
+    const unsigned char *bytes = NULL;
+    error = fomoxa_reader_take(reader, len, &bytes);
+    if (!fomoxa_decode_error_ok(&error)) {
+        reader->pos = start;
+        return error;
+    }
+    if (!fomoxa_is_valid_utf8(bytes, len)) {
+        reader->pos = start;
+        error = fomoxa_decode_ok();
+        error.kind = FOMOXA_DECODE_INVALID_UTF8;
+        return error;
+    }
+    if (*inout != NULL && strlen(*inout) == len && memcmp(*inout, bytes, len) == 0) {
+        return fomoxa_decode_ok();
+    }
+
+    char *value = (char *)realloc((void *)*inout, len + 1);
+    if (value == NULL) {
+        reader->pos = start;
+        error = fomoxa_decode_ok();
+        error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
+        return error;
+    }
+    memcpy(value, bytes, len);
+    value[len] = '\0';
+    *inout = value;
+    return fomoxa_decode_ok();
+}
+
+static inline FomoxaDecodeError fomoxa_reader_read_bytes_into(FomoxaReader *reader,
+                                                                  FomoxaBytes *inout) {
+    size_t start = reader->pos;
+    size_t len = 0;
+    FomoxaDecodeError error = fomoxa_reader_read_len(reader, reader->limits.max_bytes_len, &len);
+    if (!fomoxa_decode_error_ok(&error)) {
+        return error;
+    }
+
+    const unsigned char *bytes = NULL;
+    error = fomoxa_reader_take(reader, len, &bytes);
+    if (!fomoxa_decode_error_ok(&error)) {
+        reader->pos = start;
+        return error;
+    }
+
+    if (len == 0) {
+        fomoxa_bytes_free(inout);
+        return fomoxa_decode_ok();
+    }
+    if (inout->len != len) {
+        unsigned char *value = (unsigned char *)realloc(inout->data, len);
+        if (value == NULL) {
+            reader->pos = start;
+            error = fomoxa_decode_ok();
+            error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;
+            return error;
+        }
+        inout->data = value;
+        inout->len = len;
+    }
+    memcpy(inout->data, bytes, len);
     return fomoxa_decode_ok();
 }
 

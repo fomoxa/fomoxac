@@ -81,12 +81,15 @@ type Limits struct {
 	MaxArrayCount int
 }
 
-// UnlimitedLimits is the permissive default: math.MaxUint32 for every field.
+// UnlimitedLimits is the permissive default: math.MaxUint32 for every field,
+// or the largest int where int is 32 bits wide.
 var UnlimitedLimits = Limits{
-	MaxStringLen:  math.MaxUint32,
-	MaxBytesLen:   math.MaxUint32,
-	MaxArrayCount: math.MaxUint32,
+	MaxStringLen:  maxLength,
+	MaxBytesLen:   maxLength,
+	MaxArrayCount: maxLength,
 }
+
+const maxLength = int(^uint(0) >> 1 & math.MaxUint32)
 
 // Writer appends Fomoxa-encoded values to a growable buffer.
 //
@@ -99,6 +102,21 @@ type Writer struct {
 // NewWriter creates an empty writer.
 func NewWriter() *Writer {
 	return &Writer{}
+}
+
+func NewWriterSize(capacity int) *Writer {
+	return &Writer{buf: make([]byte, 0, capacity)}
+}
+
+func (w *Writer) Reset() {
+	w.buf = w.buf[:0]
+}
+
+func fomoxaPreallocate(count int) int {
+	if count > 4096 {
+		return 4096
+	}
+	return count
 }
 
 // Bytes returns the bytes written so far.
@@ -140,9 +158,7 @@ func (w *Writer) WriteI16(value int16) {
 
 // WriteU16 writes a uint16 as 2 bytes, Little Endian.
 func (w *Writer) WriteU16(value uint16) {
-	var tmp [2]byte
-	binary.LittleEndian.PutUint16(tmp[:], value)
-	w.buf = append(w.buf, tmp[:]...)
+	w.buf = binary.LittleEndian.AppendUint16(w.buf, value)
 }
 
 // WriteI32 writes an int32 as 4 bytes, Little Endian.
@@ -152,9 +168,7 @@ func (w *Writer) WriteI32(value int32) {
 
 // WriteU32 writes a uint32 as 4 bytes, Little Endian.
 func (w *Writer) WriteU32(value uint32) {
-	var tmp [4]byte
-	binary.LittleEndian.PutUint32(tmp[:], value)
-	w.buf = append(w.buf, tmp[:]...)
+	w.buf = binary.LittleEndian.AppendUint32(w.buf, value)
 }
 
 // WriteI64 writes an int64 as 8 bytes, Little Endian.
@@ -164,9 +178,7 @@ func (w *Writer) WriteI64(value int64) {
 
 // WriteU64 writes a uint64 as 8 bytes, Little Endian.
 func (w *Writer) WriteU64(value uint64) {
-	var tmp [8]byte
-	binary.LittleEndian.PutUint64(tmp[:], value)
-	w.buf = append(w.buf, tmp[:]...)
+	w.buf = binary.LittleEndian.AppendUint64(w.buf, value)
 }
 
 // WriteF32 writes a float32 as its raw IEEE 754 bits, 4 bytes Little Endian.
@@ -221,6 +233,11 @@ func NewReader(buf []byte) *Reader {
 // guards.
 func NewReaderWithLimits(buf []byte, limits Limits) *Reader {
 	return &Reader{buf: buf, limits: limits}
+}
+
+func (r *Reader) Reset(buf []byte) {
+	r.buf = buf
+	r.pos = 0
 }
 
 // Position returns the cursor position, in bytes from the start.
@@ -387,6 +404,47 @@ func (r *Reader) ReadString() (string, error) {
 	return string(bytes), nil
 }
 
+func (r *Reader) ReadStringInto(dst *string) error {
+	start := r.pos
+	length, err := r.readLength(r.limits.MaxStringLen)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := r.takeChecked(length, start)
+	if err != nil {
+		return err
+	}
+
+	if !utf8.Valid(bytes) {
+		r.pos = start
+		return errInvalidUTF8()
+	}
+	if string(bytes) != *dst {
+		*dst = string(bytes)
+	}
+	return nil
+}
+
+func (r *Reader) ReadBytesInto(dst *[]byte) error {
+	start := r.pos
+	length, err := r.readLength(r.limits.MaxBytesLen)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := r.takeChecked(length, start)
+	if err != nil {
+		return err
+	}
+	out := append((*dst)[:0], bytes...)
+	if out == nil {
+		out = []byte{}
+	}
+	*dst = out
+	return nil
+}
+
 // ReadBytes reads a bytes blob: a uint32 length, then that many raw bytes.
 func (r *Reader) ReadBytes() ([]byte, error) {
 	start := r.pos
@@ -417,6 +475,13 @@ func (r *Reader) readLength(limit int) (int, error) {
 	length, err := r.ReadU32()
 	if err != nil {
 		return 0, err
+	}
+	if uint64(length) > uint64(maxLength) {
+		r.pos = start
+		if limit >= maxLength {
+			return 0, errUnexpectedEOF(maxLength, r.Remaining())
+		}
+		return 0, errLengthOverflow(maxLength, limit)
 	}
 	if int(length) > limit {
 		r.pos = start

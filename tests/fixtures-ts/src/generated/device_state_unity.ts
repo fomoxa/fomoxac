@@ -4,8 +4,8 @@
 // model: DeviceState
 // codec: unity
 // fingerprint: sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 import { Writer, Reader } from "./runtime";
 import { DeviceState } from "../models/device_state";
@@ -49,6 +49,6 @@ export class DeviceStateUnityCodec {
      */
     static decode(reader: Reader, value: DeviceState): void {
         value.Id = reader.fieldAbsent() ? 0 : reader.readU32();
-        value.DisplayName = reader.fieldAbsent() ? "" : reader.readString();
+        value.DisplayName = reader.fieldAbsent() ? "" : reader.readString(value.DisplayName);
     }
 }

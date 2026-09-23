@@ -273,19 +273,25 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
             "            const count = reader.fieldAbsent() ? 0 : reader.readArrayCount();\n",
         );
         out.push_str(&format!(
-            "            const elements: {element_ts_type}[] = [];\n"
+            "            const elements: {element_ts_type}[] = Array.isArray({place}) ? {place} : [];\n"
         ));
         out.push_str("            for (let i = 0; i < count; i++) {\n");
         decode_element_into(out, element_type, "elements", codec, "                ");
         out.push_str("            }\n");
+        out.push_str("            elements.length = count;\n");
         out.push_str(&format!("            {place} = elements;\n"));
         out.push_str("        }\n");
         return;
     }
 
     let (_, reader_method, _) = primitive(&field.ty).expect("models and arrays handled above");
+    let current = if reuses_current(&field.ty) {
+        place.as_str()
+    } else {
+        ""
+    };
     out.push_str(&format!(
-        "        {place} = reader.fieldAbsent() ? {} : reader.{reader_method}();\n",
+        "        {place} = reader.fieldAbsent() ? {} : reader.{reader_method}({current});\n",
         zero(&field.ty),
     ));
 }
@@ -294,15 +300,28 @@ fn decode_element_into(out: &mut String, ty: &WireType, list: &str, codec: &str,
     match as_model(ty) {
         Some(name) => {
             let nested = codec_type_name(name, codec);
-            out.push_str(&format!("{pad}const element = new {name}();\n"));
+            out.push_str(&format!("{pad}let element = {list}[i];\n"));
+            out.push_str(&format!(
+                "{pad}if (element === undefined || element === null) {{\n{pad}    element = new {name}();\n{pad}    {list}[i] = element;\n{pad}}}\n"
+            ));
             out.push_str(&format!("{pad}{nested}.decode(reader, element);\n"));
-            out.push_str(&format!("{pad}{list}.push(element);\n"));
         }
         None => {
             let (_, reader_method, _) = primitive(ty).expect("models handled above");
-            out.push_str(&format!("{pad}{list}.push(reader.{reader_method}());\n"));
+            let current = if reuses_current(ty) {
+                format!("{list}[i]")
+            } else {
+                String::new()
+            };
+            out.push_str(&format!(
+                "{pad}{list}[i] = reader.{reader_method}({current});\n"
+            ));
         }
     }
+}
+
+fn reuses_current(ty: &WireType) -> bool {
+    matches!(ty, WireType::Str | WireType::Bytes)
 }
 
 fn element_type_name(ty: &WireType, _imports: &Imports<'_>) -> String {
@@ -411,11 +430,13 @@ mod tests {
     }
 
     #[test]
-    fn a_string_zeroes_to_an_empty_string() {
+    fn a_string_zeroes_to_an_empty_string_and_otherwise_decodes_over_the_held_one() {
         let text = generated(&[("Name", "string")]);
         assert!(text.contains("writer.writeString(value.Name);"), "{text}");
         assert!(
-            text.contains("value.Name = reader.fieldAbsent() ? \"\" : reader.readString();"),
+            text.contains(
+                "value.Name = reader.fieldAbsent() ? \"\" : reader.readString(value.Name);"
+            ),
             "{text}"
         );
     }
@@ -464,27 +485,35 @@ mod tests {
             text.contains("const count = reader.fieldAbsent() ? 0 : reader.readArrayCount();"),
             "{text}"
         );
-        assert!(text.contains("const elements: string[] = [];"), "{text}");
         assert!(
-            text.contains("elements.push(reader.readString());"),
+            text.contains(
+                "const elements: string[] = Array.isArray(value.Tags) ? value.Tags : [];"
+            ),
             "{text}"
         );
+        assert!(
+            text.contains("elements[i] = reader.readString(elements[i]);"),
+            "{text}"
+        );
+        assert!(text.contains("elements.length = count;"), "{text}");
         assert!(text.contains("value.Tags = elements;"), "{text}");
     }
 
     #[test]
-    fn an_array_of_models_creates_a_fresh_element_each_iteration() {
+    fn an_array_of_models_decodes_into_held_elements_and_creates_only_new_ones() {
         let text = generated(&[("Roster", "Array<PlayerInfo>")]);
         assert!(
-            text.contains("const elements: PlayerInfo[] = [];"),
+            text.contains(
+                "const elements: PlayerInfo[] = Array.isArray(value.Roster) ? value.Roster : [];"
+            ),
             "{text}"
         );
-        assert!(text.contains("const element = new PlayerInfo();"), "{text}");
+        assert!(text.contains("let element = elements[i];"), "{text}");
+        assert!(text.contains("element = new PlayerInfo();"), "{text}");
         assert!(
             text.contains("PlayerInfoEdgeCodec.decode(reader, element);"),
             "{text}"
         );
-        assert!(text.contains("elements.push(element);"), "{text}");
     }
 
     #[test]

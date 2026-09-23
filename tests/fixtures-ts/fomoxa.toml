@@ -6,3 +6,5 @@ out = "src/generated"
 
 # No `model_path`: the default computes a relative `import` straight from
 # each model's own source path, exactly as it would in a real project.
+
+net_schema = true

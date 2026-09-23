@@ -372,6 +372,22 @@ fn a_removed_model_takes_its_generated_file_with_it() {
     assert!(!read(&directory, "src/generated/mod.rs").contains("team_edge"));
 }
 
+#[test]
+fn turning_net_schema_off_takes_its_file_with_it() {
+    let directory = project("net-schema-off");
+    fomoxac(&directory, &["generate"]);
+    assert!(read(&directory, "src/generated/net_schema.rs").contains("pub fn fomoxa_net_schema()"));
+    assert!(read(&directory, "src/generated/mod.rs").contains("pub use self::net_schema::*;"));
+
+    let config = read(&directory, "fomoxa.toml").replace("net_schema = true", "net_schema = false");
+    std::fs::write(directory.join("fomoxa.toml"), config).expect("write");
+
+    let output = fomoxac(&directory, &["generate"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(!directory.join("src/generated/net_schema.rs").exists());
+    assert!(!read(&directory, "src/generated/mod.rs").contains("net_schema"));
+}
+
 // ====================================================================== errors
 
 #[test]
@@ -558,9 +574,27 @@ fn compat_compares_two_named_schemas_without_reading_source() {
 /// under test on a branch - the shape a pull request actually has.
 fn repository(name: &str, change: Option<&str>) -> Option<PathBuf> {
     let directory = project(name);
+    commit_schema_history(&directory, &directory, change)?;
+    Some(directory)
+}
+
+fn repository_with_the_project_in_a_subdirectory(
+    name: &str,
+    change: Option<&str>,
+) -> Option<PathBuf> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("target/tests")
+        .join(name);
+    let _ = std::fs::remove_dir_all(&root);
+    let directory = project(&format!("{name}/tests/fixtures"));
+    commit_schema_history(&root, &directory, change)?;
+    Some(directory)
+}
+
+fn commit_schema_history(root: &Path, directory: &Path, change: Option<&str>) -> Option<()> {
     let git = |arguments: &[&str]| {
         Command::new("git")
-            .current_dir(&directory)
+            .current_dir(root)
             .args(arguments)
             .output()
     };
@@ -571,19 +605,19 @@ fn repository(name: &str, change: Option<&str>) -> Option<PathBuf> {
     let _ = git(&["config", "user.email", "fomoxa@example.test"]);
     let _ = git(&["config", "user.name", "Fomoxa"]);
 
-    fomoxac(&directory, &["generate", "-q"]);
+    fomoxac(directory, &["generate", "-q"]);
     let _ = git(&["add", "-A"]);
     let _ = git(&["commit", "-m", "schema v1"]);
 
     if let Some(fields) = change {
         let _ = git(&["checkout", "-b", "feature/foo"]);
-        rewrite_player(&directory, fields);
-        fomoxac(&directory, &["generate", "-q"]);
+        rewrite_player(directory, fields);
+        fomoxac(directory, &["generate", "-q"]);
         let _ = git(&["add", "-A"]);
         let _ = git(&["commit", "-m", "schema v2"]);
     }
 
-    Some(directory)
+    Some(())
 }
 
 #[test]
@@ -601,6 +635,23 @@ fn ci_compares_against_the_named_target_branch() {
     let report = stdout(&output);
     assert!(output.status.success(), "{report}{}", stderr(&output));
     assert!(report.contains("matches the source"), "{report}");
+    assert!(report.contains("COMPATIBLE"), "{report}");
+}
+
+#[test]
+fn ci_reads_the_target_branch_schema_of_a_project_below_the_repository_root() {
+    let Some(directory) = repository_with_the_project_in_a_subdirectory(
+        "ci-subdirectory",
+        Some(&format!(
+            "{PLAYER_V1}\n    #[network(u32)]\n    #[codec(edge)]\n    pub level: u32,\n"
+        )),
+    ) else {
+        return;
+    };
+
+    let output = fomoxac(&directory, &["ci", "--base-ref", "develop"]);
+    let report = stdout(&output);
+    assert!(output.status.success(), "{report}{}", stderr(&output));
     assert!(report.contains("COMPATIBLE"), "{report}");
 }
 
@@ -902,12 +953,11 @@ fn the_generated_tree_matches_the_committed_fixture() {
 }
 
 /// The same rule `fomoxac` itself applies when deciding whether to rewrite a
-/// file: only the `generated-at:` line may differ. Checked against both
-/// spellings (`//` for Rust, Go and C#; `#` for GDScript, whose only comment
-/// syntax that is) so one helper serves every backend's fixture comparison.
+/// file: only the `generated-at:` line may differ, so one helper serves every
+/// backend's fixture comparison.
 fn same_but_for_timestamp(left: &str, right: &str) -> bool {
     fn timestamp_line(line: &str) -> bool {
-        line.starts_with("// generated-at: ") || line.starts_with("# generated-at: ")
+        line.starts_with("// generated-at: ")
     }
 
     left.lines()
@@ -1214,160 +1264,6 @@ fn the_cs_generated_tree_matches_the_committed_fixture() {
     }
 }
 
-// ================================================================== GDScript
-
-/// A clean copy of `tests/fixtures-gd/` - the GDScript counterpart of
-/// [`cs_project`]/[`go_project`]: `fomoxa.toml` and the annotated models, in
-/// a directory of its own so a test can edit it without disturbing the
-/// committed fixture. One model per file, since a `.gd` file may declare only
-/// one `class_name` - see `tests/fixtures-gd/src/models/`.
-fn gd_project(name: &str) -> PathBuf {
-    let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target/tests")
-        .join(name);
-    let _ = std::fs::remove_dir_all(&directory);
-    std::fs::create_dir_all(directory.join("src/models")).expect("create project");
-
-    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures-gd");
-    std::fs::copy(fixtures.join("fomoxa.toml"), directory.join("fomoxa.toml"))
-        .expect("copy fomoxa.toml");
-    for entry in std::fs::read_dir(fixtures.join("src/models")).expect("read fixtures") {
-        let path = entry.expect("entry").path();
-        std::fs::copy(
-            &path,
-            directory
-                .join("src/models")
-                .join(path.file_name().expect("name")),
-        )
-        .expect("copy schema");
-    }
-
-    directory
-}
-
-#[test]
-fn gd_generate_writes_one_file_per_model_per_codec_with_no_qualification_at_all() {
-    let directory = gd_project("gd-generate");
-    let output = fomoxac(&directory, &["generate"]);
-    assert!(output.status.success(), "{}", stderr(&output));
-
-    for (file, class_name) in [
-        ("src/generated/runtime.gd", "FomoxaRuntime"),
-        ("src/generated/handshake.gd", "FomoxaHandshake"),
-        ("src/generated/player_edge.gd", "PlayerEdgeCodec"),
-        ("src/generated/player_unity.gd", "PlayerUnityCodec"),
-        ("src/generated/player_info_edge.gd", "PlayerInfoEdgeCodec"),
-        ("src/generated/team_edge.gd", "TeamEdgeCodec"),
-    ] {
-        let text = read(&directory, file);
-        assert!(
-            text.starts_with("# GENERATED BY fomoxac\n"),
-            "{file}: {text}"
-        );
-        assert!(
-            text.contains(&format!("class_name {class_name}\n")),
-            "{file}: {text}"
-        );
-    }
-
-    // The model type is named bare - never qualified, never a DTO of its own.
-    let codec = read(&directory, "src/generated/player_edge.gd");
-    assert!(codec.contains("value: Player)"), "{codec}");
-    // A nested codec is called bare too - there is nothing to import or
-    // qualify in GDScript, unlike Go's package or C#'s namespace.
-    let team = read(&directory, "src/generated/team_edge.gd");
-    assert!(
-        team.contains("PlayerInfoEdgeCodec.encode(writer, value.captain)"),
-        "{team}"
-    );
-    assert!(!codec.contains("preload("), "{codec}");
-}
-
-#[test]
-fn gd_check_passes_when_current_and_fails_when_stale() {
-    let directory = gd_project("gd-check");
-    fomoxac(&directory, &["generate"]);
-
-    let output = fomoxac(&directory, &["generate", "--check"]);
-    assert!(output.status.success(), "{}", stderr(&output));
-
-    let source = read(&directory, "src/models/player.gd");
-    std::fs::write(
-        directory.join("src/models/player.gd"),
-        source.replace(
-            "var cache: String = \"\"",
-            "var cache: String = \"\"\n\n# fomoxa:u32 codec=edge\nvar level: int = 0",
-        ),
-    )
-    .expect("write");
-
-    let output = fomoxac(&directory, &["generate", "--check"]);
-    assert!(!output.status.success(), "a stale tree must fail --check");
-    assert!(stderr(&output).contains("stale:"), "{}", stderr(&output));
-}
-
-#[test]
-fn gd_model_path_has_no_effect_gdscript_needs_nothing_to_override() {
-    let directory = gd_project("gd-model-path");
-    fomoxac(&directory, &["generate", "-q"]);
-    let without = read(&directory, "src/generated/player_edge.gd");
-
-    let with_override = gd_project("gd-model-path-override");
-    fomoxac(
-        &with_override,
-        &["generate", "-q", "--model-path", "Game.Wire"],
-    );
-    let with = read(&with_override, "src/generated/player_edge.gd");
-
-    assert!(
-        same_but_for_timestamp(&without, &with),
-        "--model-path must have no effect on the GDScript backend:\n{without}\n---\n{with}"
-    );
-}
-
-#[test]
-fn mixed_rust_and_gdscript_sources_in_one_run_are_rejected() {
-    let directory = gd_project("gd-mixed");
-    // A Rust model dropped into the same `--src` tree as the GDScript fixture.
-    std::fs::write(
-        directory.join("src/models/extra.rs"),
-        "#[network]\n#[codec(edge)]\nstruct Extra {\n    #[network(u32)]\n    #[codec(edge)]\n    id: u32,\n}\n",
-    )
-    .expect("write");
-
-    let output = fomoxac(&directory, &["generate"]);
-    assert!(
-        !output.status.success(),
-        "mixing languages in one run must be refused"
-    );
-    let message = stderr(&output);
-    assert!(
-        message.contains("Rust") && message.contains("GDScript"),
-        "{message}"
-    );
-}
-
-#[test]
-fn the_gd_generated_tree_matches_the_committed_fixture() {
-    let directory = gd_project("gd-fixture-is-current");
-    fomoxac(&directory, &["generate", "-q"]);
-
-    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures-gd");
-    for path in [
-        "src/generated/player_edge.gd",
-        "src/generated/team_edge.gd",
-        "src/generated/handshake.gd",
-        ".fomoxa/schema.json",
-    ] {
-        let fresh = read(&directory, path);
-        let committed = std::fs::read_to_string(fixtures.join(path)).expect("committed fixture");
-        assert!(
-            same_but_for_timestamp(&fresh, &committed),
-            "{path} in tests/fixtures-gd/ is out of date - regenerate it"
-        );
-    }
-}
-
 // ======================================================================= C++
 
 /// A clean copy of `tests/fixtures-cpp/`'s schema - the C++ counterpart of
@@ -1663,7 +1559,10 @@ fn c_model_path_has_no_effect_since_there_is_no_namespace_to_override() {
     );
     let overridden = read(&with_override, "src/generated/player_edge.h");
 
-    assert_eq!(without_override, overridden);
+    assert!(
+        same_but_for_timestamp(&without_override, &overridden),
+        "{without_override}\n---\n{overridden}"
+    );
     // The `#include` path is, as ever, always the model's own physical
     // source location.
     assert!(

@@ -284,20 +284,26 @@ fn decode_field(out: &mut String, field: &Field, codec: &str) {
             "            const count = reader.fieldAbsent() ? 0 : reader.readArrayCount();\n",
         );
         out.push_str(&format!(
-            "            /** @type {{{}}} */\n            const elements = [];\n",
+            "            /** @type {{{}}} */\n            const elements = Array.isArray({place}) ? {place} : [];\n",
             jsdoc_type(&field.ty)
         ));
         out.push_str("            for (let i = 0; i < count; i++) {\n");
         decode_element_into(out, element_type, "elements", codec, "                ");
         out.push_str("            }\n");
+        out.push_str("            elements.length = count;\n");
         out.push_str(&format!("            {place} = elements;\n"));
         out.push_str("        }\n");
         return;
     }
 
     let (_, reader_method) = primitive(&field.ty).expect("models and arrays handled above");
+    let current = if reuses_current(&field.ty) {
+        place.as_str()
+    } else {
+        ""
+    };
     out.push_str(&format!(
-        "        {place} = reader.fieldAbsent() ? {} : reader.{reader_method}();\n",
+        "        {place} = reader.fieldAbsent() ? {} : reader.{reader_method}({current});\n",
         zero(&field.ty),
     ));
 }
@@ -306,15 +312,28 @@ fn decode_element_into(out: &mut String, ty: &WireType, list: &str, codec: &str,
     match as_model(ty) {
         Some(name) => {
             let nested = codec_type_name(name, codec);
-            out.push_str(&format!("{pad}const element = new {name}();\n"));
+            out.push_str(&format!("{pad}let element = {list}[i];\n"));
+            out.push_str(&format!(
+                "{pad}if (element === undefined || element === null) {{\n{pad}    element = new {name}();\n{pad}    {list}[i] = element;\n{pad}}}\n"
+            ));
             out.push_str(&format!("{pad}{nested}.decode(reader, element);\n"));
-            out.push_str(&format!("{pad}{list}.push(element);\n"));
         }
         None => {
             let (_, reader_method) = primitive(ty).expect("models handled above");
-            out.push_str(&format!("{pad}{list}.push(reader.{reader_method}());\n"));
+            let current = if reuses_current(ty) {
+                format!("{list}[i]")
+            } else {
+                String::new()
+            };
+            out.push_str(&format!(
+                "{pad}{list}[i] = reader.{reader_method}({current});\n"
+            ));
         }
     }
+}
+
+fn reuses_current(ty: &WireType) -> bool {
+    matches!(ty, WireType::Str | WireType::Bytes)
 }
 
 fn as_model(ty: &WireType) -> Option<&str> {
@@ -445,11 +464,15 @@ mod tests {
             text.contains("writer.writeArrayCount(value.Tags.length);"),
             "{text}"
         );
-        assert!(text.contains("const elements = [];"), "{text}");
         assert!(
-            text.contains("elements.push(reader.readString());"),
+            text.contains("const elements = Array.isArray(value.Tags) ? value.Tags : [];"),
             "{text}"
         );
+        assert!(
+            text.contains("elements[i] = reader.readString(elements[i]);"),
+            "{text}"
+        );
+        assert!(text.contains("elements.length = count;"), "{text}");
     }
 
     #[test]

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "generator": "fomoxac 0.2.2",
+  "schema_fingerprint": "sha256:613186f60497e44945aa20d676394447395594490ca193417f162e855cb11ad2",
+  "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
+  "sources": {
+    "src/models/models.hpp": {
+      "models": [
+        "DeviceState",
+        "EveryPrimitive",
+        "Player",
+        "PlayerInfo",
+        "Team"
+      ],
+      "outputs": [
+        {
+          "path": "src/generated/device_state_edge.hpp",
+          "model": "DeviceState",
+          "codec": "edge",
+          "fingerprint": "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91",
+          "sha256": "110cd3ec1e508e1fb950741900a3bec91a99b05821b12f1a14687199730105bd"
+        },
+        {
+          "path": "src/generated/device_state_unity.hpp",
+          "model": "DeviceState",
+          "codec": "unity",
+          "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
+          "sha256": "0666f8225d01ead88ba7ec41c291fef4a7842a92f99bf5f5582d8f40fb4c139f"
+        },
+        {
+          "path": "src/generated/every_primitive_edge.hpp",
+          "model": "EveryPrimitive",
+          "codec": "edge",
+          "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
+          "sha256": "1121f521c9c34415c32a8ca2e2c8f0a92b212ccbbd456aae8c7dc9da8d5c28ac"
+        },
+        {
+          "path": "src/generated/player_edge.hpp",
+          "model": "Player",
+          "codec": "edge",
+          "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
+          "sha256": "7d1338def4ad5af3952c7d532e84e60f790add63cafe4bccced3f322a2653e41"
+        },
+        {
+          "path": "src/generated/player_info_edge.hpp",
+          "model": "PlayerInfo",
+          "codec": "edge",
+          "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
+          "sha256": "47917f37969efcb82ea2fe67fd159a9c77ae554d70a689cd00dc56e00b060553"
+        },
+        {
+          "path": "src/generated/team_edge.hpp",
+          "model": "Team",
+          "codec": "edge",
+          "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
+          "sha256": "43b28bf41eadd50aa8675ab0410e3af971fc21daea4fe158bb678ffc2ee91c8b"
+        }
+      ]
+    }
+  },
+  "shared": [
+    {
+      "path": "src/generated/runtime.hpp",
+      "kind": "runtime",
+      "sha256": "cf75eb6bf8659c39d3ebe30ad2d7601665ad50fe76ce47796a7aa324f9336003"
+    },
+    {
+      "path": "src/generated/handshake.hpp",
+      "kind": "handshake",
+      "sha256": "62b3ce779904c3e98e5f8127c47c080b2d743b474755d2cad320754939cdd74e"
+    },
+    {
+      "path": "src/generated/net_schema.hpp",
+      "kind": "net_schema",
+      "sha256": "bf8081b8f9ab2a97024dc54add12ca851a6065183f8919acdd5059b162430fdc"
+    }
+  ]
+}

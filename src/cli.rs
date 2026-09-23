@@ -4,8 +4,8 @@ use std::path::PathBuf;
 pub const USAGE: &str = "\
 fomoxac - the official Fomoxa source generator
 
-Reads Fomoxa attributes from Rust, Go, C#, GDScript, C++, C, TypeScript or
-JavaScript sources - never more than one language in one run - and writes one
+Reads Fomoxa attributes from Rust, Go, C#, C++, C, TypeScript or JavaScript
+sources - never more than one language in one run - and writes one
 codec file per model per codec, plus the schema, fingerprints and build graph
 that go with them.
 
@@ -27,7 +27,7 @@ OPTIONS:
         --src <PATH>     A directory to scan recursively, or a single file.
                          Repeatable. Default: fomoxa.toml's `src`, else `src`.
                          Every file found must be one language - `.rs`, `.go`,
-                         `.cs`, `.gd`, `.hpp`/`.cpp`/`.cc`/`.cxx` (C++),
+                         `.cs`, `.hpp`/`.cpp`/`.cc`/`.cxx` (C++),
                          `.c`/`.h` (C), or `.ts`/`.js` (TypeScript/
                          JavaScript) - never a mix; separate projects sharing
                          one schema each get their own `--src`/`--out` (and
@@ -53,12 +53,10 @@ OPTIONS:
                          point your compiler's `-I` at the directory that
                          path is itself relative to, typically the project
                          root.
-                         GDScript and C: no effect. GDScript, because a
-                         model's own `class_name` is already reachable
-                         project-wide with nothing to override; C, because it
-                         has no namespace at all, only the same physical
-                         `#include` path C++ has above (and, like C++'s,
-                         never overridden by this option).
+                         C: no effect, because it has no namespace at all,
+                         only the same physical `#include` path C++ has
+                         above (and, like C++'s, never overridden by this
+                         option).
                          TypeScript/JavaScript: an ES module specifier, e.g.
                          `@/models` - every model is imported from that one
                          module (a barrel re-exporting each of them) in place
@@ -134,19 +132,6 @@ C# spells the same declaration with attributes, the same shape as Rust's:
         public float X { get; set; }
     }
 
-GDScript has no attributes either, and an unrecognized `@name` is a parse
-error in Godot itself - so, like Go, a `# fomoxa:` comment directive says it
-instead:
-
-    # fomoxa:model codec=edge,unity
-    class_name Player
-
-    # fomoxa:u32 codec=edge,unity
-    var id: int
-
-    # fomoxa:f32 codec=edge
-    var x: float
-
 C++ has no attributes either, and no comment-directive syntax to fall back
 on - it spells the same declaration with three macros a small header (see
 `fomoxa.h` in the brief) defines to expand to nothing, so an annotated
@@ -183,7 +168,7 @@ section of the README for why), and there is no `namespace` to open at all:
     };
 
 TypeScript and JavaScript have neither attributes nor macros usable without a
-runtime dependency, so - like Go and GDScript - a comment directive says it,
+runtime dependency, so - like Go - a comment directive says it,
 read the same way for both languages (`.ts` and `.js`) and requiring no
 decorator and no package to install:
 

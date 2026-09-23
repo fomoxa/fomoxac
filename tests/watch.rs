@@ -37,6 +37,7 @@ fn options(directory: &Path) -> Options {
         root: directory.to_path_buf(),
         model_path: None,
         validate_message_fingerprint: false,
+        net_schema: false,
     }
 }
 

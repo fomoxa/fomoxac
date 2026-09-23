@@ -4,8 +4,8 @@
 // model: Player
 // codec: edge
 // fingerprint: sha256:01fc1f8d5768cded1cb94f6d37b2f32412b40376e78e3c36ac8a5e70cee183f4
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #pragma once
 
@@ -52,8 +52,8 @@ static inline bool PlayerEdgeCodec_encode(FomoxaWriter *writer, const struct Pla
 // the stream ended inside is an error. Bytes left over after the last field
 // belong to a newer writer's model and are ignored.
 //
-// `*value` must not already hold data from a previous, unfreed decode - see
-// runtime.h's module docs.
+// `*value` must be zero-initialized, freed, or filled by an earlier decode,
+// whose buffers this one reuses.
 static inline FomoxaDecodeError PlayerEdgeCodec_decode(FomoxaReader *reader, struct Player *value) {
     if (fomoxa_reader_field_absent(reader)) {
         value->Id = 0;
@@ -74,16 +74,16 @@ static inline FomoxaDecodeError PlayerEdgeCodec_decode(FomoxaReader *reader, str
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     if (fomoxa_reader_field_absent(reader)) {
+        free((void *)value->Name);
         value->Name = NULL;
     } else {
-        FomoxaDecodeError error = fomoxa_reader_read_string(reader, &value->Name);
+        FomoxaDecodeError error = fomoxa_reader_read_string_into(reader, &value->Name);
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     if (fomoxa_reader_field_absent(reader)) {
-        value->Payload.data = NULL;
-        value->Payload.len = 0;
+        fomoxa_bytes_free(&value->Payload);
     } else {
-        FomoxaDecodeError error = fomoxa_reader_read_bytes(reader, &value->Payload);
+        FomoxaDecodeError error = fomoxa_reader_read_bytes_into(reader, &value->Payload);
         if (!fomoxa_decode_error_ok(&error)) return error;
     }
     return fomoxa_decode_ok();

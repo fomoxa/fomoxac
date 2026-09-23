@@ -4,8 +4,8 @@
 // model: DeviceState
 // codec: unity
 // fingerprint: sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #![allow(dead_code, unused_imports)]
 
@@ -48,7 +48,7 @@ impl DeviceStateUnityCodec {
     /// the last field belong to a newer writer's model and are ignored.
     pub fn decode(reader: &mut Reader, value: &mut DeviceState) -> ::core::result::Result<(), DecodeError> {
         value.id = if reader.field_absent() { 0u32 } else { reader.read_u32()? };
-        value.display_name = if reader.field_absent() { ::std::string::String::new() } else { reader.read_string()? };
+        if reader.field_absent() { value.display_name.clear(); } else { reader.read_string_into(&mut value.display_name)?; }
         ::core::result::Result::Ok(())
     }
 }

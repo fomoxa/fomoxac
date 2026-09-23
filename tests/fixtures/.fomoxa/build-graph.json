@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.1",
+  "generator": "fomoxac 0.2.2",
   "schema_fingerprint": "sha256:9622e96b1c562c0c0e2f36c250555a86aa93f005eb03c91bd8d68137bdc6db88",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -15,28 +15,28 @@
           "model": "DeviceState",
           "codec": "edge",
           "fingerprint": "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91",
-          "sha256": "38a89fecd64fdf1bcf9ba11a7bb89ef4ee3390ca568a744a02d415520d9b78aa"
+          "sha256": "97a4759d4962c07af967b3133cc73ea2c9fff080c91e5a65f1cf4b8aa97a79c3"
         },
         {
           "path": "src/generated/device_state_unity.rs",
           "model": "DeviceState",
           "codec": "unity",
           "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
-          "sha256": "8401de3e6927aaf0a4bfce74ce1c9e5bee7e0d2a332e0908ef2c719056cc67bd"
+          "sha256": "405fe81fdc91fbe42e3948a754357e4970e84f63ad164c07b8ff2cda8d373542"
         },
         {
           "path": "src/generated/telemetry_edge.rs",
           "model": "Telemetry",
           "codec": "edge",
           "fingerprint": "sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5",
-          "sha256": "70799ece0e2fe18109781fb7250083ce838cd1bc52b7a0b97f7a0d816cfc8720"
+          "sha256": "4833c985175358d153b881977a8f956953f8151bc9497787244c00945c37e47d"
         },
         {
           "path": "src/generated/telemetry_orange_pi.rs",
           "model": "Telemetry",
           "codec": "orange_pi",
           "fingerprint": "sha256:795e4aaf9379b5fef010061b70469a498b522a0856b080be6dfa6cde562b3998",
-          "sha256": "7046a612de82e6b352d390f85c15800ef9e1ca224435b147f394e5ade2adc9ff"
+          "sha256": "cff740038b746d1b303b315f203d2018bd166c74b133714970ca4f3c00a5c2de"
         }
       ]
     },
@@ -50,7 +50,7 @@
           "model": "EveryPrimitive",
           "codec": "edge",
           "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
-          "sha256": "3a6acc77ba71ca1f7f8ee651b5a639f06235c2c46d646ab3d706869d8652df79"
+          "sha256": "9dce5c5729d4aa80196e07cd2a1dbc62d5aaf6bfa4e9dc5edec7afe61322deba"
         }
       ]
     },
@@ -66,21 +66,21 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "ebb5d2fc7c8bd5da1e27e23fc4f44d68faf7eceabc7a15d5f3cab46e0e95b8a4"
+          "sha256": "821c8ce5792e5ac441765c9402d97228dcb7eba4f96de8e5783c7e8fe2f42e91"
         },
         {
           "path": "src/generated/player_info_edge.rs",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "1c5c0266f4e8f678fc50517f291f7f9412365ed21d24ff7604606c27e490c8bf"
+          "sha256": "cda14e23f15d281248a258ba8c494281d6eb8123fe0d27e79a7faf05d70b6b8e"
         },
         {
           "path": "src/generated/team_edge.rs",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "3c38e544f5231c42d829614aefe5d74fe8643e190bfb424a842d864fbfe97173"
+          "sha256": "ef4124f635e06d39a06438abe35374c826c1ed21a2c777adac06dda93aca4211"
         }
       ]
     }
@@ -89,17 +89,22 @@
     {
       "path": "src/generated/runtime.rs",
       "kind": "runtime",
-      "sha256": "60e5f0fcfce318799cb5aa24c6f6bd0daa6e77a22d120df73d4a4dfbe2f3cb74"
+      "sha256": "69b03edd711e0e0c1c4b9270ee65ac26dd3d072cb3acd6449d83bba3aae27a2b"
     },
     {
       "path": "src/generated/handshake.rs",
       "kind": "handshake",
-      "sha256": "df2cd7349a8d172e39dc14bb3607ab512de240697fded9737f0e56cbe49ffbdf"
+      "sha256": "8d74a302bb03e4aeb3cd100b6eb2a26f2efd8bfbc830414809b2ae96f7f8354e"
+    },
+    {
+      "path": "src/generated/net_schema.rs",
+      "kind": "net_schema",
+      "sha256": "95850710cc72405e7dc9b07e5a222c20f31454ee85ed8f5fcf7c67eeaae3d293"
     },
     {
       "path": "src/generated/mod.rs",
       "kind": "root",
-      "sha256": "51839e4ea1db3ce7a67bb2cc31103b836c56bad930855e2a132ca0fad8802d9f"
+      "sha256": "35e02d719e0a0d237465378d662f0cbce8455e60ace788d6bcca678044c421e0"
     }
   ]
 }

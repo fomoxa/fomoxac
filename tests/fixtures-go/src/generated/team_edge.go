@@ -4,8 +4,8 @@
 // model: Team
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 package generated
 
@@ -72,14 +72,24 @@ func (TeamEdgeCodec) Decode(r *Reader, value *models.Team) error {
 			return err
 		}
 	}
-	tagsElements := make([]string, 0, tagsCount)
+	tagsElements := value.Tags
+	if len(tagsElements) > tagsCount {
+		tagsElements = tagsElements[:tagsCount]
+	}
+	if cap(tagsElements) < tagsCount {
+		grown := make([]string, len(tagsElements), fomoxaPreallocate(tagsCount))
+		copy(grown, tagsElements)
+		tagsElements = grown
+	}
 	for i := 0; i < tagsCount; i++ {
-		var element string
-		element, err = r.ReadString()
+		if i == len(tagsElements) {
+			var element string
+			tagsElements = append(tagsElements, element)
+		}
+		err = r.ReadStringInto(&tagsElements[i])
 		if err != nil {
 			return err
 		}
-		tagsElements = append(tagsElements, element)
 	}
 	value.Tags = tagsElements
 	var scoresCount int
@@ -89,14 +99,24 @@ func (TeamEdgeCodec) Decode(r *Reader, value *models.Team) error {
 			return err
 		}
 	}
-	scoresElements := make([]uint32, 0, scoresCount)
+	scoresElements := value.Scores
+	if len(scoresElements) > scoresCount {
+		scoresElements = scoresElements[:scoresCount]
+	}
+	if cap(scoresElements) < scoresCount {
+		grown := make([]uint32, len(scoresElements), fomoxaPreallocate(scoresCount))
+		copy(grown, scoresElements)
+		scoresElements = grown
+	}
 	for i := 0; i < scoresCount; i++ {
-		var element uint32
-		element, err = r.ReadU32()
+		if i == len(scoresElements) {
+			var element uint32
+			scoresElements = append(scoresElements, element)
+		}
+		scoresElements[i], err = r.ReadU32()
 		if err != nil {
 			return err
 		}
-		scoresElements = append(scoresElements, element)
 	}
 	value.Scores = scoresElements
 	var rosterCount int
@@ -106,14 +126,24 @@ func (TeamEdgeCodec) Decode(r *Reader, value *models.Team) error {
 			return err
 		}
 	}
-	rosterElements := make([]models.PlayerInfo, 0, rosterCount)
+	rosterElements := value.Roster
+	if len(rosterElements) > rosterCount {
+		rosterElements = rosterElements[:rosterCount]
+	}
+	if cap(rosterElements) < rosterCount {
+		grown := make([]models.PlayerInfo, len(rosterElements), fomoxaPreallocate(rosterCount))
+		copy(grown, rosterElements)
+		rosterElements = grown
+	}
 	for i := 0; i < rosterCount; i++ {
-		var element models.PlayerInfo
-		err = (PlayerInfoEdgeCodec{}).Decode(r, &element)
+		if i == len(rosterElements) {
+			var element models.PlayerInfo
+			rosterElements = append(rosterElements, element)
+		}
+		err = (PlayerInfoEdgeCodec{}).Decode(r, &rosterElements[i])
 		if err != nil {
 			return err
 		}
-		rosterElements = append(rosterElements, element)
 	}
 	value.Roster = rosterElements
 	return nil

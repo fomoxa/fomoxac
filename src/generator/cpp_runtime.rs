@@ -173,15 +173,19 @@ public:
     /// Writes a `string` as a `u32` UTF-8 **byte** length, then those bytes.
     ///
     /// The length counts bytes, not characters.
-    void write_string(const std::string& value) {
+    void write_string(std::string_view value) {
         write_len(value.size());
         buf_.insert(buf_.end(), value.begin(), value.end());
     }
 
     /// Writes a `bytes` blob as a `u32` length, then the raw bytes.
     void write_bytes(const std::vector<std::uint8_t>& value) {
-        write_len(value.size());
-        buf_.insert(buf_.end(), value.begin(), value.end());
+        write_bytes(value.data(), value.size());
+    }
+
+    void write_bytes(const std::uint8_t* data, std::size_t size) {
+        write_len(size);
+        buf_.insert(buf_.end(), data, data + size);
     }
 
     /// Writes an `Array<T>`'s element count (RFC-0002 §6) - the caller writes

@@ -235,8 +235,8 @@ pub fn codec_file(model: &Model, message: &Message, imports: &Imports<'_>) -> St
          // the stream ended inside is an error. Bytes left over after the last field\n\
          // belong to a newer writer's model and are ignored.\n\
          //\n\
-         // `*value` must not already hold data from a previous, unfreed decode - see\n\
-         // runtime.h's module docs.\n",
+         // `*value` must be zero-initialized, freed, or filled by an earlier decode,\n\
+         // whose buffers this one reuses.\n",
         message.codec
     ));
     out.push_str(&format!(
@@ -372,12 +372,24 @@ fn decode_field(out: &mut String, field: &Field, codec: &str) {
 
     if matches!(field.ty, WireType::Bytes) {
         out.push_str("    if (fomoxa_reader_field_absent(reader)) {\n");
+        out.push_str(&format!("        fomoxa_bytes_free(&{place});\n"));
+        out.push_str("    } else {\n");
         out.push_str(&format!(
-            "        {place}.data = NULL;\n        {place}.len = 0;\n"
+            "        FomoxaDecodeError error = fomoxa_reader_read_bytes_into(reader, &{place});\n        \
+             if (!fomoxa_decode_error_ok(&error)) return error;\n"
+        ));
+        out.push_str("    }\n");
+        return;
+    }
+
+    if matches!(field.ty, WireType::Str) {
+        out.push_str("    if (fomoxa_reader_field_absent(reader)) {\n");
+        out.push_str(&format!(
+            "        free((void *){place});\n        {place} = NULL;\n"
         ));
         out.push_str("    } else {\n");
         out.push_str(&format!(
-            "        FomoxaDecodeError error = fomoxa_reader_read_bytes(reader, &{place});\n        \
+            "        FomoxaDecodeError error = fomoxa_reader_read_string_into(reader, &{place});\n        \
              if (!fomoxa_decode_error_ok(&error)) return error;\n"
         ));
         out.push_str("    }\n");
@@ -398,6 +410,7 @@ fn decode_field(out: &mut String, field: &Field, codec: &str) {
 fn decode_array_field(out: &mut String, place: &str, element_type: &WireType, codec: &str) {
     let array_type = array_type_name(element_type);
     let elem_c_type = element_c_type(element_type);
+    let elem_pointer = pointer_to(&elem_c_type);
 
     out.push_str("    {\n");
     out.push_str("        size_t count = 0;\n");
@@ -407,47 +420,96 @@ fn decode_array_field(out: &mut String, place: &str, element_type: &WireType, co
          &count);\n            if (!fomoxa_decode_error_ok(&error)) return error;\n",
     );
     out.push_str("        }\n");
-    out.push_str(&format!("        {array_type} array;\n"));
-    out.push_str("        array.items = NULL;\n");
-    out.push_str("        array.count = 0;\n");
-    out.push_str("        if (count > 0) {\n");
-    out.push_str(&format!(
-        "            array.items = ({elem_c_type} *)calloc(count, sizeof({elem_c_type}));\n"
-    ));
-    out.push_str("            if (array.items == NULL) {\n");
-    out.push_str(
-        "                FomoxaDecodeError error = fomoxa_decode_ok();\n                \
-         error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;\n                return error;\n",
-    );
-    out.push_str("            }\n");
-    out.push_str("            array.count = count;\n");
+    out.push_str(&format!("        {array_type} *array = &{place};\n"));
+    if owns_memory(element_type) {
+        out.push_str("        while (array->count > count) {\n");
+        out.push_str("            --array->count;\n");
+        release_element(
+            out,
+            element_type,
+            "array->items[array->count]",
+            "            ",
+        );
+        out.push_str("        }\n");
+    } else {
+        out.push_str("        if (array->count > count) {\n");
+        out.push_str("            array->count = count;\n");
+        out.push_str("        }\n");
+    }
+    out.push_str("        if (count == 0) {\n");
+    out.push_str("            free(array->items);\n");
+    out.push_str("            array->items = NULL;\n");
     out.push_str("        }\n");
+    out.push_str("        size_t capacity = array->count;\n");
     out.push_str("        for (size_t i = 0; i < count; ++i) {\n");
-    decode_element_into(out, element_type, "array.items[i]", codec);
+    out.push_str("            if (i == array->count) {\n");
+    out.push_str("                if (i == capacity) {\n");
+    out.push_str("                    size_t grown = capacity < 8 ? 8 : capacity * 2;\n");
+    out.push_str("                    if (grown > count) grown = count;\n");
+    out.push_str(&format!(
+        "                    {elem_pointer}items = NULL;\n"
+    ));
+    out.push_str(&format!(
+        "                    if (grown <= SIZE_MAX / sizeof({elem_c_type})) {{\n"
+    ));
+    out.push_str(&format!(
+        "                        items = ({})realloc(array->items, grown * sizeof({elem_c_type}));\n",
+        elem_pointer.trim_end()
+    ));
+    out.push_str("                    }\n");
+    out.push_str("                    if (items == NULL) {\n");
+    out.push_str(
+        "                        FomoxaDecodeError error = fomoxa_decode_ok();\n                        \
+         error.kind = FOMOXA_DECODE_OUT_OF_MEMORY;\n                        return error;\n",
+    );
+    out.push_str("                    }\n");
+    out.push_str("                    array->items = items;\n");
+    out.push_str("                    capacity = grown;\n");
+    out.push_str("                }\n");
+    out.push_str(&format!(
+        "                memset(&array->items[i], 0, sizeof({elem_c_type}));\n"
+    ));
+    out.push_str("                array->count = i + 1;\n");
+    out.push_str("            }\n");
+    decode_element_into(out, element_type, "array->items[i]", codec);
     out.push_str("        }\n");
-    out.push_str(&format!("        {place} = array;\n"));
     out.push_str("    }\n");
 }
 
-fn decode_element_into(out: &mut String, ty: &WireType, element_place: &str, codec: &str) {
-    match as_model(ty) {
-        Some(name) => {
-            let nested = codec_type_name(name, codec);
-            out.push_str(&format!(
-                "            FomoxaDecodeError error = {nested}_decode(reader, &{element_place});\n"
-            ));
-        }
-        None => {
-            let (_, reader_fn, _) = primitive(ty).expect("models handled above");
-            out.push_str(&format!(
-                "            FomoxaDecodeError error = {reader_fn}(reader, &{element_place});\n"
-            ));
-        }
+fn pointer_to(c_type: &str) -> String {
+    if c_type.ends_with('*') {
+        format!("{c_type}*")
+    } else {
+        format!("{c_type} *")
     }
-    out.push_str("            if (!fomoxa_decode_error_ok(&error)) {\n");
-    free_array_value(out, ty, "array", "                ");
-    out.push_str("                return error;\n");
-    out.push_str("            }\n");
+}
+
+fn release_element(out: &mut String, ty: &WireType, element_place: &str, pad: &str) {
+    match ty {
+        WireType::Model(name) => out.push_str(&format!("{pad}{name}_free(&{element_place});\n")),
+        WireType::Str => out.push_str(&format!("{pad}free((void *){element_place});\n")),
+        WireType::Bytes => out.push_str(&format!("{pad}fomoxa_bytes_free(&{element_place});\n")),
+        _ => {}
+    }
+}
+
+fn decode_element_into(out: &mut String, ty: &WireType, element_place: &str, codec: &str) {
+    let call = match ty {
+        WireType::Model(name) => {
+            let nested = codec_type_name(name, codec);
+            format!("{nested}_decode(reader, &{element_place})")
+        }
+        WireType::Str => format!("fomoxa_reader_read_string_into(reader, &{element_place})"),
+        WireType::Bytes => format!("fomoxa_reader_read_bytes_into(reader, &{element_place})"),
+        _ => {
+            let (_, reader_fn, _) = primitive(ty).expect("models handled above");
+            format!("{reader_fn}(reader, &{element_place})")
+        }
+    };
+    out.push_str(&format!(
+        "            {{\n                FomoxaDecodeError error = {call};\n                \
+         if (!fomoxa_decode_error_ok(&error)) return error;\n            }}\n"
+    ));
 }
 
 fn free_array_value(out: &mut String, element: &WireType, target: &str, pad: &str) {
@@ -489,9 +551,8 @@ pub fn free_file(model: &Model, imports: &Imports<'_>) -> String {
          // of {1}'s codecs actually populated them.\n\
          //\n\
          // Safe on a freshly zero-initialized {0} ({0} value = {{0}};), on one this\n\
-         // model's decode functions have populated, or on one already freed - never on\n\
-         // one still holding data from a *previous, unfreed* decode (see runtime.h's\n\
-         // module docs).\n",
+         // model's decode functions have populated, once or many times and whether or\n\
+         // not the last decode failed, or on one already freed.\n",
         model_type, model.name
     ));
     out.push_str(&format!(
@@ -792,15 +853,18 @@ mod tests {
     }
 
     #[test]
-    fn a_string_field_is_a_const_char_star_zeroing_to_null() {
+    fn a_string_field_is_a_const_char_star_released_when_absent_and_reused_otherwise() {
         let text = generated(&[("Name", "string")]);
         assert!(
             text.contains("fomoxa_writer_write_string(writer, value->Name)"),
             "{text}"
         );
-        assert!(text.contains("value->Name = NULL;"), "{text}");
         assert!(
-            text.contains("fomoxa_reader_read_string(reader, &value->Name);"),
+            text.contains("free((void *)value->Name);\n        value->Name = NULL;"),
+            "{text}"
+        );
+        assert!(
+            text.contains("fomoxa_reader_read_string_into(reader, &value->Name);"),
             "{text}"
         );
     }
@@ -813,7 +877,11 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("value->Payload.data = NULL;\n        value->Payload.len = 0;"),
+            text.contains("fomoxa_bytes_free(&value->Payload);"),
+            "{text}"
+        );
+        assert!(
+            text.contains("fomoxa_reader_read_bytes_into(reader, &value->Payload);"),
             "{text}"
         );
     }
@@ -850,29 +918,55 @@ mod tests {
             text.contains("fomoxa_writer_write_string(writer, value->Tags.items[i])"),
             "{text}"
         );
-        assert!(text.contains("FomoxaArray_string array;"), "{text}");
         assert!(
-            text.contains("array.items = (const char * *)calloc(count, sizeof(const char *));"),
+            text.contains("FomoxaArray_string *array = &value->Tags;"),
             "{text}"
         );
-        assert!(text.contains("value->Tags = array;"), "{text}");
-    }
-
-    #[test]
-    fn an_array_of_models_frees_inline_on_a_failing_element_not_via_a_centralized_function() {
-        let text = generated(&[("Roster", "Array<PlayerInfo>")]);
+        assert!(
+            text.contains("free((void *)array->items[array->count]);"),
+            "{text}"
+        );
         assert!(
             text.contains(
-                "array.items = (struct PlayerInfo *)calloc(count, sizeof(struct PlayerInfo));"
+                "items = (const char **)realloc(array->items, grown * sizeof(const char *));"
             ),
             "{text}"
         );
         assert!(
-            text.contains("PlayerInfoEdgeCodec_decode(reader, &array.items[i]);"),
+            text.contains("memset(&array->items[i], 0, sizeof(const char *));"),
+            "{text}"
+        );
+        assert!(
+            text.contains("fomoxa_reader_read_string_into(reader, &array->items[i]);"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn an_array_of_models_decodes_into_held_elements_and_frees_only_the_dropped_tail() {
+        let text = generated(&[("Roster", "Array<PlayerInfo>")]);
+        assert!(
+            text.contains(
+                "items = (struct PlayerInfo *)realloc(array->items, grown * sizeof(struct PlayerInfo));"
+            ),
+            "{text}"
+        );
+        assert!(
+            text.contains("PlayerInfoEdgeCodec_decode(reader, &array->items[i]);"),
             "{text}"
         );
         assert!(!text.contains("FomoxaArray_PlayerInfo_free"), "{text}");
-        assert!(text.contains("PlayerInfo_free(&array.items[j]);"), "{text}");
+        assert!(
+            text.contains("PlayerInfo_free(&array->items[array->count]);"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn an_array_of_primitives_is_cut_without_a_release_loop() {
+        let text = generated(&[("Scores", "Array<u32>")]);
+        assert!(text.contains("array->count = count;"), "{text}");
+        assert!(!text.contains("while (array->count > count)"), "{text}");
     }
 
     #[test]

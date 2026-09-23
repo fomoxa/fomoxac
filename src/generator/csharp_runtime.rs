@@ -70,80 +70,150 @@ public struct Limits
 /// no metadata between values.
 public sealed class Writer
 {
-    private readonly System.Collections.Generic.List<byte> _buffer =
-        new System.Collections.Generic.List<byte>();
+    private const int DefaultCapacity = 256;
+
+    private byte[] _buffer;
+    private int _length;
+
+    public Writer() : this(DefaultCapacity) { }
+
+    public Writer(int capacity)
+    {
+        if (capacity < 0)
+        {
+            throw new System.ArgumentOutOfRangeException(nameof(capacity));
+        }
+        _buffer = capacity == 0 ? System.Array.Empty<byte>() : new byte[capacity];
+    }
 
     /// The bytes written so far.
-    public byte[] ToArray() => _buffer.ToArray();
+    public byte[] ToArray() => WrittenSpan.ToArray();
+
+    public System.ReadOnlySpan<byte> WrittenSpan => new System.ReadOnlySpan<byte>(_buffer, 0, _length);
+
+    public System.ReadOnlyMemory<byte> WrittenMemory => new System.ReadOnlyMemory<byte>(_buffer, 0, _length);
 
     /// The number of bytes written so far.
-    public int Length => _buffer.Count;
+    public int Length => _length;
+
+    public void Clear() => _length = 0;
 
     /// Writes a `bool` as one byte: `0x00` or `0x01`, never anything else.
-    public void WriteBool(bool value) => _buffer.Add(value ? (byte)0x01 : (byte)0x00);
+    public void WriteBool(bool value) => Reserve(1)[0] = value ? (byte)0x01 : (byte)0x00;
 
     /// Writes an `i8` as 1 byte.
-    public void WriteI8(sbyte value) => _buffer.Add(unchecked((byte)value));
+    public void WriteI8(sbyte value) => Reserve(1)[0] = unchecked((byte)value);
 
     /// Writes a `u8` as 1 byte.
-    public void WriteU8(byte value) => _buffer.Add(value);
+    public void WriteU8(byte value) => Reserve(1)[0] = value;
 
     /// Writes an `i16` as 2 bytes, Little Endian.
-    public void WriteI16(short value) => WriteLittleEndian(unchecked((ushort)value), 2);
+    public void WriteI16(short value) =>
+        System.Buffers.Binary.BinaryPrimitives.WriteInt16LittleEndian(Reserve(2), value);
 
     /// Writes a `u16` as 2 bytes, Little Endian.
-    public void WriteU16(ushort value) => WriteLittleEndian(value, 2);
+    public void WriteU16(ushort value) =>
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian(Reserve(2), value);
 
     /// Writes an `i32` as 4 bytes, Little Endian.
-    public void WriteI32(int value) => WriteLittleEndian(unchecked((uint)value), 4);
+    public void WriteI32(int value) =>
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(Reserve(4), value);
 
     /// Writes a `u32` as 4 bytes, Little Endian.
-    public void WriteU32(uint value) => WriteLittleEndian(value, 4);
+    public void WriteU32(uint value) =>
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(Reserve(4), value);
 
     /// Writes an `i64` as 8 bytes, Little Endian.
-    public void WriteI64(long value) => WriteLittleEndian(unchecked((ulong)value), 8);
+    public void WriteI64(long value) =>
+        System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(Reserve(8), value);
 
     /// Writes a `u64` as 8 bytes, Little Endian.
-    public void WriteU64(ulong value) => WriteLittleEndian(value, 8);
+    public void WriteU64(ulong value) =>
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64LittleEndian(Reserve(8), value);
 
     /// Writes an `f32` as its raw IEEE 754 bits, 4 bytes Little Endian.
     ///
     /// The bit pattern is written unmodified: `NaN` payloads survive and
     /// `-0.0` stays distinct from `0.0`.
     public void WriteF32(float value) =>
-        WriteLittleEndian(unchecked((uint)System.BitConverter.SingleToInt32Bits(value)), 4);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(
+            Reserve(4), System.BitConverter.SingleToInt32Bits(value));
 
     /// Writes an `f64` as its raw IEEE 754 bits, 8 bytes Little Endian.
     public void WriteF64(double value) =>
-        WriteLittleEndian(unchecked((ulong)System.BitConverter.DoubleToInt64Bits(value)), 8);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(
+            Reserve(8), System.BitConverter.DoubleToInt64Bits(value));
 
     /// Writes a `string` as a `u32` UTF-8 **byte** length, then those bytes.
     ///
     /// The length counts bytes, not characters.
     public void WriteString(string value)
     {
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(value);
-        WriteU32((uint)bytes.Length);
-        _buffer.AddRange(bytes);
+        if (value == null)
+        {
+            throw new System.ArgumentNullException(nameof(value));
+        }
+        int lengthOffset = _length;
+        Reserve(4);
+        EnsureCapacity(System.Text.Encoding.UTF8.GetMaxByteCount(value.Length));
+        int byteCount = System.Text.Encoding.UTF8.GetBytes(
+            System.MemoryExtensions.AsSpan(value),
+            new System.Span<byte>(_buffer, _length, _buffer.Length - _length));
+        _length += byteCount;
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(
+            new System.Span<byte>(_buffer, lengthOffset, 4), (uint)byteCount);
     }
 
     /// Writes a `bytes` blob as a `u32` length, then the raw bytes.
     public void WriteBytes(byte[] value)
     {
-        WriteU32((uint)value.Length);
-        _buffer.AddRange(value);
+        if (value == null)
+        {
+            throw new System.ArgumentNullException(nameof(value));
+        }
+        WriteBytes(new System.ReadOnlySpan<byte>(value));
     }
+
+    public void WriteBytes(System.ReadOnlySpan<byte> value)
+    {
+        WriteU32((uint)value.Length);
+        value.CopyTo(Reserve(value.Length));
+    }
+
+    public void WriteBytes(System.ArraySegment<byte> value) =>
+        WriteBytes(new System.ReadOnlySpan<byte>(value.Array, value.Offset, value.Count));
+
+    public void WriteBytes(System.ReadOnlyMemory<byte> value) => WriteBytes(value.Span);
+
+    public void WriteBytes(System.Memory<byte> value) => WriteBytes((System.ReadOnlySpan<byte>)value.Span);
 
     /// Writes an `Array<T>`'s element count (RFC-0002 §6) - the caller
     /// writes each element itself, in order, right after.
     public void WriteArrayCount(int count) => WriteU32((uint)count);
 
-    private void WriteLittleEndian(ulong value, int byteCount)
+    private System.Span<byte> Reserve(int count)
     {
-        for (int i = 0; i < byteCount; i++)
+        EnsureCapacity(count);
+        System.Span<byte> slot = new System.Span<byte>(_buffer, _length, count);
+        _length += count;
+        return slot;
+    }
+
+    private void EnsureCapacity(int additional)
+    {
+        long required = (long)_length + additional;
+        if (required <= _buffer.Length)
         {
-            _buffer.Add((byte)(value >> (8 * i)));
+            return;
         }
+        if (required > int.MaxValue)
+        {
+            throw new System.InvalidOperationException(
+                $"fomoxa: an encoded message cannot exceed {int.MaxValue} bytes");
+        }
+        long doubled = _buffer.Length == 0 ? DefaultCapacity : (long)_buffer.Length * 2;
+        int grown = (int)System.Math.Min(int.MaxValue, System.Math.Max(required, doubled));
+        System.Array.Resize(ref _buffer, grown);
     }
 }
 
@@ -153,7 +223,11 @@ public sealed class Writer
 /// wrong answer, and a failed read leaves the cursor where it was.
 public ref struct Reader
 {
+    private static readonly System.Text.UTF8Encoding StrictUtf8 = new System.Text.UTF8Encoding(false, true);
+
     private readonly System.ReadOnlySpan<byte> _buffer;
+    private readonly System.ReadOnlyMemory<byte> _source;
+    private readonly bool _hasSource;
     private int _position;
     private readonly Limits _limits;
 
@@ -164,9 +238,31 @@ public ref struct Reader
     public Reader(System.ReadOnlySpan<byte> buffer, Limits limits)
     {
         _buffer = buffer;
+        _source = default;
+        _hasSource = false;
         _position = 0;
         _limits = limits;
     }
+
+    public Reader(System.ReadOnlyMemory<byte> buffer) : this(buffer, Limits.Unlimited) { }
+
+    public Reader(System.ReadOnlyMemory<byte> buffer, Limits limits)
+    {
+        _buffer = buffer.Span;
+        _source = buffer;
+        _hasSource = true;
+        _position = 0;
+        _limits = limits;
+    }
+
+    public Reader(byte[] buffer) : this(new System.ReadOnlyMemory<byte>(buffer), Limits.Unlimited) { }
+
+    public Reader(byte[] buffer, Limits limits) : this(new System.ReadOnlyMemory<byte>(buffer), limits) { }
+
+    public Reader(System.ArraySegment<byte> buffer) : this(buffer, Limits.Unlimited) { }
+
+    public Reader(System.ArraySegment<byte> buffer, Limits limits)
+        : this(new System.ReadOnlyMemory<byte>(buffer.Array, buffer.Offset, buffer.Count), limits) { }
 
     /// The cursor position, in bytes from the start.
     public int Position => _position;
@@ -220,22 +316,22 @@ public ref struct Reader
     public byte ReadU8() => Take(1)[0];
 
     /// Reads an `i16` from 2 bytes, Little Endian.
-    public short ReadI16() => unchecked((short)ReadLittleEndian(2));
+    public short ReadI16() => System.Buffers.Binary.BinaryPrimitives.ReadInt16LittleEndian(Take(2));
 
     /// Reads a `u16` from 2 bytes, Little Endian.
-    public ushort ReadU16() => (ushort)ReadLittleEndian(2);
+    public ushort ReadU16() => System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(Take(2));
 
     /// Reads an `i32` from 4 bytes, Little Endian.
-    public int ReadI32() => unchecked((int)ReadLittleEndian(4));
+    public int ReadI32() => System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(Take(4));
 
     /// Reads a `u32` from 4 bytes, Little Endian.
-    public uint ReadU32() => (uint)ReadLittleEndian(4);
+    public uint ReadU32() => System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(Take(4));
 
     /// Reads an `i64` from 8 bytes, Little Endian.
-    public long ReadI64() => unchecked((long)ReadLittleEndian(8));
+    public long ReadI64() => System.Buffers.Binary.BinaryPrimitives.ReadInt64LittleEndian(Take(8));
 
     /// Reads a `u64` from 8 bytes, Little Endian.
-    public ulong ReadU64() => ReadLittleEndian(8);
+    public ulong ReadU64() => System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(Take(8));
 
     /// Reads an `f32` from its raw 4-byte IEEE 754 bits.
     ///
@@ -252,12 +348,102 @@ public ref struct Reader
     public string ReadString()
     {
         int start = _position;
-        int len = ReadLength(_limits.MaxStringLength);
+        uint len = ReadLength(_limits.MaxStringLength);
+        return DecodeUtf8(TakeChecked(len, start), start);
+    }
+
+    public void ReadString(ref string value)
+    {
+        int start = _position;
+        uint len = ReadLength(_limits.MaxStringLength);
         System.ReadOnlySpan<byte> bytes = TakeChecked(len, start);
 
+        if (value == null || !IsSameText(bytes, value))
+        {
+            value = DecodeUtf8(bytes, start);
+        }
+    }
+
+    /// Reads a `bytes` blob: a `u32` length, then that many raw bytes.
+    public byte[] ReadBytes()
+    {
+        int start = _position;
+        uint len = ReadLength(_limits.MaxBytesLength);
+        return TakeChecked(len, start).ToArray();
+    }
+
+    public void ReadBytes(ref byte[] value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        if (value == null || value.Length != bytes.Length)
+        {
+            value = bytes.Length == 0 ? System.Array.Empty<byte>() : new byte[bytes.Length];
+        }
+        bytes.CopyTo(value);
+    }
+
+    public void ReadBytes(ref System.ArraySegment<byte> value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        byte[] array = value.Array;
+        if (array == null || array.Length < bytes.Length)
+        {
+            array = new byte[bytes.Length];
+        }
+        bytes.CopyTo(array);
+        value = new System.ArraySegment<byte>(array, 0, bytes.Length);
+    }
+
+    public void ReadBytes(ref System.Memory<byte> value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        byte[] array = System.Runtime.InteropServices.MemoryMarshal.TryGetArray<byte>(value, out System.ArraySegment<byte> segment)
+            ? segment.Array
+            : null;
+        if (array == null || array.Length < bytes.Length)
+        {
+            array = new byte[bytes.Length];
+        }
+        bytes.CopyTo(array);
+        value = new System.Memory<byte>(array, 0, bytes.Length);
+    }
+
+    public void ReadBytes(ref System.ReadOnlyMemory<byte> value)
+    {
+        System.ReadOnlySpan<byte> bytes = TakeBytes();
+        value = _hasSource
+            ? _source.Slice(_position - bytes.Length, bytes.Length)
+            : bytes.ToArray();
+    }
+
+    /// Reads an `Array<T>`'s element count (RFC-0002 §6), checked against
+    /// <see cref="Limits.MaxArrayCount"/> before the caller reads a single
+    /// element - the same allocation guard <see cref="ReadString"/> and
+    /// <see cref="ReadBytes"/> apply to their own length prefix.
+    public int ReadArrayCount()
+    {
+        int start = _position;
+        uint count = ReadLength(_limits.MaxArrayCount);
+        if (count > int.MaxValue)
+        {
+            _position = start;
+            throw DecodeException.LengthOverflow(count, int.MaxValue);
+        }
+        return (int)count;
+    }
+
+    private System.ReadOnlySpan<byte> TakeBytes()
+    {
+        int start = _position;
+        uint len = ReadLength(_limits.MaxBytesLength);
+        return TakeChecked(len, start);
+    }
+
+    private string DecodeUtf8(System.ReadOnlySpan<byte> bytes, int start)
+    {
         try
         {
-            return new System.Text.UTF8Encoding(false, true).GetString(bytes);
+            return StrictUtf8.GetString(bytes);
         }
         catch (System.Text.DecoderFallbackException)
         {
@@ -266,21 +452,59 @@ public ref struct Reader
         }
     }
 
-    /// Reads a `bytes` blob: a `u32` length, then that many raw bytes.
-    public byte[] ReadBytes()
+    private static bool IsSameText(System.ReadOnlySpan<byte> bytes, string value)
     {
-        int start = _position;
-        int len = ReadLength(_limits.MaxBytesLength);
-        return TakeChecked(len, start).ToArray();
+        int at = 0;
+        for (int index = 0; index < value.Length; index++)
+        {
+            int scalar = value[index];
+            if (scalar >= 0xD800 && scalar <= 0xDFFF)
+            {
+                if (scalar > 0xDBFF || index + 1 == value.Length)
+                {
+                    return false;
+                }
+                int low = value[index + 1];
+                if (low < 0xDC00 || low > 0xDFFF)
+                {
+                    return false;
+                }
+                scalar = 0x10000 + ((scalar - 0xD800) << 10) + (low - 0xDC00);
+                index++;
+            }
+
+            int width = scalar < 0x80 ? 1 : scalar < 0x800 ? 2 : scalar < 0x10000 ? 3 : 4;
+            if (bytes.Length - at < width)
+            {
+                return false;
+            }
+            switch (width)
+            {
+                case 1:
+                    if (bytes[at] != scalar) return false;
+                    break;
+                case 2:
+                    if (bytes[at] != (0xC0 | (scalar >> 6))
+                        || bytes[at + 1] != (0x80 | (scalar & 0x3F))) return false;
+                    break;
+                case 3:
+                    if (bytes[at] != (0xE0 | (scalar >> 12))
+                        || bytes[at + 1] != (0x80 | ((scalar >> 6) & 0x3F))
+                        || bytes[at + 2] != (0x80 | (scalar & 0x3F))) return false;
+                    break;
+                default:
+                    if (bytes[at] != (0xF0 | (scalar >> 18))
+                        || bytes[at + 1] != (0x80 | ((scalar >> 12) & 0x3F))
+                        || bytes[at + 2] != (0x80 | ((scalar >> 6) & 0x3F))
+                        || bytes[at + 3] != (0x80 | (scalar & 0x3F))) return false;
+                    break;
+            }
+            at += width;
+        }
+        return at == bytes.Length;
     }
 
-    /// Reads an `Array<T>`'s element count (RFC-0002 §6), checked against
-    /// <see cref="Limits.MaxArrayCount"/> before the caller reads a single
-    /// element - the same allocation guard <see cref="ReadString"/> and
-    /// <see cref="ReadBytes"/> apply to their own length prefix.
-    public int ReadArrayCount() => ReadLength(_limits.MaxArrayCount);
-
-    private int ReadLength(long limit)
+    private uint ReadLength(long limit)
     {
         int start = _position;
         uint len = ReadU32();
@@ -289,29 +513,18 @@ public ref struct Reader
             _position = start;
             throw DecodeException.LengthOverflow(len, limit);
         }
-        return (int)len;
+        return len;
     }
 
-    private System.ReadOnlySpan<byte> TakeChecked(int len, int start)
+    private System.ReadOnlySpan<byte> TakeChecked(uint len, int start)
     {
         int remaining = Remaining;
-        if (len > remaining)
+        if (len > (uint)remaining)
         {
             _position = start;
             throw DecodeException.UnexpectedEof(len, remaining);
         }
-        return Take(len);
-    }
-
-    private ulong ReadLittleEndian(int byteCount)
-    {
-        System.ReadOnlySpan<byte> bytes = Take(byteCount);
-        ulong value = 0;
-        for (int i = 0; i < byteCount; i++)
-        {
-            value |= (ulong)bytes[i] << (8 * i);
-        }
-        return value;
+        return Take((int)len);
     }
 
     /// Borrows the next `len` bytes and advances the cursor.
@@ -328,6 +541,20 @@ public ref struct Reader
         System.ReadOnlySpan<byte> bytes = _buffer.Slice(_position, len);
         _position += len;
         return bytes;
+    }
+}
+
+public static class ArrayField
+{
+    public static System.Collections.Generic.List<T> Reuse<T>(System.Collections.Generic.IEnumerable<T> existing, int count) =>
+        existing as System.Collections.Generic.List<T> ?? new System.Collections.Generic.List<T>(System.Math.Min(count, 4096));
+
+    public static void Trim<T>(System.Collections.Generic.List<T> list, int count)
+    {
+        if (list.Count > count)
+        {
+            list.RemoveRange(count, list.Count - count);
+        }
     }
 }
 "####;

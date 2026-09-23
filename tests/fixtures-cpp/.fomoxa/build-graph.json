@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.1",
+  "generator": "fomoxac 0.2.2",
   "schema_fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -16,28 +16,28 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "bb981edd4035b4b9198816cc6651176165b205f4b906df4568213ad1d7382c2a"
+          "sha256": "653fca78b2b17322ea61f7845d412c0aab3ffbb1b5a9c5a4961901385794e220"
         },
         {
           "path": "src/generated/player_unity.hpp",
           "model": "Player",
           "codec": "unity",
           "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
-          "sha256": "f40f18efee5349be98a46e38d43c39c5b6ca1976b30b0db9f130db413b6ccaf2"
+          "sha256": "bb97df000faa2ee389786be25abf4221dcde13a9e066591527b772674f9c32b3"
         },
         {
           "path": "src/generated/player_info_edge.hpp",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "906cca31c80067a5b99e48b07d34e3756661d285566dada5cae892d3fb539a78"
+          "sha256": "1e2c050bd8e5eeb3e8ddfb6a6a8f0a6ce37620a8e98df290456bfd003f127d5e"
         },
         {
           "path": "src/generated/team_edge.hpp",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "4acc6caa5e734fd8a06f31b7237ca3b9593a16403e746edbf9a7de3e710d384e"
+          "sha256": "50745ae69ec5b5f4e55b668e0bc20c6a2cd71c44b01220090fa26921dde70201"
         }
       ]
     }
@@ -46,12 +46,12 @@
     {
       "path": "src/generated/runtime.hpp",
       "kind": "runtime",
-      "sha256": "5b32040d2769849d0363130dbae50ee3c32da66a4d8439bb1a90133a13d321b1"
+      "sha256": "cf75eb6bf8659c39d3ebe30ad2d7601665ad50fe76ce47796a7aa324f9336003"
     },
     {
       "path": "src/generated/handshake.hpp",
       "kind": "handshake",
-      "sha256": "f18599e02367d07a3b5c858f8f5a3f05fd681f9e0ffcf095e04787100ea9da6d"
+      "sha256": "e7f0831d4b2ab995fb8853a9d5c202cb44b4398f1edc995aad89e16594d535d9"
     }
   ]
 }

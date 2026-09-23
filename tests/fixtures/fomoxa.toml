@@ -7,3 +7,5 @@ out = "src/generated"
 # No `model_path`: the default reads it off the source layout, exactly as Rust
 # does - src/models/player.rs is crate::models::player, which is where the test
 # crate mounts it.
+
+net_schema = true

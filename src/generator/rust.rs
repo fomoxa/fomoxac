@@ -253,20 +253,19 @@ fn decode_field(out: &mut String, field: &Field, codec: &str) {
     if let WireType::Array(element_type) = &field.ty {
         out.push_str("        {\n");
         out.push_str(
-            "            let count = if reader.field_absent() { 0 } \
+            "            let count0 = if reader.field_absent() { 0 } \
              else { reader.read_array_count()? };\n",
         );
-        out.push_str(
-            "            let mut elements = ::std::vec::Vec::with_capacity(count.min(4096));\n",
-        );
-        out.push_str("            for _ in 0..count {\n");
-        out.push_str(&format!(
-            "                elements.push({});\n",
-            decode_element(element_type, codec)
-        ));
-        out.push_str("            }\n");
-        out.push_str(&format!("            {place} = elements;\n"));
+        decode_elements(out, element_type, &place, codec, 0, "            ");
         out.push_str("        }\n");
+        return;
+    }
+
+    if matches!(field.ty, WireType::Str | WireType::Bytes) {
+        let (_, reader_method, _) = primitive(&field.ty).expect("a string or bytes field");
+        out.push_str(&format!(
+            "        if reader.field_absent() {{ {place}.clear(); }} else {{ reader.{reader_method}_into(&mut {place})?; }}\n"
+        ));
         return;
     }
 
@@ -277,26 +276,63 @@ fn decode_field(out: &mut String, field: &Field, codec: &str) {
     ));
 }
 
-fn decode_element(ty: &WireType, codec: &str) -> String {
-    if let Some(name) = as_model(ty) {
-        let nested = codec_type_name(name, codec);
-        return format!(
-            "{{ let mut element = <{name} as ::core::default::Default>::default(); \
-             {nested}::decode(reader, &mut element)?; element }}"
-        );
+fn decode_elements(
+    out: &mut String,
+    element_type: &WireType,
+    place: &str,
+    codec: &str,
+    depth: usize,
+    pad: &str,
+) {
+    let elements = format!("elements{depth}");
+    let index = format!("index{depth}");
+    let count = format!("count{depth}");
+    out.push_str(&format!("{pad}let {elements} = &mut {place};\n"));
+    out.push_str(&format!("{pad}{elements}.truncate({count});\n"));
+    out.push_str(&format!(
+        "{pad}{elements}.reserve({count}.min(4096).saturating_sub({elements}.len()));\n"
+    ));
+    out.push_str(&format!("{pad}for {index} in 0..{count} {{\n"));
+    out.push_str(&format!(
+        "{pad}    if {index} == {elements}.len() {{\n{pad}        {elements}.push(::core::default::Default::default());\n{pad}    }}\n"
+    ));
+    let slot = format!("{elements}[{index}]");
+    let inner_pad = format!("{pad}    ");
+    match element_type {
+        WireType::Model(name) => {
+            let nested = codec_type_name(name, codec);
+            out.push_str(&format!(
+                "{inner_pad}{nested}::decode(reader, &mut {slot})?;\n"
+            ));
+        }
+        WireType::Array(inner) => {
+            out.push_str(&format!("{inner_pad}{{\n"));
+            out.push_str(&format!(
+                "{inner_pad}    let count{} = reader.read_array_count()?;\n",
+                depth + 1
+            ));
+            decode_elements(
+                out,
+                inner,
+                &slot,
+                codec,
+                depth + 1,
+                &format!("{inner_pad}    "),
+            );
+            out.push_str(&format!("{inner_pad}}}\n"));
+        }
+        WireType::Str | WireType::Bytes => {
+            let (_, reader_method, _) = primitive(element_type).expect("a string or bytes element");
+            out.push_str(&format!(
+                "{inner_pad}reader.{reader_method}_into(&mut {slot})?;\n"
+            ));
+        }
+        _ => {
+            let (_, reader_method, _) = primitive(element_type).expect("a primitive element");
+            out.push_str(&format!("{inner_pad}{slot} = reader.{reader_method}()?;\n"));
+        }
     }
-
-    if let WireType::Array(element_type) = ty {
-        return format!(
-            "{{ let count = reader.read_array_count()?; \
-             let mut inner = ::std::vec::Vec::with_capacity(count.min(4096)); \
-             for _ in 0..count {{ inner.push({}); }} inner }}",
-            decode_element(element_type, codec)
-        );
-    }
-
-    let (_, reader_method, _) = primitive(ty).expect("models and arrays handled above");
-    format!("reader.{reader_method}()?")
+    out.push_str(&format!("{pad}}}\n"));
 }
 
 fn as_model(ty: &WireType) -> Option<&str> {
@@ -403,10 +439,15 @@ mod tests {
     }
 
     #[test]
-    fn a_string_is_borrowed_to_the_writer_and_zeroes_to_an_empty_string() {
+    fn a_string_is_borrowed_to_the_writer_and_decoded_in_place() {
         let text = generated(&[("name", "string")]);
         assert!(text.contains("writer.write_string(&value.name);"), "{text}");
-        assert!(text.contains("::std::string::String::new()"), "{text}");
+        assert!(
+            text.contains(
+                "if reader.field_absent() { value.name.clear(); } else { reader.read_string_into(&mut value.name)?; }"
+            ),
+            "{text}"
+        );
     }
 
     #[test]
@@ -436,12 +477,35 @@ mod tests {
         assert!(text.contains("writer.write_string(element);"), "{text}");
         assert!(
             text.contains(
-                "let count = if reader.field_absent() { 0 } else { reader.read_array_count()? };"
+                "let count0 = if reader.field_absent() { 0 } else { reader.read_array_count()? };"
             ),
             "{text}"
         );
+        assert!(text.contains("let elements0 = &mut value.tags;"), "{text}");
+        assert!(text.contains("elements0.truncate(count0);"), "{text}");
         assert!(
-            text.contains("elements.push(reader.read_string()?);"),
+            text.contains("elements0.push(::core::default::Default::default());"),
+            "{text}"
+        );
+        assert!(
+            text.contains("reader.read_string_into(&mut elements0[index0])?;"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn a_nested_array_decodes_each_level_in_place() {
+        let text = generated(&[("grid", "Array<Array<u8>>")]);
+        assert!(
+            text.contains("let elements1 = &mut elements0[index0];"),
+            "{text}"
+        );
+        assert!(
+            text.contains("let count1 = reader.read_array_count()?;"),
+            "{text}"
+        );
+        assert!(
+            text.contains("elements1[index1] = reader.read_u8()?;"),
             "{text}"
         );
     }
@@ -466,7 +530,7 @@ mod tests {
     #[test]
     fn two_arrays_in_one_codec_do_not_collide() {
         let text = generated(&[("tags", "Array<string>"), ("scores", "Array<u32>")]);
-        assert_eq!(text.matches("let mut elements").count(), 2, "{text}");
+        assert_eq!(text.matches("let elements0 = &mut").count(), 2, "{text}");
         assert_eq!(text.matches("        {\n").count(), 2, "{text}");
     }
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.1",
+  "generator": "fomoxac 0.2.2",
   "fingerprint": "sha256:bf32c8e0dd47fb9fd24a2f56ac986e5ab447520fbfe6af6dba12a23f0da4c74f",
   "fingerprint_u64": "0xBF32C8E0DD47FB9F",
   "models": {

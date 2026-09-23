@@ -1,10 +1,10 @@
 # fomoxac
 
-`fomoxac` is the source generator for the Fomoxa protocol. It reads Fomoxa annotations from a model source tree written in one of eight supported languages and writes codec source files, plus schema and fingerprint metadata. Its role is close to that of `protoc`: it reads source, writes source, and exits. Nothing it generates depends on `fomoxac` at run time.
+`fomoxac` is the source generator for the Fomoxa protocol. It reads Fomoxa annotations from a model source tree written in one of seven supported languages and writes codec source files, plus schema and fingerprint metadata. Its role is close to that of `protoc`: it reads source, writes source, and exits. Nothing it generates depends on `fomoxac` at run time.
 
 The crate builds two binaries: `fomoxac` for generation, compatibility checks and CI, and `fomoxa-inspect` for decoding a raw payload against a schema while debugging.
 
-Package name: `fomoxac`. Current version: `0.2.1` (see `Cargo.toml`). License: Apache-2.0.
+Package name: `fomoxac`. Current version: `0.2.2` (see `Cargo.toml`). License: Apache-2.0.
 
 The generator and the code it generates have no runtime dependencies. `Cargo.toml` declares no `[dependencies]`. Its one `[dev-dependencies]` entry, `fomoxa-attributes = "0.1.1"`, is used only by the test fixtures, so that `#[network]` and `#[codec(...)]` resolve to defined types when `cargo test` compiles the fixture crate.
 
@@ -14,7 +14,7 @@ The generator and the code it generates have no runtime dependencies. `Cargo.tom
 cargo install fomoxac
 ```
 
-This installs `fomoxac` and `fomoxa-inspect` from crates.io (version `0.2.1`).
+This installs `fomoxac` and `fomoxa-inspect` from crates.io (version `0.2.2`).
 
 To build from a checkout of this repository:
 
@@ -25,18 +25,18 @@ cargo build --release --bin fomoxa-inspect
 
 ## What it reads
 
-Each run reads exactly one language: Rust, Go, C#, GDScript, C++, C, TypeScript, or JavaScript. A run over a source tree that mixes these languages fails with an error. A project with models in more than one language needs one `--src`/`--out` pair per language, and usually one `fomoxa.toml` per language as well.
+Each run reads exactly one language: Rust, Go, C#, C++, C, TypeScript, or JavaScript. A run over a source tree that mixes these languages fails with an error. A project with models in more than one language needs one `--src`/`--out` pair per language, and usually one `fomoxa.toml` per language as well.
 
 In a source file the scanner looks for four things and ignores everything else: whether a type is a model, which codecs a model generates, a field's wire type, and which codecs a field belongs to. Only Rust and C# have an attribute mechanism `fomoxac` can extend, so each language expresses these four things in its own syntax:
 
-| | Rust | Go | C# | GDScript | C++ / C | TypeScript / JavaScript |
-|---|---|---|---|---|---|---|
-| this type is a model | `#[network]` | `//fomoxa:model` | `[Network]` | `# fomoxa:model` | `FOMOXA_MODEL` | `// FOMOXA_MODEL` |
-| generate these codecs | `#[codec(edge, unity)]` | `//fomoxa:model codec=edge,unity` | `[Codec("edge", "unity")]` | `# fomoxa:model codec=edge,unity` | `FOMOXA_CODEC("edge", "unity")` | `// FOMOXA_CODEC("edge", "unity")` |
-| this field's wire type | `#[network(u32)]` | `` `fomoxa:"u32"` `` (struct tag) | `[Network("u32")]` | `# fomoxa:u32` | `FOMOXA_FIELD(u32)` | `// FOMOXA_FIELD(u32)` |
-| this field's codecs | `#[codec(edge)]` | `` `codec:"edge"` `` (struct tag) | `[Codec("edge")]` | `# fomoxa:u32 codec=edge` | `FOMOXA_CODEC("edge")` | `// FOMOXA_CODEC("edge")` |
+| | Rust | Go | C# | C++ / C | TypeScript / JavaScript |
+|---|---|---|---|---|---|
+| this type is a model | `#[network]` | `//fomoxa:model` | `[Network]` | `FOMOXA_MODEL` | `// FOMOXA_MODEL` |
+| generate these codecs | `#[codec(edge, unity)]` | `//fomoxa:model codec=edge,unity` | `[Codec("edge", "unity")]` | `FOMOXA_CODEC("edge", "unity")` | `// FOMOXA_CODEC("edge", "unity")` |
+| this field's wire type | `#[network(u32)]` | `` `fomoxa:"u32"` `` (struct tag) | `[Network("u32")]` | `FOMOXA_FIELD(u32)` | `// FOMOXA_FIELD(u32)` |
+| this field's codecs | `#[codec(edge)]` | `` `codec:"edge"` `` (struct tag) | `[Codec("edge")]` | `FOMOXA_CODEC("edge")` | `// FOMOXA_CODEC("edge")` |
 
-Go, GDScript, TypeScript and JavaScript use comment directives. A `//fomoxa:...`, `# fomoxa:...` or `// FOMOXA_...` comment is already valid source in those languages and means nothing until `fomoxac` reads it. C++ and C have neither attributes nor a settled convention for comment directives, so they use three macros, `FOMOXA_MODEL`, `FOMOXA_CODEC(...)` and `FOMOXA_FIELD(...)`, which a small shared header defines to expand to nothing.
+Go, TypeScript and JavaScript use comment directives. A `//fomoxa:...` or `// FOMOXA_...` comment is already valid source in those languages and means nothing until `fomoxac` reads it. C++ and C have neither attributes nor a settled convention for comment directives, so they use three macros, `FOMOXA_MODEL`, `FOMOXA_CODEC(...)` and `FOMOXA_FIELD(...)`, which a small shared header defines to expand to nothing.
 
 The wire type is never inferred from the host field's type. `#[network(u32)]` and its equivalents are four bytes whatever the width of the host field. Whether the host compiler accepts the generated call is up to that compiler.
 
@@ -49,7 +49,6 @@ Each scanner is a lexer for its language's annotation syntax. It does not resolv
 | Rust | `#[network]` and `#[codec]` defined somewhere the model crate depends on: the [`fomoxa-attributes`](https://crates.io/crates/fomoxa-attributes) crate, or an equivalent no-op definition. This is a dependency of the model source, never of the generated code |
 | Go | Nothing. A comment and a struct tag are already valid Go |
 | C# | A small `Network`/`Codec` attribute pair defined somewhere the models can see |
-| GDScript | Nothing. A `# fomoxa:` comment is already valid GDScript |
 | C++ and C | The same header, defining `FOMOXA_MODEL`, `FOMOXA_FIELD`, and `FOMOXA_CODEC` as no-ops |
 | TypeScript and JavaScript | Nothing. A `// FOMOXA_...` comment is already valid source in both, with no decorator and no package to install |
 
@@ -113,25 +112,6 @@ public class DeviceState
 
     public string Cache { get; set; }
 }
-```
-
-```gdscript
-# fomoxa:model codec=edge,unity
-class_name DeviceState
-
-# fomoxa:u32 codec=edge,unity
-var id: int = 0
-
-# fomoxa:f32 codec=edge
-var temperature: float = 0.0
-
-# fomoxa:string codec=unity
-var display_name: String = ""
-
-# fomoxa:u32
-var unrouted: int = 0
-
-var cache: String = ""
 ```
 
 ```cpp
@@ -258,6 +238,7 @@ src = "src"
 out = "src/generated"
 model_path = "crate::models"            # optional
 validate_message_fingerprint = true     # optional, default false
+net_schema = true                       # optional, default false
 ```
 
 | Key | Type | Default | Meaning |
@@ -266,6 +247,7 @@ validate_message_fingerprint = true     # optional, default false
 | `out` | string | `"generated"` | Where generated files are written. |
 | `model_path` | string | (computed per language; see the flag table below) | Overrides how a generated codec locates a model type. |
 | `validate_message_fingerprint` | boolean | `false` | If `true`, every generated frame gains a `[MessageId: u32][MessageFingerprint: u64]` prefix, and `fomoxa_write_envelope`/`fomoxa_read_envelope` are generated to write and check it. |
+| `net_schema` | boolean | `false` | If `true`, one more file builds the Fomoxa runtime's schema object from the handshake table; see [The runtime schema](#the-runtime-schema). |
 
 Keys may sit at the top level of the file or under a `[fomoxa]` table; other tables are ignored. A line starting with `#` outside a quoted string is a comment.
 
@@ -297,7 +279,7 @@ Meant for CI, in three steps. It first checks that the committed `.fomoxa/schema
 
 | Flag | Applies to | Meaning |
 |---|---|---|
-| `--src <PATH>` | all | A directory (scanned recursively) or a single file to read models from. Repeatable. Default: `fomoxa.toml`'s `src`, else `src`. Every file found must have the extension of one single language (`.rs`; `.go`; `.cs`; `.gd`; `.hpp`/`.cpp`/`.cc`/`.cxx` for C++; `.c`/`.h` for C; or `.ts`/`.js` for TypeScript/JavaScript). A mix in one `--src` set is an error. |
+| `--src <PATH>` | all | A directory (scanned recursively) or a single file to read models from. Repeatable. Default: `fomoxa.toml`'s `src`, else `src`. Every file found must have the extension of one single language (`.rs`; `.go`; `.cs`; `.hpp`/`.cpp`/`.cc`/`.cxx` for C++; `.c`/`.h` for C; or `.ts`/`.js` for TypeScript/JavaScript). A mix in one `--src` set is an error. |
 | `-o`, `--out <PATH>` | all | Where generated source is written. Default: `fomoxa.toml`'s `out`, else `generated`. |
 | `--model-path <PATH>` | all | Overrides how a generated codec locates a model type. Its meaning depends on the backend (see below). Default: `fomoxa.toml`'s `model_path`, else computed from the source layout. |
 | `--check` | `generate` | Writes nothing. Exits with a non-zero status if anything on disk differs from what would be generated. Cannot be combined with `--watch`. |
@@ -317,7 +299,6 @@ What `--model-path` sets depends on the backend:
 | Go | An import path, e.g. `github.com/acme/game/models`. | Computed from the nearest `go.mod`'s `module` line plus the model source's own directory. `go.mod` must sit at the project root, next to `fomoxa.toml`. |
 | C# | A namespace, e.g. `Game.Models`. | The `namespace` the model's own source declares, or none. |
 | C++ | A namespace, e.g. `Game::Models`. It never affects the physical `#include` path, which is always the model's own source path. | The first `namespace` the model's own source opens, or none. |
-| GDScript | No effect. A model's own `class_name` is already reachable across the project. | N/A |
 | C | No effect. C has no namespaces, and the physical `#include` path it does use is never overridden. | N/A |
 | TypeScript / JavaScript | An ES module specifier, e.g. `@/models`, used for every model (typically a barrel file that re-exports each one). | A relative `import` computed from the model's own source path. |
 
@@ -435,6 +416,26 @@ No schema is ever sent over the wire, because both peers have their own compiled
 
 By default no frame carries a fingerprint. Setting `validate_message_fingerprint = true` in `fomoxa.toml` adds a `[MessageId: u32][MessageFingerprint: u64]` prefix to every generated frame, and generates `fomoxa_write_envelope`/`fomoxa_read_envelope` to write and check it.
 
+### The runtime schema
+
+A Fomoxa runtime needs the schema fingerprint and, for every message, its id, fingerprint and prefix chain before it can handshake. The handshake file already holds all of them in `FOMOXA_MESSAGES`, but the runtime takes them as its own schema type, and copying them across by hand is how a message ends up missing from the handshake. Setting `net_schema = true` in `fomoxa.toml` generates that copy: one file that builds the runtime's schema from every message in `FOMOXA_MESSAGES`, under the schema fingerprint.
+
+| Language | Runtime | File | Entry point |
+|---|---|---|---|
+| Rust | `fomoxa-net` | `net_schema.rs` | `fomoxa_net_schema() -> Result<fomoxa_net::Schema, fomoxa_net::SchemaError>`, re-exported from the module root |
+| Go | `github.com/fomoxa/go` | `net_schema.go` | `FomoxaNetSchema() (*fomoxa.Schema, error)` |
+| C# | `Fomoxa.Net` | `NetSchema.cs` | `NetSchema.Build()` returns `Fomoxa.Net.Schema` |
+| C++ | Fomoxa C | `net_schema.hpp` | `&FOMOXA_NET_SCHEMA`, a `constexpr fmx_schema` |
+| C | Fomoxa C | `net_schema.h` | `&FOMOXA_NET_SCHEMA`, a `static const fmx_schema` |
+| TypeScript | `@fomoxa/net` | `net_schema.ts` | `fomoxaNetSchema()` returns `Schema` |
+| JavaScript | `@fomoxa/net` | `net_schema.js` | `fomoxaNetSchema()` |
+
+```csharp
+var server = new FomoxaServer(listener, Generated.NetSchema.Build(), new SessionConfig());
+```
+
+This is the only generated file that depends on a runtime package, which is why it is opt-in: the codecs and the handshake file still compile without one. `generate` refuses to write it for a schema whose hello would not fit the 1 MiB handshake body, or for a message with more than 65,535 fields. Setting the key back to `false` removes the file on the next run.
+
 ## Schema evolution
 
 `.fomoxa/schema.json` is the schema written to disk as JSON. It is the input to `fomoxa-inspect` and to `fomoxac compat`/`fomoxac ci`, and the baseline the next run compares against. Generation never reads it as input: every `generate` run recomputes the schema from source, then compares the result with whatever `.fomoxa/schema.json` already held.
@@ -518,33 +519,45 @@ The build graph shows where a generated file came from, even after its source mo
 
 ## Per-language backend notes
 
+In every backend, decoding into a value that already holds a previous message reuses that value's storage. A `string` that spells the same text is kept as it is, a `bytes` field and every `Array<T>` are overwritten in place, a longer previous array is cut to the new count, and each array element that already exists is decoded into rather than replaced. A writer that is reused across messages and a value that is decoded into again therefore reach a steady state in which neither allocates, and every vector runner in CI decodes each accept vector a second time into the same value to check this. The one exception is a `string` whose text changed, in a language where strings are immutable (C#, Go, TypeScript, JavaScript), because the new text has to be a new string. Decoding into a value overwrites its buffers, so a buffer the value shares with other data has to be copied before decoding.
+
+### Rust
+
+`decode` takes `&mut` to the model. `String` and `Vec<u8>` fields are decoded with `read_string_into` and `read_bytes_into`, which clear and refill the existing allocation. A `Vec<T>` is truncated to the new count and grown with `Default::default()` elements, and every element is decoded in place, including nested arrays at any depth. A decode that changes a value's contents allocates only to grow capacity.
+
 ### Go
 
-Go compiles by package. Every file `fomoxac` writes in one run shares one `package` clause, named after the directory of `--out`. There is no module root to declare, and code refers to a codec directly, e.g. `generated.PlayerEdgeCodec{}`. By default a codec's `import` of its model type is computed from the nearest `go.mod`'s `module` line plus the model source's own directory, so `go.mod` has to be at the project root, next to `fomoxa.toml`. `Decode` returns `error`, checked after each read.
+Go compiles by package. Every file `fomoxac` writes in one run shares one `package` clause, named after the directory of `--out`. There is no module root to declare, and code refers to a codec directly, e.g. `generated.PlayerEdgeCodec{}`. By default a codec's `import` of its model type is computed from the nearest `go.mod`'s `module` line plus the model source's own directory, so `go.mod` has to be at the project root, next to `fomoxa.toml`. `Decode` returns `error`, checked after each read. `Writer.Reset()` keeps the buffer for the next message and `NewWriterSize(n)` starts with room for `n` bytes; a writer reused this way encodes without allocating. `Reader.Reset(buf)` points a reader at the next message, so decoding needs no new reader per message. `ReadStringInto` keeps a string whose bytes are unchanged, `ReadBytesInto` refills the slice's capacity, and a slice field is resliced within its capacity, with existing elements decoded in place. The generated code builds where `int` is 32 bits: there the permissive `UnlimitedLimits` is the largest `int` rather than `math.MaxUint32`, and CI runs the vectors under `GOARCH=386`.
 
 ### C#
 
-C# compiles by project. A generated codec never writes a `using` directive. It writes a fully qualified reference (e.g. `Models.Player`) when the model lives outside the run's own namespace, which is the directory name of `--out` in PascalCase, and a bare reference otherwise. `Decode` takes `ref Reader` and throws `DecodeException` on failure. A C# property cannot be passed by `ref`, so a nested model field is decoded through a local variable: read it out, decode into it by `ref`, and assign it back. The field must therefore already hold an instance before `Decode` runs.
+C# compiles by project. A generated codec never writes a `using` directive. It writes a fully qualified reference (e.g. `Models.Player`) when the model lives outside the run's own namespace, which is the directory name of `--out` in PascalCase, and a bare reference otherwise. `Decode` takes `ref Reader` and throws `DecodeException` on failure. A C# property cannot be passed by `ref`, so a nested model field is decoded through a local variable: read it out, decode into it by `ref`, and assign it back. The field must therefore already hold an instance before `Decode` runs. `Writer` writes into one `byte[]` that `Clear()` keeps, so a writer reused across messages stops allocating once its buffer has grown to the largest message; `WrittenSpan` and `WrittenMemory` expose the written bytes without copying, and `ToArray()` copies them.
 
-### GDScript
+A `string` field is read with `ReadString(ref string)`, which compares the incoming UTF-8 with the string the field already holds and keeps that instance when they match. The host type of a `bytes` field decides how it is decoded, because the generated call is resolved by overload:
 
-GDScript compiles by file, and each `.gd` file exposes one project-wide name through `class_name`. Each codec file declares its own `class_name` and needs no `preload`. `encode` and `decode` are `static func`s called directly (`PlayerEdgeCodec.encode(writer, value)`), with nothing to instantiate. GDScript has no `try`/`catch`, so every read returns a 2-element `Array`, and `decode` returns a `DecodeError`, or `null` on success, instead of throwing. GDScript's only integer type is signed 64-bit, so every fingerprint constant is assembled from two 32-bit halves instead of one 16-digit hex literal. `--model-path` has no effect on this backend. This project's CI does not compile this backend, because no official headless Godot GitHub Action exists to build against. Only `generate --check` runs automatically, and `tests/fixtures-gd/` has to be opened in the Godot editor to confirm it compiles.
+| Host type | Decoding into a held value |
+|---|---|
+| `byte[]` | The array is reused when it has exactly the new length |
+| `ArraySegment<byte>`, `Memory<byte>` | The array behind it is reused from index 0 when it is large enough |
+| `ReadOnlyMemory<byte>` | A slice of the input, with no copy, when the `Reader` was built over a `byte[]`, an `ArraySegment<byte>` or a `ReadOnlyMemory<byte>`. The slice is valid only while that input is. A `Reader` over a span copies the bytes instead |
+
+`Writer.WriteBytes` accepts all of these, and `ReadOnlySpan<byte>` too, so a model that wraps another message can carry its payload as `ReadOnlyMemory<byte>` from one writer's `WrittenMemory` into another writer without allocating. An `Array<T>` field of any type that implements `IEnumerable<T>` and holds a `List<T>` is reused through `ArrayField.Reuse`, and its elements are decoded in place. A new list preallocates at most 4096 elements, the same bound the Rust backend uses.
 
 ### C++
 
-C++ compiles by translation unit. This backend is header-only: every method is defined inside its `struct` body and is therefore implicitly `inline`, so several `.cpp` files can `#include` a generated header without a separate compilation unit. A model's header is always included by its own source path exactly as `--src` found it (e.g. `src/models/player.hpp`), and the project's include path has to be set up for that. A reference to a namespaced model is always fully qualified from the global namespace (e.g. `::Game::Models::Player`). Every `Reader` read returns its result through an output reference and returns a `DecodeError`, where a default-constructed one means "no error", so this backend works with `-fno-exceptions`. Generated code targets C++17. This project's CI compiles this backend and runs its generated tree through a hand-written smoke test, `tests/fixtures-cpp/smoke_test.cpp`.
+C++ compiles by translation unit. This backend is header-only: every method is defined inside its `struct` body and is therefore implicitly `inline`, so several `.cpp` files can `#include` a generated header without a separate compilation unit. A model's header is always included by its own source path exactly as `--src` found it (e.g. `src/models/player.hpp`), and the project's include path has to be set up for that. A reference to a namespaced model is always fully qualified from the global namespace (e.g. `::Game::Models::Player`). Every `Reader` read returns its result through an output reference and returns a `DecodeError`, where a default-constructed one means "no error", so this backend works with `-fno-exceptions`. Generated code targets C++17. This project's CI compiles this backend and runs its generated tree through a hand-written smoke test, `tests/fixtures-cpp/smoke_test.cpp`. An array count read from the stream reserves at most 4096 elements, the same bound the Rust backend uses, so a hostile count cannot make `decode` throw `std::length_error` or `std::bad_alloc` before a single element is read. A `std::vector` field is cut or extended in place and its elements, `std::string` and byte vectors included, are decoded into their existing storage. `write_string` takes a `std::string_view`, and `write_bytes` also takes a pointer and a size.
 
 ### C
 
-C reads the same `FOMOXA_MODEL`/`FOMOXA_CODEC`/`FOMOXA_FIELD` macros as C++, from the same header, but generates free functions: `PlayerEdgeCodec_encode` and `PlayerEdgeCodec_decode`, both `static inline`. A model is always referenced as `struct Name`, never as a bare `Name`, which matches the plain tagged-struct declarations the macros are written against. `--model-path` has no effect, since C has no namespaces; only the physical `#include` path, the model's own source path, applies. Every `Reader` read returns a `FomoxaDecodeError` through an output pointer, where zero-initialized means "no error". Every `_encode` function and every `FomoxaWriter` method returns `bool`, because C code has to check a fallible allocation explicitly. A `string` field decodes to a heap-allocated `const char *`, `bytes` to a `FomoxaBytes { data, len }`, and `Array<T>` to a generated `FomoxaArray_T { items, count }`, with one such type per distinct `T` in a shared `arrays.h`. Each model gets a `<Model>_fomoxa.h` file with a `<Model>_free` function that releases everything that model's codecs allocated while decoding. Call it exactly once per decoded value, and only on a value that is freshly zero-initialized or freshly freed. Generated code targets C99. As with C++, CI compiles this backend and runs its generated tree.
+C reads the same `FOMOXA_MODEL`/`FOMOXA_CODEC`/`FOMOXA_FIELD` macros as C++, from the same header, but generates free functions: `PlayerEdgeCodec_encode` and `PlayerEdgeCodec_decode`, both `static inline`. A model is always referenced as `struct Name`, never as a bare `Name`, which matches the plain tagged-struct declarations the macros are written against. `--model-path` has no effect, since C has no namespaces; only the physical `#include` path, the model's own source path, applies. Every `Reader` read returns a `FomoxaDecodeError` through an output pointer, where zero-initialized means "no error". Every `_encode` function and every `FomoxaWriter` method returns `bool`, because C code has to check a fallible allocation explicitly. A `string` field decodes to a heap-allocated `const char *`, `bytes` to a `FomoxaBytes { data, len }`, and `Array<T>` to a generated `FomoxaArray_T { items, count }`, with one such type per distinct `T` in a shared `arrays.h`. Each model gets a `<Model>_fomoxa.h` file with a `<Model>_free` function that releases everything that model's codecs allocated while decoding. A decode target must be zero-initialized, freed by `<Model>_free`, or filled by an earlier decode. Decoding again into the same value reuses its buffers: `fomoxa_reader_read_string_into` and `fomoxa_reader_read_bytes_into` keep or `realloc` them, and an array keeps its items, frees only the elements past the new count, and grows geometrically. The value always stays safe to free, including after a failed decode, and `<Model>_free` is called once, when the value is no longer needed. Generated code targets C99. As with C++, CI compiles this backend and runs its generated tree. `fomoxa_writer_reset` empties a writer and keeps its buffer, so one writer can encode message after message without reallocating.
 
 ### TypeScript
 
-TypeScript needs no project file like `go.mod`. A generated codec reaches a model class through an ordinary relative ES `import`, computed by default from the model's own source path: `src/generated/player_edge.ts` importing from `src/models/player.ts` writes `import { Player } from "../models/player";`. `encode` and `decode` are `static` methods that mutate the model class directly. `i64`/`u64` fields, every fingerprint, and every per-frame envelope value are `bigint`, because a JS `number` is only exact up to 2^53. The other primitives map to the usual JS/TS types: `number`, `string`, `boolean`, and `Uint8Array` for `bytes`. A nested model field is constructed with `new ModelName()` if it does not already hold an instance, so the nested class needs a public constructor with no parameters. `decode` throws `DecodeError` on failure. CI compiles this backend with `tsc` and runs its generated tree through `tests/fixtures-ts/smoke_test.ts`.
+TypeScript needs no project file like `go.mod`. A generated codec reaches a model class through an ordinary relative ES `import`, computed by default from the model's own source path: `src/generated/player_edge.ts` importing from `src/models/player.ts` writes `import { Player } from "../models/player";`. `encode` and `decode` are `static` methods that mutate the model class directly. `i64`/`u64` fields, every fingerprint, and every per-frame envelope value are `bigint`, because a JS `number` is only exact up to 2^53. The other primitives map to the usual JS/TS types: `number`, `string`, `boolean`, and `Uint8Array` for `bytes`. A nested model field is constructed with `new ModelName()` if it does not already hold an instance, so the nested class needs a public constructor with no parameters. `decode` throws `DecodeError` on failure. CI compiles this backend with `tsc` and runs its generated tree through `tests/fixtures-ts/smoke_test.ts`. `Writer` keeps its buffer across `clear()`, and `writtenView()` returns the written bytes as a `subarray` over that buffer, valid until the next write or `clear()`; `toUint8Array()` copies them. A `string` is encoded with `TextEncoder.encodeInto` straight into the buffer. `Reader.reset(bytes)` reuses one reader across messages. `readString(current)` returns `current` when the bytes spell it, without decoding, and `readBytes(current)` copies into `current` when the length is unchanged. An array field is reused, and each element that is already a model instance is decoded into. Reusing one `Writer` matters more here than in any other backend: every new `Writer`, and every time its buffer grows, allocates a new `ArrayBuffer` for its `DataView`, which costs about a microsecond on Node.
 
 ### JavaScript
 
-The JavaScript backend renders the same IR as the TypeScript backend, with every type annotation replaced by `@param`/`@returns` JSDoc. One difference affects behavior: the generated file is meant to run directly under Node's ESM loader or in a browser, so every relative `import` carries an explicit `.js` extension. A JavaScript codec file also imports fewer models than its TypeScript counterpart. An untyped function parameter never names a type, so a codec imports only the models it constructs with `new`, for a nested field or an array element. This backend has no build step, and its fixture runs directly with `node`.
+The JavaScript backend renders the same IR as the TypeScript backend, with every type annotation replaced by `@param`/`@returns` JSDoc. One difference affects behavior: the generated file is meant to run directly under Node's ESM loader or in a browser, so every relative `import` carries an explicit `.js` extension. A JavaScript codec file also imports fewer models than its TypeScript counterpart. An untyped function parameter never names a type, so a codec imports only the models it constructs with `new`, for a nested field or an array element. This backend has no build step, and its fixture runs directly with `node`. Its `Writer` has the same `clear()` and `writtenView()` as the TypeScript one, and the same reason to reuse it. Its `Reader` has the same `reset`, `readString(current)` and `readBytes(current)`.
 
 ## Repository layout
 
@@ -561,7 +574,6 @@ fomoxac/
 │   │   ├── rust.rs             #[network] / #[codec(...)]
 │   │   ├── go.rs               //fomoxa:model + struct tags
 │   │   ├── csharp.rs           [Network] / [Codec(...)]
-│   │   ├── gdscript.rs         # fomoxa:model / # fomoxa:TYPE comments
 │   │   ├── cpp.rs              FOMOXA_MODEL / FOMOXA_CODEC(...) / FOMOXA_FIELD(...)
 │   │   ├── c.rs                 the same, minus namespace/class handling
 │   │   └── typescript.rs       // FOMOXA_MODEL / ... comments, for .ts and .js
@@ -589,16 +601,22 @@ fomoxac/
 │   ├── fixtures/                Rust fixture project
 │   ├── fixtures-go/             Go fixture project
 │   ├── fixtures-cs/             C# fixture project
-│   ├── fixtures-gd/             GDScript fixture project
 │   ├── fixtures-cpp/            C++ fixture project
 │   ├── fixtures-c/              C fixture project
 │   ├── fixtures-ts/             TypeScript fixture project
 │   ├── fixtures-js/             JavaScript fixture project
-│   └── vectors/fomoxa-vectors.json
+│   ├── vectors-cs/              the vector models and a runner, C#
+│   ├── vectors-go/              the vector models and a runner, Go
+│   ├── vectors-cpp/             the vector models and a runner, C++
+│   ├── vectors-c/               the vector models and a runner, C
+│   ├── vectors/                 fomoxa-vectors.json, and lines.py for the C/C++ runners
+│   └── sdk/                     each runtime's schema type, copied, for net_schema
+├── docs/
+│   └── runtime-design.md       why each Reader and Writer is built as it is, with measurements
 └── SPEC-FINGERPRINT.md         normative: the fingerprint canonical form
 ```
 
-To add a target language, add `parser/<lang>.rs` and the set `generator/<lang>.rs`, `generator/<lang>_runtime.rs`, and `generator/<lang>_handshake.rs`. Everything above the IR (`ir.rs`, `fingerprint.rs`, `schema.rs`, `compat.rs`, `buildgraph.rs`) is independent of the language.
+To add a target language, add `parser/<lang>.rs` and the set `generator/<lang>.rs`, `generator/<lang>_runtime.rs`, and `generator/<lang>_handshake.rs`, plus its entry in `generator/net_schema.rs`. Read [docs/runtime-design.md](docs/runtime-design.md) before writing or changing a runtime. Everything above the IR (`ir.rs`, `fingerprint.rs`, `schema.rs`, `compat.rs`, `buildgraph.rs`) is independent of the language.
 
 ## Tests
 
@@ -610,25 +628,29 @@ cargo test
 |---|---|
 | `src/**` | Unit tests for the scanners, the IR and its validation, the canonical fingerprint text against pinned digests, every row of the compatibility table, the JSON round trip, and SHA-256 against published test vectors |
 | `tests/generated.rs` | The committed `tests/fixtures/src/generated/` tree, compiled into a real crate and run against the same annotated model files `fomoxac` scanned |
-| `tests/cli.rs` | The real `fomoxac` binary over real files: what is written and where, `--check`, the compatibility warnings, the exit codes of `compat`, `ci` against a real git repository, `fomoxa-inspect`, and per-backend behavior for each of the eight backends (one file per codec, a mixed-language `--src` refused, `--model-path`), plus one run of `--watch` through the real binary |
+| `tests/cli.rs` | The real `fomoxac` binary over real files: what is written and where, `--check`, the compatibility warnings, the exit codes of `compat`, `ci` against a real git repository, `fomoxa-inspect`, and per-backend behavior for each of the seven backends (one file per codec, a mixed-language `--src` refused, `--model-path`), plus one run of `--watch` through the real binary |
 | `tests/watch.rs` | `--watch` driven directly through `fomoxac::watch::run` instead of a subprocess: a source file modified, created, and deleted; an invalid model reported and watched past, then regenerated once fixed; `--out` never watched; and two filesystem writes from one save settled into a single regeneration |
 | `tests/cross_language.rs` | One schema definition parsed through the Rust, TypeScript, JavaScript, Go, and C# scanners, checked for identical fingerprints |
-| `tests/vectors.rs` | `tests/vectors/fomoxa-vectors.json`, the fixed cross-SDK reference vectors, checked against the real generated codecs |
+| `tests/vectors.rs` | `tests/vectors/fomoxa-vectors.json`, the fixed cross-SDK reference vectors, checked against the real generated Rust codecs |
 
 `cargo test` has no Go toolchain and no .NET SDK, so `.github/workflows/ci.yml` builds `tests/fixtures-go/` and `tests/fixtures-cs/` directly, and runs `go vet` on the Go fixture. The remaining fixtures are checked in CI as follows:
 
-- `tests/fixtures-gd/`: `generate --check` only, since no headless Godot toolchain runs in this project's CI.
 - `tests/fixtures-cpp/` and `tests/fixtures-c/`: compiled with g++ (`-std=c++17`) and gcc (`-std=c99`) under `-Wall -Wextra -Wpedantic -Werror`, and their hand-written smoke tests run against the compiled output.
 - `tests/fixtures-ts/`: type-checked under `strict` with `tsc`, compiled, and its smoke test run with `node`.
 - `tests/fixtures-js/`: its smoke test run directly with `node`, with no build step.
 
-`.github/workflows/ci.yml` runs on every push and pull request. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test`, then for each of the eight fixture trees a freshness check (`generate --check`) and, where CI has the toolchain, a real build and run. It provisions Rust (`stable`), Go `1.21`, .NET `8.0.x`, and Node `22`.
+Every other backend is checked against the same vectors, byte for byte, in CI: each `accept` vector is decoded and re-encoded to its `reencode` bytes, each `reject` vector fails with its named error, and every message's id and fingerprint match the file. The runners are `tests/vectors-cs/Program.cs`, `tests/vectors-go/main.go`, `tests/vectors-cpp/vectors_test.cpp`, `tests/vectors-c/vectors_test.c` (fed by `tests/vectors/lines.py`, and built under AddressSanitizer and UndefinedBehaviorSanitizer), `tests/fixtures-ts/vectors_test.ts` and `tests/fixtures-js/vectors_test.js`. A round-trip smoke test alone cannot show this: an encoder and a decoder that are wrong the same way still round-trip.
+
+Every runner also builds the runtime schema from the generated `net_schema` file, against a copy of that runtime's schema type kept in `tests/sdk/` (`Fomoxa.Net`, `github.com/fomoxa/go`, `fomoxa-net`, Fomoxa C, `@fomoxa/net`) so that CI never fetches another repository, and checks that it declares every message of the handshake table with the same fingerprint and prefix chain. The C#, Go, TypeScript and JavaScript runners also compare each prefix chain with the vectors. `tests/generated.rs` does the same for Rust, with `tests/sdk/rust/` as a dev-dependency.
+
+`.github/workflows/ci.yml` runs on every push and pull request. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test`, then for each of the seven fixture trees a freshness check (`generate --check`) and, where CI has the toolchain, a real build and run. It provisions Rust (`stable`), Go `1.21`, .NET `8.0.x`, and Node `22`.
 
 `.github/workflows/schema.yml` runs on pull requests. It fetches the target branch, builds `fomoxac`, and runs `fomoxac ci --base-ref origin/<base-ref>` against the Rust fixture, so the check fails when a pull request contains a breaking schema change relative to its target branch.
 
 ## References
 
 - [SPEC-FINGERPRINT.md](SPEC-FINGERPRINT.md): the normative fingerprint canonical form.
+- [docs/runtime-design.md](docs/runtime-design.md): the design of each backend's `Reader` and `Writer`, the measurements behind it, and the alternatives that were dropped.
 - [`.github/workflows/ci.yml`](.github/workflows/ci.yml): the build and test matrix per language.
 - [`.github/workflows/schema.yml`](.github/workflows/schema.yml): the schema compatibility check on pull requests.
 

@@ -8,6 +8,7 @@ pub struct Config {
     pub out: Option<PathBuf>,
     pub model_path: Option<String>,
     pub validate_message_fingerprint: Option<bool>,
+    pub net_schema: Option<bool>,
 }
 
 impl Config {
@@ -66,15 +67,14 @@ fn parse(text: &str) -> Result<Config, String> {
                     Some(string(value).map_err(|problem| format!("{at}: model_path {problem}"))?)
             }
             "validate_message_fingerprint" => {
-                config.validate_message_fingerprint = Some(match value {
-                    "true" => true,
-                    "false" => false,
-                    other => {
-                        return Err(format!(
-                            "{at}: validate_message_fingerprint is `true` or `false`, not `{other}`"
-                        ))
-                    }
-                })
+                config.validate_message_fingerprint =
+                    Some(boolean(value).map_err(|problem| {
+                        format!("{at}: validate_message_fingerprint {problem}")
+                    })?)
+            }
+            "net_schema" => {
+                config.net_schema =
+                    Some(boolean(value).map_err(|problem| format!("{at}: net_schema {problem}"))?)
             }
             _ => {}
         }
@@ -93,6 +93,14 @@ fn strip_comment(line: &str) -> &str {
         }
     }
     line
+}
+
+fn boolean(value: &str) -> Result<bool, String> {
+    match value {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        other => Err(format!("is `true` or `false`, not `{other}`")),
+    }
 }
 
 fn string(value: &str) -> Result<String, String> {
@@ -125,16 +133,17 @@ mod tests {
     use super::parse;
 
     #[test]
-    fn reads_the_three_keys() {
+    fn reads_every_key() {
         let config = parse(
             "# the project's paths\nsrc = \"src\"\nout = \"generated\"\n\
-             validate_message_fingerprint = true\n",
+             validate_message_fingerprint = true\nnet_schema = true\n",
         )
         .expect("parse");
 
         assert_eq!(config.src, [PathBuf::from("src")]);
         assert_eq!(config.out, Some(PathBuf::from("generated")));
         assert_eq!(config.validate_message_fingerprint, Some(true));
+        assert_eq!(config.net_schema, Some(true));
     }
 
     #[test]
@@ -163,5 +172,6 @@ mod tests {
     fn a_value_of_the_wrong_shape_is_reported() {
         assert!(parse("out = generated").is_err());
         assert!(parse("validate_message_fingerprint = yes").is_err());
+        assert!(parse("net_schema = 1").is_err());
     }
 }

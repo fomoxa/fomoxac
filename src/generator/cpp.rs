@@ -278,7 +278,7 @@ pub fn codec_file(
             "    static DecodeError decode(Reader& reader, {model_type}& value) {{\n"
         ));
         for field in &message.fields {
-            decode_field(&mut out, field, &message.codec, imports);
+            decode_field(&mut out, field, &message.codec);
         }
         out.push_str("        return DecodeError{};\n");
         out.push_str("    }\n");
@@ -361,7 +361,7 @@ fn encode_scalar(out: &mut String, ty: &WireType, place: &str, codec: &str, pad:
     }
 }
 
-fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<'_>) {
+fn decode_field(out: &mut String, field: &Field, codec: &str) {
     let place = format!("value.{}", field.name);
 
     if let Some(name) = as_model(&field.ty) {
@@ -374,8 +374,6 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
     }
 
     if let WireType::Array(element_type) = &field.ty {
-        let element_type_cpp = element_type_name(element_type, imports);
-
         out.push_str("        {\n");
         out.push_str("            std::size_t count = 0;\n");
         out.push_str("            if (!reader.field_absent()) {\n");
@@ -384,14 +382,19 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
              !error.ok()) return error;\n",
         );
         out.push_str("            }\n");
-        out.push_str(&format!(
-            "            std::vector<{element_type_cpp}> elements;\n"
-        ));
-        out.push_str("            elements.reserve(count);\n");
-        out.push_str("            for (std::size_t i = 0; i < count; ++i) {\n");
-        decode_element_into(out, element_type, "elements", codec, imports);
+        out.push_str(&format!("            auto& elements = {place};\n"));
+        out.push_str("            if (elements.size() > count) {\n");
+        out.push_str(
+            "                elements.erase(elements.begin() + static_cast<std::ptrdiff_t>(count), elements.end());\n",
+        );
         out.push_str("            }\n");
-        out.push_str(&format!("            {place} = std::move(elements);\n"));
+        out.push_str("            elements.reserve(count < 4096 ? count : 4096);\n");
+        out.push_str("            for (std::size_t i = 0; i < count; ++i) {\n");
+        out.push_str("                if (i == elements.size()) {\n");
+        out.push_str("                    elements.emplace_back();\n");
+        out.push_str("                }\n");
+        decode_element_into(out, element_type, "elements", codec);
+        out.push_str("            }\n");
         out.push_str("        }\n");
         return;
     }
@@ -407,24 +410,20 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
     out.push_str("        }\n");
 }
 
-fn decode_element_into(
-    out: &mut String,
-    ty: &WireType,
-    elements_local: &str,
-    codec: &str,
-    imports: &Imports<'_>,
-) {
+fn decode_element_into(out: &mut String, ty: &WireType, elements_local: &str, codec: &str) {
     match as_model(ty) {
         Some(name) => {
             let nested = codec_type_name(name, codec);
-            let cpp_type = imports.qualify(name);
-            out.push_str(&format!("                {cpp_type} element{{}};\n"));
             out.push_str(&format!(
-                "                if (DecodeError error = {nested}::decode(reader, element); \
+                "                if (DecodeError error = {nested}::decode(reader, {elements_local}[i]); \
                  !error.ok()) return error;\n"
             ));
+        }
+        None if matches!(ty, WireType::Str | WireType::Bytes) => {
+            let (_, reader_method, _) = primitive(ty).expect("a string or bytes element");
             out.push_str(&format!(
-                "                {elements_local}.push_back(std::move(element));\n"
+                "                if (DecodeError error = reader.{reader_method}({elements_local}[i]); \
+                 !error.ok()) return error;\n"
             ));
         }
         None => {
@@ -434,17 +433,8 @@ fn decode_element_into(
                 "                if (DecodeError error = reader.{reader_method}(element); \
                  !error.ok()) return error;\n"
             ));
-            out.push_str(&format!(
-                "                {elements_local}.push_back(std::move(element));\n"
-            ));
+            out.push_str(&format!("                {elements_local}[i] = element;\n"));
         }
-    }
-}
-
-fn element_type_name(ty: &WireType, imports: &Imports<'_>) -> String {
-    match primitive(ty) {
-        Some((_, _, cpp_type)) => cpp_type.to_owned(),
-        None => imports.qualify(ty.model_name().expect("a non-primitive, non-array type")),
     }
 }
 
@@ -595,29 +585,34 @@ mod tests {
         );
         assert!(text.contains("writer.write_string(element);"), "{text}");
         assert!(text.contains("std::size_t count = 0;"), "{text}");
+        assert!(text.contains("auto& elements = value.Tags;"), "{text}");
+        assert!(text.contains("elements.emplace_back();"), "{text}");
         assert!(
-            text.contains("std::vector<std::string> elements;"),
+            text.contains(
+                "if (DecodeError error = reader.read_string(elements[i]); !error.ok()) return error;"
+            ),
             "{text}"
         );
-        assert!(text.contains("std::string element{};"), "{text}");
-        assert!(
-            text.contains("elements.push_back(std::move(element));"),
-            "{text}"
-        );
-        assert!(text.contains("value.Tags = std::move(elements);"), "{text}");
     }
 
     #[test]
-    fn an_array_of_models_creates_a_fresh_element_each_iteration() {
+    fn an_array_of_models_decodes_into_held_elements() {
         let text = generated(&[("Roster", "Array<PlayerInfo>")]);
-        assert!(text.contains("::PlayerInfo element{};"), "{text}");
+        assert!(text.contains("auto& elements = value.Roster;"), "{text}");
         assert!(
             text.contains(
-                "if (DecodeError error = PlayerInfoEdgeCodec::decode(reader, element); \
+                "if (DecodeError error = PlayerInfoEdgeCodec::decode(reader, elements[i]); \
                  !error.ok()) return error;"
             ),
             "{text}"
         );
+    }
+
+    #[test]
+    fn an_array_of_bools_goes_through_a_local_for_vector_bool() {
+        let text = generated(&[("Flags", "Array<bool>")]);
+        assert!(text.contains("bool element{};"), "{text}");
+        assert!(text.contains("elements[i] = element;"), "{text}");
     }
 
     #[test]

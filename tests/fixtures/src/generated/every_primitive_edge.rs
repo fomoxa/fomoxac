@@ -4,8 +4,8 @@
 // model: EveryPrimitive
 // codec: edge
 // fingerprint: sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #![allow(dead_code, unused_imports)]
 
@@ -80,8 +80,8 @@ impl EveryPrimitiveEdgeCodec {
         value.sequence = if reader.field_absent() { 0u64 } else { reader.read_u64()? };
         value.ratio = if reader.field_absent() { 0.0f32 } else { reader.read_f32()? };
         value.precise = if reader.field_absent() { 0.0f64 } else { reader.read_f64()? };
-        value.label = if reader.field_absent() { ::std::string::String::new() } else { reader.read_string()? };
-        value.blob = if reader.field_absent() { ::std::vec::Vec::new() } else { reader.read_bytes()? };
+        if reader.field_absent() { value.label.clear(); } else { reader.read_string_into(&mut value.label)?; }
+        if reader.field_absent() { value.blob.clear(); } else { reader.read_bytes_into(&mut value.blob)?; }
         ::core::result::Result::Ok(())
     }
 }

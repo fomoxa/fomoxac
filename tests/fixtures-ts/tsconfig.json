@@ -9,5 +9,5 @@
         "outDir": "dist",
         "rootDir": "."
     },
-    "include": ["src/**/*.ts", "smoke_test.ts"]
+    "include": ["src/**/*.ts", "smoke_test.ts", "vectors_test.ts"]
 }

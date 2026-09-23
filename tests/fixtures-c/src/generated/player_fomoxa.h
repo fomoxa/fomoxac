@@ -3,8 +3,8 @@
 // source: src/models/player.h
 // model: Player
 // fingerprint: sha256:eb1e1a594c929156c3c1545ba37fd8d07a515735a237704178cec4fc5b194f2e
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #pragma once
 
@@ -19,9 +19,8 @@
 // of Player's codecs actually populated them.
 //
 // Safe on a freshly zero-initialized struct Player (struct Player value = {0};), on one this
-// model's decode functions have populated, or on one already freed - never on
-// one still holding data from a *previous, unfreed* decode (see runtime.h's
-// module docs).
+// model's decode functions have populated, once or many times and whether or
+// not the last decode failed, or on one already freed.
 static inline void Player_free(struct Player *value) {
     free((void *)value->Name);
     value->Name = NULL;

@@ -3,8 +3,8 @@
 // source: src/models/player.h
 // model: Team
 // fingerprint: sha256:75660c480fc1252fed456c7597adf79d345060aeaedef08c092483d5f2fcc61b
-// fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// fomoxac-version: 0.2.2
+// generated-at: 2026-09-23T15:58:02Z
 
 #pragma once
 
@@ -21,9 +21,8 @@
 // of Team's codecs actually populated them.
 //
 // Safe on a freshly zero-initialized struct Team (struct Team value = {0};), on one this
-// model's decode functions have populated, or on one already freed - never on
-// one still holding data from a *previous, unfreed* decode (see runtime.h's
-// module docs).
+// model's decode functions have populated, once or many times and whether or
+// not the last decode failed, or on one already freed.
 static inline void Team_free(struct Team *value) {
     PlayerInfo_free(&value->Captain);
     FomoxaArray_string_free(&value->Tags);

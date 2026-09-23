@@ -1,0 +1,4 @@
+src = "src"
+out = "src/generated"
+
+net_schema = true
