@@ -96,6 +96,14 @@ export class Writer {
         return this.bytes.slice(0, this.len);
     }
 
+    writtenView(): Uint8Array {
+        return this.bytes.subarray(0, this.len);
+    }
+
+    clear(): void {
+        this.len = 0;
+    }
+
     private ensure(extra: number): void {
         if (this.len + extra <= this.bytes.length) {
             return;
@@ -198,11 +206,12 @@ export class Writer {
      * The length counts bytes, not characters.
      */
     writeString(value: string): void {
-        const encoded = FOMOXA_TEXT_ENCODER.encode(value);
-        this.writeLength(encoded.length);
-        this.ensure(encoded.length);
-        this.bytes.set(encoded, this.len);
-        this.len += encoded.length;
+        this.ensure(4 + value.length * 3);
+        const lengthOffset = this.len;
+        this.len += 4;
+        const written = FOMOXA_TEXT_ENCODER.encodeInto(value, this.bytes.subarray(this.len)).written ?? 0;
+        this.len += written;
+        this.view.setUint32(lengthOffset, written, true);
     }
 
     /** Writes a `bytes` blob as a `u32` length, then the raw bytes. */

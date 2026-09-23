@@ -27,6 +27,8 @@ interface Vector {
     error?: string;
 }
 
+const sharedWriter = new Writer(1);
+
 function roundTrip<T>(codec: Codec<T>, create: () => T): (payload: Uint8Array) => Uint8Array {
     return (payload) => {
         const value = create();
@@ -37,12 +39,30 @@ function roundTrip<T>(codec: Codec<T>, create: () => T): (payload: Uint8Array) =
     };
 }
 
+function sharedRoundTrip<T>(codec: Codec<T>, create: () => T): (payload: Uint8Array) => Uint8Array {
+    return (payload) => {
+        const value = create();
+        codec.decode(new Reader(payload), value);
+        sharedWriter.clear();
+        codec.encode(sharedWriter, value);
+        return sharedWriter.writtenView();
+    };
+}
+
 const roundTrips: Record<string, (payload: Uint8Array) => Uint8Array> = {
     "Player.edge": roundTrip(PlayerEdgeCodec, () => new Player()),
     "DeviceState.edge": roundTrip(DeviceStateEdgeCodec, () => new DeviceState()),
     "DeviceState.unity": roundTrip(DeviceStateUnityCodec, () => new DeviceState()),
     "EveryPrimitive.edge": roundTrip(EveryPrimitiveEdgeCodec, () => new EveryPrimitive()),
     "Team.edge": roundTrip(TeamEdgeCodec, () => new Team()),
+};
+
+const sharedRoundTrips: Record<string, (payload: Uint8Array) => Uint8Array> = {
+    "Player.edge": sharedRoundTrip(PlayerEdgeCodec, () => new Player()),
+    "DeviceState.edge": sharedRoundTrip(DeviceStateEdgeCodec, () => new DeviceState()),
+    "DeviceState.unity": sharedRoundTrip(DeviceStateUnityCodec, () => new DeviceState()),
+    "EveryPrimitive.edge": sharedRoundTrip(EveryPrimitiveEdgeCodec, () => new EveryPrimitive()),
+    "Team.edge": sharedRoundTrip(TeamEdgeCodec, () => new Team()),
 };
 
 const identities: Record<string, { MESSAGE_ID: number; FINGERPRINT: bigint }> = {
@@ -114,6 +134,12 @@ for (const vector of vectors.reject as Vector[]) {
         const matched = error instanceof DecodeError && error.message.startsWith(errorPrefixes[expected]);
         check(matched, `reject ${vector.name}: ${describe(error)}, expected DecodeError ${expected}`);
     }
+}
+
+for (const vector of vectors.accept as Vector[]) {
+    const expected = toHex(roundTrips[vector.message](hex(vector.hex)));
+    const actual = toHex(sharedRoundTrips[vector.message](hex(vector.hex)));
+    check(actual === expected, `shared writer ${vector.name}: ${actual}, expected ${expected}`);
 }
 
 console.log(`${checks - failures}/${checks} checks passed`);

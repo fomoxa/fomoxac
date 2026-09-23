@@ -96,7 +96,7 @@
     {
       "path": "src/generated/runtime.js",
       "kind": "runtime",
-      "sha256": "370456e48ee8910e23feef620b2ade7dc4277b4c76926c6bb66874b3ecfd4d8f"
+      "sha256": "0d7fe83820693907b02de4ebeff745d5a8d4dbf039a22add3124e75a6097fa83"
     },
     {
       "path": "src/generated/handshake.js",

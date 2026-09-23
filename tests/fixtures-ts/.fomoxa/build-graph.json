@@ -96,7 +96,7 @@
     {
       "path": "src/generated/runtime.ts",
       "kind": "runtime",
-      "sha256": "902290cad8299fa4e301844d25c421df7683464d6a4d13533b9d866a322d4411"
+      "sha256": "0dd247c5baf666d2f3c5137d813a086eebf5063929571db9f590fca78fa31fe5"
     },
     {
       "path": "src/generated/handshake.ts",

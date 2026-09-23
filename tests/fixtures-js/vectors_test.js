@@ -13,6 +13,8 @@ import { DeviceStateEdgeCodec } from "./src/generated/device_state_edge.js";
 import { DeviceStateUnityCodec } from "./src/generated/device_state_unity.js";
 import { EveryPrimitiveEdgeCodec } from "./src/generated/every_primitive_edge.js";
 
+const sharedWriter = new Writer(1);
+
 function roundTrip(codec, create) {
     return (payload) => {
         const value = create();
@@ -23,12 +25,30 @@ function roundTrip(codec, create) {
     };
 }
 
+function sharedRoundTrip(codec, create) {
+    return (payload) => {
+        const value = create();
+        codec.decode(new Reader(payload), value);
+        sharedWriter.clear();
+        codec.encode(sharedWriter, value);
+        return sharedWriter.writtenView();
+    };
+}
+
 const roundTrips = {
     "Player.edge": roundTrip(PlayerEdgeCodec, () => new Player()),
     "DeviceState.edge": roundTrip(DeviceStateEdgeCodec, () => new DeviceState()),
     "DeviceState.unity": roundTrip(DeviceStateUnityCodec, () => new DeviceState()),
     "EveryPrimitive.edge": roundTrip(EveryPrimitiveEdgeCodec, () => new EveryPrimitive()),
     "Team.edge": roundTrip(TeamEdgeCodec, () => new Team()),
+};
+
+const sharedRoundTrips = {
+    "Player.edge": sharedRoundTrip(PlayerEdgeCodec, () => new Player()),
+    "DeviceState.edge": sharedRoundTrip(DeviceStateEdgeCodec, () => new DeviceState()),
+    "DeviceState.unity": sharedRoundTrip(DeviceStateUnityCodec, () => new DeviceState()),
+    "EveryPrimitive.edge": sharedRoundTrip(EveryPrimitiveEdgeCodec, () => new EveryPrimitive()),
+    "Team.edge": sharedRoundTrip(TeamEdgeCodec, () => new Team()),
 };
 
 const identities = {
@@ -100,6 +120,12 @@ for (const vector of vectors.reject) {
         const matched = error instanceof DecodeError && error.message.startsWith(errorPrefixes[vector.error]);
         check(matched, `reject ${vector.name}: ${describe(error)}, expected DecodeError ${vector.error}`);
     }
+}
+
+for (const vector of vectors.accept) {
+    const expected = toHex(roundTrips[vector.message](hex(vector.hex)));
+    const actual = toHex(sharedRoundTrips[vector.message](hex(vector.hex)));
+    check(actual === expected, `shared writer ${vector.name}: ${actual}, expected ${expected}`);
 }
 
 console.log(`${checks - failures}/${checks} checks passed`);
