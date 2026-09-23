@@ -135,6 +135,8 @@ int main(void) {
     char line[LINE_CAPACITY];
     static unsigned char payload[BYTES_CAPACITY];
     static unsigned char expected[BYTES_CAPACITY];
+    FomoxaWriter shared_writer;
+    fomoxa_writer_init(&shared_writer);
 
     while (fgets(line, sizeof line, stdin) != NULL) {
         char kind[16], name[128], third[128], fourth[BYTES_CAPACITY], fifth[BYTES_CAPACITY];
@@ -159,11 +161,17 @@ int main(void) {
 
             if (strcmp(kind, "accept") == 0) {
                 size_t expected_size = from_hex(fifth, expected);
+                FomoxaDecodeError shared_error;
                 check(fomoxa_decode_error_ok(&error), kind, name, "decode failed");
                 check(!fomoxa_decode_error_ok(&error) ||
                           (writer.len == expected_size &&
                            (expected_size == 0 || memcmp(writer.data, expected, expected_size) == 0)),
                       kind, name, "re-encoded bytes differ");
+                fomoxa_writer_reset(&shared_writer);
+                shared_error = round_trip(payload, payload_size, &shared_writer);
+                check(fomoxa_decode_error_ok(&shared_error) && shared_writer.len == expected_size &&
+                          (expected_size == 0 || memcmp(shared_writer.data, expected, expected_size) == 0),
+                      "shared writer", name, "re-encoded bytes differ");
             } else {
                 FomoxaDecodeErrorKind wanted;
                 int known = error_kind(fifth, &wanted);
@@ -173,6 +181,7 @@ int main(void) {
         }
     }
 
+    fomoxa_writer_free(&shared_writer);
     printf("%d/%d checks passed\n", checks - failures, checks);
     return failures == 0 && checks > 0 ? 0 : 1;
 }

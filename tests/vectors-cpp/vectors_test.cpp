@@ -21,6 +21,8 @@ namespace {
 using Bytes = std::vector<std::uint8_t>;
 using RoundTrip = std::function<DecodeError(const Bytes&, Bytes&)>;
 
+Writer shared_writer(1);
+
 template <typename Codec, typename Model>
 RoundTrip round_trip() {
     return [](const Bytes& payload, Bytes& out) {
@@ -34,6 +36,28 @@ RoundTrip round_trip() {
         return error;
     };
 }
+
+template <typename Codec, typename Model>
+RoundTrip shared_round_trip() {
+    return [](const Bytes& payload, Bytes& out) {
+        Model value{};
+        Reader reader(payload.data(), payload.size());
+        DecodeError error = Codec::decode(reader, value);
+        if (!error.ok()) return error;
+        shared_writer.clear();
+        Codec::encode(shared_writer, value);
+        out = shared_writer.bytes();
+        return error;
+    };
+}
+
+const std::map<std::string, RoundTrip> kSharedRoundTrips = {
+    {"Player.edge", shared_round_trip<PlayerEdgeCodec, models::Player>()},
+    {"DeviceState.edge", shared_round_trip<DeviceStateEdgeCodec, models::DeviceState>()},
+    {"DeviceState.unity", shared_round_trip<DeviceStateUnityCodec, models::DeviceState>()},
+    {"EveryPrimitive.edge", shared_round_trip<EveryPrimitiveEdgeCodec, models::EveryPrimitive>()},
+    {"Team.edge", shared_round_trip<TeamEdgeCodec, models::Team>()},
+};
 
 const std::map<std::string, RoundTrip> kRoundTrips = {
     {"Player.edge", round_trip<PlayerEdgeCodec, models::Player>()},
@@ -130,6 +154,10 @@ int main() {
             check(error.ok(), "accept " + name + ": " + error.message());
             check(!error.ok() || actual == expected,
                   "accept " + name + ": re-encoded " + to_hex(actual) + ", expected " + to_hex(expected));
+            Bytes shared;
+            DecodeError shared_error = kSharedRoundTrips.at(message)(payload, shared);
+            check(shared_error.ok() && shared == expected,
+                  "shared writer " + name + ": " + to_hex(shared) + ", expected " + to_hex(expected));
         } else if (kind == "reject") {
             check(!error.ok() && error.kind == kErrorKinds.at(last),
                   "reject " + name + ": " + (error.ok() ? std::string("decoded") : error.message()) + ", expected " + last);

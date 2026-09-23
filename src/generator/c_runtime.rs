@@ -162,6 +162,10 @@ static inline void fomoxa_writer_free(FomoxaWriter *writer) {
  * eventually `free()` it. `*out_len` is set to the number of bytes written.
  * The writer is left empty, so a later `fomoxa_writer_free` on it is a
  * no-op. */
+static inline void fomoxa_writer_reset(FomoxaWriter *writer) {
+    writer->len = 0;
+}
+
 static inline unsigned char *fomoxa_writer_take(FomoxaWriter *writer, size_t *out_len) {
     unsigned char *data = writer->data;
     *out_len = writer->len;

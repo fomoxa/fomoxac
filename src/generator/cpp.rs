@@ -387,7 +387,7 @@ fn decode_field(out: &mut String, field: &Field, codec: &str, imports: &Imports<
         out.push_str(&format!(
             "            std::vector<{element_type_cpp}> elements;\n"
         ));
-        out.push_str("            elements.reserve(count);\n");
+        out.push_str("            elements.reserve(count < 4096 ? count : 4096);\n");
         out.push_str("            for (std::size_t i = 0; i < count; ++i) {\n");
         decode_element_into(out, element_type, "elements", codec, imports);
         out.push_str("            }\n");
