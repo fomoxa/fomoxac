@@ -63,6 +63,17 @@ jobs:
           go build ./...
           go vet ./...
 
+      - name: the committed Go vector tree is current
+        working-directory: tests/vectors-go
+        run: cargo run --quiet --bin fomoxac -- generate --check
+
+      - name: the Go codecs reproduce tests/vectors/fomoxa-vectors.json
+        working-directory: tests/vectors-go
+        run: |
+          test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+          go vet ./...
+          go run .
+
       # Same shape as the Go fixture above: current, and actually buildable.
       # `cargo test` never invokes the .NET SDK either.
       - name: the committed C# fixture is current
@@ -72,6 +83,14 @@ jobs:
       - name: the committed C# fixture builds clean
         working-directory: tests/fixtures-cs
         run: dotnet build --nologo
+
+      - name: the committed C# vector tree is current
+        working-directory: tests/vectors-cs
+        run: cargo run --quiet --bin fomoxac -- generate --check
+
+      - name: the C# codecs reproduce tests/vectors/fomoxa-vectors.json
+        working-directory: tests/vectors-cs
+        run: dotnet run
 
       # Same shape as the Go and C# fixtures above: current, and actually
       # buildable - g++ is available on the standard Ubuntu runner image, so
@@ -88,6 +107,20 @@ jobs:
             smoke_test.cpp -o /tmp/fomoxa-cpp-smoke-test
           /tmp/fomoxa-cpp-smoke-test
 
+      - name: the committed C++ vector tree is current
+        working-directory: tests/vectors-cpp
+        run: cargo run --quiet --bin fomoxac -- generate --check
+
+      - name: the C++ codecs reproduce tests/vectors/fomoxa-vectors.json
+        working-directory: tests/vectors-cpp
+        run: |
+          set -o pipefail
+          g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror \
+            -fsanitize=address,undefined -fno-sanitize-recover=all \
+            -I . -I include -I src \
+            vectors_test.cpp -o /tmp/fomoxa-cpp-vectors
+          python3 ../vectors/lines.py | /tmp/fomoxa-cpp-vectors
+
       # gcc is available on the same runner image, so the C backend gets the
       # same real compile-and-run treatment as C++'s, above.
       - name: the committed C fixture is current
@@ -101,6 +134,20 @@ jobs:
             -I . -I include -I src \
             smoke_test.c -o /tmp/fomoxa-c-smoke-test
           /tmp/fomoxa-c-smoke-test
+
+      - name: the committed C vector tree is current
+        working-directory: tests/vectors-c
+        run: cargo run --quiet --bin fomoxac -- generate --check
+
+      - name: the C codecs reproduce tests/vectors/fomoxa-vectors.json
+        working-directory: tests/vectors-c
+        run: |
+          set -o pipefail
+          gcc -std=c99 -Wall -Wextra -Wpedantic -Werror \
+            -fsanitize=address,undefined -fno-sanitize-recover=all \
+            -I . -I include -I src \
+            vectors_test.c -o /tmp/fomoxa-c-vectors
+          python3 ../vectors/lines.py | /tmp/fomoxa-c-vectors
 
       # Same shape as the Go and C# fixtures above: current, and actually
       # buildable - `tsc` is installed from the fixture's own package.json,
@@ -116,6 +163,7 @@ jobs:
           npm install
           npx tsc -p tsconfig.json
           node dist/smoke_test.js
+          node dist/vectors_test.js
 
       # JavaScript needs no build step at all - the generated tree is run
       # directly by Node's own ESM loader, which is also why every relative
@@ -128,3 +176,7 @@ jobs:
       - name: the committed JavaScript fixture's smoke test round-trips
         working-directory: tests/fixtures-js
         run: node smoke_test.js
+
+      - name: the JavaScript codecs reproduce tests/vectors/fomoxa-vectors.json
+        working-directory: tests/fixtures-js
+        run: node vectors_test.js

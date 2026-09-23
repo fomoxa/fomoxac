@@ -567,7 +567,11 @@ fomoxac/
 │   ├── fixtures-c/              C fixture project
 │   ├── fixtures-ts/             TypeScript fixture project
 │   ├── fixtures-js/             JavaScript fixture project
-│   └── vectors/fomoxa-vectors.json
+│   ├── vectors-cs/              the vector models and a runner, C#
+│   ├── vectors-go/              the vector models and a runner, Go
+│   ├── vectors-cpp/             the vector models and a runner, C++
+│   ├── vectors-c/               the vector models and a runner, C
+│   └── vectors/                 fomoxa-vectors.json, and lines.py for the C/C++ runners
 └── SPEC-FINGERPRINT.md         normative: the fingerprint canonical form
 ```
 
@@ -586,12 +590,14 @@ cargo test
 | `tests/cli.rs` | The real `fomoxac` binary over real files: what is written and where, `--check`, the compatibility warnings, the exit codes of `compat`, `ci` against a real git repository, `fomoxa-inspect`, and per-backend behavior for each of the seven backends (one file per codec, a mixed-language `--src` refused, `--model-path`), plus one run of `--watch` through the real binary |
 | `tests/watch.rs` | `--watch` driven directly through `fomoxac::watch::run` instead of a subprocess: a source file modified, created, and deleted; an invalid model reported and watched past, then regenerated once fixed; `--out` never watched; and two filesystem writes from one save settled into a single regeneration |
 | `tests/cross_language.rs` | One schema definition parsed through the Rust, TypeScript, JavaScript, Go, and C# scanners, checked for identical fingerprints |
-| `tests/vectors.rs` | `tests/vectors/fomoxa-vectors.json`, the fixed cross-SDK reference vectors, checked against the real generated codecs |
+| `tests/vectors.rs` | `tests/vectors/fomoxa-vectors.json`, the fixed cross-SDK reference vectors, checked against the real generated Rust codecs |
 
 `cargo test` has no Go toolchain and no .NET SDK, so `.github/workflows/ci.yml` builds `tests/fixtures-go/` and `tests/fixtures-cs/` directly, and runs `go vet` on the Go fixture. The remaining fixtures are checked in CI as follows:
 
 - `tests/fixtures-cpp/` and `tests/fixtures-c/`: compiled with g++ (`-std=c++17`) and gcc (`-std=c99`) under `-Wall -Wextra -Wpedantic -Werror`, and their hand-written smoke tests run against the compiled output.
 - `tests/fixtures-ts/`: type-checked under `strict` with `tsc`, compiled, and its smoke test run with `node`.
+
+Every other backend is checked against the same vectors, byte for byte, in CI: each `accept` vector is decoded and re-encoded to its `reencode` bytes, each `reject` vector fails with its named error, and every message's id and fingerprint match the file. The runners are `tests/vectors-cs/Program.cs`, `tests/vectors-go/main.go`, `tests/vectors-cpp/vectors_test.cpp`, `tests/vectors-c/vectors_test.c` (fed by `tests/vectors/lines.py`, and built under AddressSanitizer and UndefinedBehaviorSanitizer), `tests/fixtures-ts/vectors_test.ts` and `tests/fixtures-js/vectors_test.js`. A round-trip smoke test alone cannot show this: an encoder and a decoder that are wrong the same way still round-trip.
 - `tests/fixtures-js/`: its smoke test run directly with `node`, with no build step.
 
 `.github/workflows/ci.yml` runs on every push and pull request. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test`, then for each of the seven fixture trees a freshness check (`generate --check`) and, where CI has the toolchain, a real build and run. It provisions Rust (`stable`), Go `1.21`, .NET `8.0.x`, and Node `22`.

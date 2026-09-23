@@ -1,5 +1,7 @@
 # Build output.
 /target
+bin/
+obj/
 
 # `tests/fixtures/generated/` and `tests/fixtures/.fomoxa/` are deliberately
 # committed: tests/generated.rs compiles that tree, and tests/cli.rs checks it
