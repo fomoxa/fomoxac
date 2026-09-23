@@ -73,21 +73,9 @@ jobs:
         working-directory: tests/fixtures-cs
         run: dotnet build --nologo
 
-      # GDScript has no headless-build story as turnkey as `go build` or
-      # `dotnet build` - there is no official Godot setup action, and this
-      # project would rather not pin CI to an unofficial one un-vetted. So
-      # only the half `fomoxac` itself can verify runs here: the committed
-      # tree is what the generator writes today. Whether it actually compiles
-      # in Godot is unverified by this workflow - open tests/fixtures-gd/ in
-      # the Godot editor to check that by hand.
-      - name: the committed GDScript fixture is current
-        working-directory: tests/fixtures-gd
-        run: cargo run --quiet --bin fomoxac -- generate --check
-
       # Same shape as the Go and C# fixtures above: current, and actually
       # buildable - g++ is available on the standard Ubuntu runner image, so
-      # unlike the GDScript backend this one gets a real compile (and a real
-      # run) rather than only a freshness check.
+      # this one gets a real compile and a real run.
       - name: the committed C++ fixture is current
         working-directory: tests/fixtures-cpp
         run: cargo run --quiet --bin fomoxac -- generate --check
@@ -117,7 +105,7 @@ jobs:
       # Same shape as the Go and C# fixtures above: current, and actually
       # buildable - `tsc` is installed from the fixture's own package.json,
       # so the generated tree is real-world type-checked, not just
-      # freshness-checked the way GDScript's is.
+      # freshness-checked.
       - name: the committed TypeScript fixture is current
         working-directory: tests/fixtures-ts
         run: cargo run --quiet --bin fomoxac -- generate --check

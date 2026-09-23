@@ -1,7 +1,6 @@
 pub mod c;
 pub mod cpp;
 pub mod csharp;
-pub mod gdscript;
 pub mod go;
 pub mod rust;
 pub mod typescript;
@@ -27,7 +26,6 @@ pub fn parse(path: &Path, text: &str) -> Result<Vec<Model>, Error> {
     match path.extension().and_then(|extension| extension.to_str()) {
         Some("go") => go::parse(path, text),
         Some("cs") => csharp::parse(path, text),
-        Some("gd") => gdscript::parse(path, text),
         Some("hpp") | Some("cpp") | Some("cc") | Some("cxx") => cpp::parse(path, text),
         Some("c") | Some("h") => c::parse(path, text),
         Some("ts") | Some("js") => typescript::parse(path, text),
