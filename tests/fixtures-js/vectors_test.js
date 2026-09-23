@@ -130,6 +130,82 @@ for (const vector of vectors.accept) {
     check(actual === expected, `shared writer ${vector.name}: ${actual}, expected ${expected}`);
 }
 
+const reusableCodecs = {
+    "Player.edge": [PlayerEdgeCodec, () => new Player()],
+    "DeviceState.edge": [DeviceStateEdgeCodec, () => new DeviceState()],
+    "DeviceState.unity": [DeviceStateUnityCodec, () => new DeviceState()],
+    "EveryPrimitive.edge": [EveryPrimitiveEdgeCodec, () => new EveryPrimitive()],
+    "Team.edge": [TeamEdgeCodec, () => new Team()],
+};
+
+function heldObjects(value) {
+    const held = [];
+    for (const field of Object.values(value)) {
+        if (typeof field !== "object" || field === null) {
+            continue;
+        }
+        held.push(field);
+        if (Array.isArray(field)) {
+            for (const element of field) {
+                if (typeof element === "object" && element !== null) {
+                    held.push(element);
+                }
+            }
+        }
+    }
+    return held;
+}
+
+const targets = new Map();
+const reader = new Reader(new Uint8Array(0));
+for (const order of [vectors.accept, [...vectors.accept].reverse()]) {
+    for (const vector of order) {
+        const [codec, create] = reusableCodecs[vector.message];
+        let target = targets.get(vector.message);
+        if (target === undefined) {
+            target = create();
+            targets.set(vector.message, target);
+        }
+        const payload = hex(vector.hex);
+        reader.reset(payload);
+        codec.decode(reader, target);
+        sharedWriter.clear();
+        codec.encode(sharedWriter, target);
+        const expected = toHex(hex(vector.reencode ?? ""));
+        check(toHex(sharedWriter.writtenView()) === expected, `reused target ${vector.name}: ${toHex(sharedWriter.writtenView())}, expected ${expected}`);
+
+        const before = heldObjects(target);
+        reader.reset(payload);
+        codec.decode(reader, target);
+        const after = heldObjects(target);
+        const kept = before.length === after.length && before.every((held, index) => held === after[index]);
+        check(kept, `reused target ${vector.name}: decoding the same bytes again replaced a held array, byte array or model`);
+    }
+}
+
+{
+    const writer = new Writer();
+    writer.writeString("Đội trưởng 🚀");
+    writer.writeBytes(new Uint8Array([1, 2, 3]));
+    const payload = writer.toUint8Array();
+    const blob = new Uint8Array(3);
+    const reusing = new Reader(payload);
+    const text = reusing.readString("Đội trưởng 🚀");
+    const bytes = reusing.readBytes(blob);
+    check(text === "Đội trưởng 🚀" && bytes === blob && toHex(blob) === "010203", "readString(current) / readBytes(current) keep equal text and reuse a same-length array");
+
+    const changing = new Reader(payload);
+    check(changing.readString("other") === "Đội trưởng 🚀" && changing.readBytes(new Uint8Array(2)).length === 3, "readString(current) / readBytes(current) replace a different value");
+
+    const invalid = new Reader(new Uint8Array([2, 0, 0, 0, 0xc3, 0x28]));
+    try {
+        invalid.readString("kept");
+        check(false, "readString(current) accepted invalid UTF-8");
+    } catch (error) {
+        check(error instanceof DecodeError && invalid.position === 0, "readString(current) rejects invalid UTF-8 and leaves the cursor");
+    }
+}
+
 function fingerprint64(tagged) {
     return BigInt(`0x${tagged.slice("sha256:".length, "sha256:".length + 16)}`);
 }

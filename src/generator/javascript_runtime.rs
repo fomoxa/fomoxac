@@ -277,6 +277,81 @@ export class Writer {
 }
 
 /**
+ * @param {Uint8Array} bytes
+ * @param {number} offset
+ * @param {number} len
+ * @param {string} value
+ * @returns {boolean}
+ */
+function fomoxaSameText(bytes, offset, len, value) {
+    const end = offset + len;
+    let at = offset;
+    for (let index = 0; index < value.length; index++) {
+        let scalar = value.charCodeAt(index);
+        if (scalar >= 0xd800 && scalar <= 0xdfff) {
+            if (scalar > 0xdbff || index + 1 === value.length) {
+                return false;
+            }
+            const low = value.charCodeAt(index + 1);
+            if (low < 0xdc00 || low > 0xdfff) {
+                return false;
+            }
+            scalar = 0x10000 + ((scalar - 0xd800) << 10) + (low - 0xdc00);
+            index++;
+        }
+        if (scalar < 0x80) {
+            if (at >= end || bytes[at] !== scalar) {
+                return false;
+            }
+            at += 1;
+        } else if (scalar < 0x800) {
+            if (end - at < 2 || bytes[at] !== (0xc0 | (scalar >> 6)) || bytes[at + 1] !== (0x80 | (scalar & 0x3f))) {
+                return false;
+            }
+            at += 2;
+        } else if (scalar < 0x10000) {
+            if (
+                end - at < 3 ||
+                bytes[at] !== (0xe0 | (scalar >> 12)) ||
+                bytes[at + 1] !== (0x80 | ((scalar >> 6) & 0x3f)) ||
+                bytes[at + 2] !== (0x80 | (scalar & 0x3f))
+            ) {
+                return false;
+            }
+            at += 3;
+        } else {
+            if (
+                end - at < 4 ||
+                bytes[at] !== (0xf0 | (scalar >> 18)) ||
+                bytes[at + 1] !== (0x80 | ((scalar >> 12) & 0x3f)) ||
+                bytes[at + 2] !== (0x80 | ((scalar >> 6) & 0x3f)) ||
+                bytes[at + 3] !== (0x80 | (scalar & 0x3f))
+            ) {
+                return false;
+            }
+            at += 4;
+        }
+    }
+    return at === end;
+}
+
+/**
+ * @param {Uint8Array} source
+ * @param {number} offset
+ * @param {Uint8Array} target
+ * @param {number} len
+ */
+function fomoxaCopy(source, offset, target, len) {
+    if (len > 64) {
+        target.set(source.subarray(offset, offset + len));
+        return;
+    }
+    for (let index = 0; index < len; index++) {
+        target[index] = source[offset + index];
+    }
+}
+
+/**
  * Reads Fomoxa-encoded values from a borrowed buffer.
  *
  * Malformed input is always a {@link DecodeError}, never a silent wrong
@@ -298,6 +373,19 @@ export class Reader {
         this.#view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         this.#pos = 0;
         this.#limits = limits;
+    }
+
+    /** @param {Uint8Array} bytes */
+    reset(bytes) {
+        if (
+            bytes.buffer !== this.#bytes.buffer ||
+            bytes.byteOffset !== this.#bytes.byteOffset ||
+            bytes.byteLength !== this.#bytes.byteLength
+        ) {
+            this.#view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        }
+        this.#bytes = bytes;
+        this.#pos = 0;
     }
 
     /** The cursor position, in bytes from the start. */
@@ -434,9 +522,10 @@ export class Reader {
      *
      * The length is checked against the limit and against the bytes actually
      * remaining **before** anything is decoded (RFC-0002 §10.1).
+     * @param {string} [current]
      * @returns {string}
      */
-    readString() {
+    readString(current) {
         const start = this.#pos;
         const len = this.#readLength(this.#limits.maxStringLen);
 
@@ -448,6 +537,10 @@ export class Reader {
             throw error;
         }
 
+        if (current !== undefined && current !== null && fomoxaSameText(this.#bytes, offset, len, current)) {
+            return current;
+        }
+
         try {
             return FOMOXA_TEXT_DECODER.decode(this.#bytes.subarray(offset, offset + len));
         } catch {
@@ -457,8 +550,9 @@ export class Reader {
     }
 
     /** Reads a `bytes` blob: a `u32` length, then that many raw bytes.
+     * @param {Uint8Array} [current]
      * @returns {Uint8Array} */
-    readBytes() {
+    readBytes(current) {
         const start = this.#pos;
         const len = this.#readLength(this.#limits.maxBytesLen);
 
@@ -470,6 +564,10 @@ export class Reader {
             throw error;
         }
 
+        if (current !== undefined && current !== null && current.length === len) {
+            fomoxaCopy(this.#bytes, offset, current, len);
+            return current;
+        }
         return this.#bytes.slice(offset, offset + len);
     }
 

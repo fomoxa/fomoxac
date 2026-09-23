@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// generated-at: 2026-09-23T08:57:21Z
 
 /**
  * The `edge` codec for {@link EveryPrimitive}, generated from its Fomoxa attributes.
@@ -86,7 +86,7 @@ export class EveryPrimitiveEdgeCodec {
         value.Sequence = reader.fieldAbsent() ? 0n : reader.readU64();
         value.Ratio = reader.fieldAbsent() ? 0 : reader.readF32();
         value.Precise = reader.fieldAbsent() ? 0 : reader.readF64();
-        value.Label = reader.fieldAbsent() ? "" : reader.readString();
-        value.Blob = reader.fieldAbsent() ? new Uint8Array(0) : reader.readBytes();
+        value.Label = reader.fieldAbsent() ? "" : reader.readString(value.Label);
+        value.Blob = reader.fieldAbsent() ? new Uint8Array(0) : reader.readBytes(value.Blob);
     }
 }

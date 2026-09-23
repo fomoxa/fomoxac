@@ -22,7 +22,7 @@
           "model": "DeviceState",
           "codec": "unity",
           "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
-          "sha256": "1e1eb7c8a318005f0cdba49852c19fd7e00fd90e06ac01722439ff54345841aa"
+          "sha256": "7b867acc3c721495dd6a171d789a0bb230c3595a9d5fa6b1edafabf8bb5ecd7d"
         },
         {
           "path": "src/generated/telemetry_edge.js",
@@ -50,7 +50,7 @@
           "model": "EveryPrimitive",
           "codec": "edge",
           "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
-          "sha256": "ea96a31522735792cab99ade78eed161f0b76fb8962e59816222f1516026851c"
+          "sha256": "37b29d1a20f8721798b76ec5c7d8111dfbaeb8f445b0ef459ad1cf188d9f6822"
         }
       ]
     },
@@ -87,7 +87,7 @@
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "6799e6af0bd4e06bd07bb480f55717f6bdbd5824b4f45d68be9578f1f92559d7"
+          "sha256": "eaf94e48e6ab66fc509507018dfd9661c54bd8796b76929ac2f144866543e791"
         }
       ]
     }
@@ -96,7 +96,7 @@
     {
       "path": "src/generated/runtime.js",
       "kind": "runtime",
-      "sha256": "0d7fe83820693907b02de4ebeff745d5a8d4dbf039a22add3124e75a6097fa83"
+      "sha256": "5d651f474750851c397e0dfb9c9f951057a93b03e90bf759caa2fc14b17ab65f"
     },
     {
       "path": "src/generated/handshake.js",

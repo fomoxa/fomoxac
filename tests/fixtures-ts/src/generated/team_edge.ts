@@ -5,7 +5,7 @@
 // codec: edge
 // fingerprint: sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b
 // fomoxac-version: 0.2.1
-// generated-at: 2026-09-21T14:58:50Z
+// generated-at: 2026-09-23T08:57:21Z
 
 import { Writer, Reader } from "./runtime";
 import { PlayerInfo, Team } from "../models/player";
@@ -68,28 +68,34 @@ export class TeamEdgeCodec {
         PlayerInfoEdgeCodec.decode(reader, value.Captain);
         {
             const count = reader.fieldAbsent() ? 0 : reader.readArrayCount();
-            const elements: string[] = [];
+            const elements: string[] = Array.isArray(value.Tags) ? value.Tags : [];
             for (let i = 0; i < count; i++) {
-                elements.push(reader.readString());
+                elements[i] = reader.readString(elements[i]);
             }
+            elements.length = count;
             value.Tags = elements;
         }
         {
             const count = reader.fieldAbsent() ? 0 : reader.readArrayCount();
-            const elements: number[] = [];
+            const elements: number[] = Array.isArray(value.Scores) ? value.Scores : [];
             for (let i = 0; i < count; i++) {
-                elements.push(reader.readU32());
+                elements[i] = reader.readU32();
             }
+            elements.length = count;
             value.Scores = elements;
         }
         {
             const count = reader.fieldAbsent() ? 0 : reader.readArrayCount();
-            const elements: PlayerInfo[] = [];
+            const elements: PlayerInfo[] = Array.isArray(value.Roster) ? value.Roster : [];
             for (let i = 0; i < count; i++) {
-                const element = new PlayerInfo();
+                let element = elements[i];
+                if (element === undefined || element === null) {
+                    element = new PlayerInfo();
+                    elements[i] = element;
+                }
                 PlayerInfoEdgeCodec.decode(reader, element);
-                elements.push(element);
             }
+            elements.length = count;
             value.Roster = elements;
         }
     }
