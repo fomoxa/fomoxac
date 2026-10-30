@@ -388,6 +388,25 @@ fn turning_net_schema_off_takes_its_file_with_it() {
     assert!(!read(&directory, "src/generated/mod.rs").contains("net_schema"));
 }
 
+#[test]
+fn the_net_schema_flag_turns_it_on_without_the_config() {
+    let directory = project("net-schema-flag");
+    let config = read(&directory, "fomoxa.toml").replace("net_schema = true", "");
+    std::fs::write(directory.join("fomoxa.toml"), config).expect("write");
+
+    let output = fomoxac(&directory, &["generate", "--net-schema"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(read(&directory, "src/generated/net_schema.rs").contains("pub fn fomoxa_net_schema()"));
+    assert!(read(&directory, "src/generated/mod.rs").contains("pub use self::net_schema::*;"));
+
+    let output = fomoxac(&directory, &["generate", "--net-schema", "--check"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+
+    let output = fomoxac(&directory, &["generate"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(!directory.join("src/generated/net_schema.rs").exists());
+}
+
 // ====================================================================== errors
 
 #[test]

@@ -4,8 +4,8 @@
 // model: Telemetry
 // codec: edge
 // fingerprint: sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5
-// fomoxac-version: 0.2.2
-// generated-at: 2026-09-23T15:58:02Z
+// fomoxac-version: 0.2.3
+// generated-at: 2026-10-30T06:51:28Z
 
 #![allow(dead_code, unused_imports)]
 

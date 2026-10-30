@@ -20,6 +20,7 @@ pub fn handshake_file(
              them. Generated - never edit, and never hand-maintain a copy of these\n\
              values anywhere else.",
         ),
+        auto_generated: true,
         ..super::Header::default()
     }
     .render();

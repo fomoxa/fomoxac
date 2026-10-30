@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.2",
+  "generator": "fomoxac 0.2.3",
   "schema_fingerprint": "sha256:dc96c2791b5567275e61f17c8461008966d75884844d90ce69c90f6bd87d2e3c",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -16,28 +16,28 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:01fc1f8d5768cded1cb94f6d37b2f32412b40376e78e3c36ac8a5e70cee183f4",
-          "sha256": "d3b1d56a66a3703da47ad509b893c650e33b872fb87c16a80b8f227591454fd0"
+          "sha256": "0d0735442605874b7cfbb913d6047bc41ccec001cbe68552b391f28ae4b4a439"
         },
         {
           "path": "src/generated/player_unity.h",
           "model": "Player",
           "codec": "unity",
           "fingerprint": "sha256:79d7ff966acb367b1accc39e029fc41874e8c605bd5663b6cf66280bde2469c7",
-          "sha256": "9ac4c018dfdb32cd91457059ddcf9abfc7ffb8ca1ef225d23fbf07e57c9a6c18"
+          "sha256": "1fd78b734b16dce6980784c19d908eef2fcbec03ed6b170bffb236da56be9dd4"
         },
         {
           "path": "src/generated/player_info_edge.h",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "764d9e0cbef19b9c5c94ef450eae316cff3d82ab96b5f6c8de6376333ad27d58"
+          "sha256": "e02a70319650b998f6040db16e58ddf8da54ef00238988c87e6dac39ac1d8a57"
         },
         {
           "path": "src/generated/team_edge.h",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "bb74e671e0b347869c94d30e879125678c437d26c51db54acc2fa885cd9212ce"
+          "sha256": "4dd9b7f7dc7cca12eb168e870464ba110b8eb3c2f250908ed1edaefb9233f4d3"
         }
       ]
     }
@@ -46,17 +46,17 @@
     {
       "path": "src/generated/runtime.h",
       "kind": "runtime",
-      "sha256": "b8d970cd58a93e628b5b425c9529c5e0a143d4e0484d0294bd4e865ef9762f82"
+      "sha256": "879076f6902bc0be0ca3b47c7ff20394e57659cb93ae50a713bc6fa1cf8b426e"
     },
     {
       "path": "src/generated/arrays.h",
       "kind": "arrays",
-      "sha256": "283a5c458a2d86f3ba2950df91fb130da06a3efb59fb0ec0f6ac01a7839fa94d"
+      "sha256": "34899e0e41f7d6627000b4c0a594c0c8a26ed71defd609425675bfc552dd9dbb"
     },
     {
       "path": "src/generated/handshake.h",
       "kind": "handshake",
-      "sha256": "22386471daf393f7dada7deb86dbe87bf0e68602a03ea211546b7d2b0d75ac58"
+      "sha256": "4145d96553ec0c4698f839763eddde75107c718137e8c90e667db9115f4eb1a5"
     }
   ]
 }

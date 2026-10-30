@@ -4,8 +4,8 @@
 // model: Player
 // codec: unity
 // fingerprint: sha256:79d7ff966acb367b1accc39e029fc41874e8c605bd5663b6cf66280bde2469c7
-// fomoxac-version: 0.2.2
-// generated-at: 2026-09-23T15:58:02Z
+// fomoxac-version: 0.2.3
+// generated-at: 2026-10-30T06:51:28Z
 
 #pragma once
 

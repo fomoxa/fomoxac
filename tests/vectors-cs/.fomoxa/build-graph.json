@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.2",
+  "generator": "fomoxac 0.2.3",
   "schema_fingerprint": "sha256:613186f60497e44945aa20d676394447395594490ca193417f162e855cb11ad2",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -18,42 +18,42 @@
           "model": "DeviceState",
           "codec": "edge",
           "fingerprint": "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91",
-          "sha256": "4267b849f1ee470c66fbef3cc528f7972d6edd45be6515ee58c6dfb6d16591fb"
+          "sha256": "b187c3ca066aca68c6831915c5d99b7ddc25a19d87cafa8397df11620b6a7811"
         },
         {
           "path": "src/generated/DeviceStateUnityCodec.cs",
           "model": "DeviceState",
           "codec": "unity",
           "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
-          "sha256": "cd7aa306178031589c055b89f94ae39362741f2f47abc09fd9b6b43d5a3cf9f1"
+          "sha256": "b1dcc6619963ed4c888fd753bbb02bf1c257356c4813e62b1a3b557b34eaca9f"
         },
         {
           "path": "src/generated/EveryPrimitiveEdgeCodec.cs",
           "model": "EveryPrimitive",
           "codec": "edge",
           "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
-          "sha256": "ff0cef613c46157f510dbcfa8ba3a34f20bb1eb0df8040cd46ecc4e7f0c97e4d"
+          "sha256": "710cdac071e2cb55a4bcaa258b0c9db8957f67b896eed9b48b1862cfd0cc9ea6"
         },
         {
           "path": "src/generated/PlayerEdgeCodec.cs",
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "31cc3266d2498691af32733e7983e7352a4bec9ef0f0b9d273e81b15e92f3286"
+          "sha256": "7eaf10354cfcde049fa4d636b5ca6758397aa2b6df3ca0440fe79c98ec93f079"
         },
         {
           "path": "src/generated/PlayerInfoEdgeCodec.cs",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "033e242dfe63132f47ab1babcdb7d79fcbf6384f37bdf5d5eff33aea498662bb"
+          "sha256": "77f93a51feabb8f951804c3b0c3a810524c21241a73208e9d13f090dda39fad6"
         },
         {
           "path": "src/generated/TeamEdgeCodec.cs",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "0fd52d5e6300e6a3d63527a6291da62ee5ae1a4af808a15d6fee2022fb8e3b40"
+          "sha256": "270d29612e9775e99de087a035f3925108f78ef3ca7a74cb151ee41a4b8b1057"
         }
       ]
     }
@@ -62,17 +62,17 @@
     {
       "path": "src/generated/Runtime.cs",
       "kind": "runtime",
-      "sha256": "c3716844cbaa1740b51bc9e705e2835a0b9788f785317168f22cfb3f7815a105"
+      "sha256": "ee1abec709cc3a0d26ff760611ee6277d6e3cff94ca7f7843e255030011dcd56"
     },
     {
       "path": "src/generated/Handshake.cs",
       "kind": "handshake",
-      "sha256": "d1fa281eeaab8494e4afb060ed5f9ef0779c7cebbecf3e7a266cb4a7e24f9b83"
+      "sha256": "6d5c47e6de22ea19a61a5fca176c5e7621263d2dfd4dfc7bbde09b7b53e9172a"
     },
     {
       "path": "src/generated/NetSchema.cs",
       "kind": "net_schema",
-      "sha256": "62cd188bcfaa345ed9715ce0bb5b088b8f18f732b2d08e446797cd3adb892318"
+      "sha256": "abaa03336fa67feb0c8414ee6cee09fdc3a3754d61f1e43c335829d57f428682"
     }
   ]
 }

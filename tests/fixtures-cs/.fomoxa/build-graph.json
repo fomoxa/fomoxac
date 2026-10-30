@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.2",
+  "generator": "fomoxac 0.2.3",
   "schema_fingerprint": "sha256:34446be0352710248876112e19ace1e99d4fe72c5c3447bf9732c7f6bc80d5b6",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -16,28 +16,28 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "2e0871d392dbdee436ce220b8b4d5d804e5768d6f593f7cd6f8deea103abde5f"
+          "sha256": "3183489511e0b1eee740da046c36fa7eb54f4e47c1efd573ff88bec9d176c641"
         },
         {
           "path": "src/generated/PlayerUnityCodec.cs",
           "model": "Player",
           "codec": "unity",
           "fingerprint": "sha256:3a09927a6d1a81f17c7ca42ee0bd208ad552c9b688495fa42483e310b09381c6",
-          "sha256": "1b696c2ffc253798cd3ba2e08e6ebafcaf5cc036edc76339a130a53d20213371"
+          "sha256": "f72fe285a5d25a9df5ac93fee6f40863ea390586b9dab826bcacd4c4e8ab1ed6"
         },
         {
           "path": "src/generated/PlayerInfoEdgeCodec.cs",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "9357728d0fc7a8551ac01d731da49f4fd7c7473a7a8a69d2a96d9f297c96b6b2"
+          "sha256": "463c573970639e905194d68bb81fde9fc444fa69642bb276f9c52339f915f501"
         },
         {
           "path": "src/generated/TeamEdgeCodec.cs",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "53215c2c4969d770e29dc142813acc8b3c4fcc908748c3ca6fde550679e3bcc8"
+          "sha256": "a1c878cb2d352624fc6b20bd12d61c26cdbe8fd3497f63f723e83314c0848ae9"
         }
       ]
     }
@@ -46,12 +46,12 @@
     {
       "path": "src/generated/Runtime.cs",
       "kind": "runtime",
-      "sha256": "c3716844cbaa1740b51bc9e705e2835a0b9788f785317168f22cfb3f7815a105"
+      "sha256": "ee1abec709cc3a0d26ff760611ee6277d6e3cff94ca7f7843e255030011dcd56"
     },
     {
       "path": "src/generated/Handshake.cs",
       "kind": "handshake",
-      "sha256": "2cf4819b8d81ca49463c3e51ef702027734499b8cc8925001a8b14e1227d0800"
+      "sha256": "3a0d2e36e05c57c74b0e693011cc193779eb04a81420865d6c822b96d7e80c6c"
     }
   ]
 }

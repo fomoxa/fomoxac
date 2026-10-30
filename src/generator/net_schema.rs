@@ -49,16 +49,18 @@ pub fn check(schema: &Schema) -> Result<(), String> {
     Ok(())
 }
 
-fn header(schema: &Schema, sdk: &str, entry: &str) -> String {
+fn header(schema: &Schema, sdk: &str, entry: &str, auto_generated: bool) -> String {
     let note = format!(
         "The {sdk} schema this tree declares: every message in the handshake\n\
          table, under the schema fingerprint. Pass {entry}\n\
          to a connection or a server instead of listing messages by hand.\n\
-         Written because fomoxa.toml sets `net_schema = true`."
+         Written because fomoxa.toml sets `net_schema = true` or fomoxac ran\n\
+         with `--net-schema`."
     );
     super::Header {
         fingerprint: Some(schema.fingerprint.tagged()),
         note: Some(&note),
+        auto_generated,
         ..super::Header::default()
     }
     .render()
@@ -72,7 +74,7 @@ fn sorted_messages(schema: &Schema) -> Vec<&Message> {
 
 pub fn rust(schema: &Schema) -> Result<String, String> {
     check(schema)?;
-    let mut out = header(schema, "fomoxa-net", "`fomoxa_net_schema()`");
+    let mut out = header(schema, "fomoxa-net", "`fomoxa_net_schema()`", false);
     out.push_str(super::FILE_ATTRIBUTES);
     out.push_str(
         "use super::handshake::{FOMOXA_MESSAGES, FOMOXA_SCHEMA_FINGERPRINT};\n\
@@ -94,7 +96,7 @@ pub fn rust(schema: &Schema) -> Result<String, String> {
 
 pub fn go(schema: &Schema, package: &str) -> Result<String, String> {
     check(schema)?;
-    let mut out = header(schema, "github.com/fomoxa/go", "FomoxaNetSchema()");
+    let mut out = header(schema, "github.com/fomoxa/go", "FomoxaNetSchema()", false);
     out.push_str(&format!("package {package}\n\n"));
     out.push_str(
         "import fomoxa \"github.com/fomoxa/go\"\n\
@@ -112,7 +114,7 @@ pub fn go(schema: &Schema, package: &str) -> Result<String, String> {
 
 pub fn csharp(schema: &Schema, namespace: &str) -> Result<String, String> {
     check(schema)?;
-    let mut out = header(schema, "Fomoxa.Net", "NetSchema.Build()");
+    let mut out = header(schema, "Fomoxa.Net", "NetSchema.Build()", true);
     out.push_str(&format!("namespace {namespace}\n{{\n\n"));
     out.push_str(
         "public static class NetSchema\n\
@@ -136,7 +138,7 @@ pub fn csharp(schema: &Schema, namespace: &str) -> Result<String, String> {
 
 pub fn typescript(schema: &Schema) -> Result<String, String> {
     check(schema)?;
-    let mut out = header(schema, "@fomoxa/net", "`fomoxaNetSchema()`");
+    let mut out = header(schema, "@fomoxa/net", "`fomoxaNetSchema()`", false);
     out.push_str(
         "import { buildSchema, type Schema } from \"@fomoxa/net\";\n\
          import { FOMOXA_MESSAGES, FOMOXA_SCHEMA_FINGERPRINT } from \"./handshake\";\n\
@@ -150,7 +152,7 @@ pub fn typescript(schema: &Schema) -> Result<String, String> {
 
 pub fn javascript(schema: &Schema) -> Result<String, String> {
     check(schema)?;
-    let mut out = header(schema, "@fomoxa/net", "`fomoxaNetSchema()`");
+    let mut out = header(schema, "@fomoxa/net", "`fomoxaNetSchema()`", false);
     out.push_str(
         "import { buildSchema } from \"@fomoxa/net\";\n\
          import { FOMOXA_MESSAGES, FOMOXA_SCHEMA_FINGERPRINT } from \"./handshake.js\";\n\
@@ -165,7 +167,7 @@ pub fn javascript(schema: &Schema) -> Result<String, String> {
 pub fn cpp(schema: &Schema, namespace: &str) -> Result<String, String> {
     check(schema)?;
     let messages = sorted_messages(schema);
-    let mut out = header(schema, "Fomoxa C", "`&FOMOXA_NET_SCHEMA`");
+    let mut out = header(schema, "Fomoxa C", "`&FOMOXA_NET_SCHEMA`", false);
     out.push_str("#pragma once\n\n#include \"fomoxa/schema.h\"\n\n#include \"handshake.hpp\"\n\n");
     out.push_str(&format!("namespace {namespace} {{\n\n"));
     if messages.is_empty() {
@@ -195,7 +197,7 @@ pub fn cpp(schema: &Schema, namespace: &str) -> Result<String, String> {
 pub fn c(schema: &Schema) -> Result<String, String> {
     check(schema)?;
     let messages = sorted_messages(schema);
-    let mut out = header(schema, "Fomoxa C", "`&FOMOXA_NET_SCHEMA`");
+    let mut out = header(schema, "Fomoxa C", "`&FOMOXA_NET_SCHEMA`", false);
     out.push_str("#pragma once\n\n#include \"fomoxa/schema.h\"\n\n#include \"handshake.h\"\n\n");
     let fingerprint = format!("{}ULL", hex64(schema.fingerprint.u64()));
     if messages.is_empty() {

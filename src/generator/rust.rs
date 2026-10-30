@@ -54,6 +54,7 @@ pub fn codec_file(model: &Model, message: &Message, imports: &Imports<'_>) -> St
         codec: Some(&message.codec),
         fingerprint: Some(message.fingerprint.tagged()),
         note: None,
+        auto_generated: false,
     }
     .render();
     out.push_str(super::FILE_ATTRIBUTES);

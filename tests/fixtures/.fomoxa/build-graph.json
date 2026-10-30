@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generator": "fomoxac 0.2.2",
+  "generator": "fomoxac 0.2.3",
   "schema_fingerprint": "sha256:9622e96b1c562c0c0e2f36c250555a86aa93f005eb03c91bd8d68137bdc6db88",
   "sha256_of": "each file with its `// generated-at:` line emptied, so an unchanged schema keeps an unchanged digest",
   "sources": {
@@ -15,28 +15,28 @@
           "model": "DeviceState",
           "codec": "edge",
           "fingerprint": "sha256:4625cb8e64b0827a10cda93e581ed653e550290885f97a5f857ec0ef39012b91",
-          "sha256": "97a4759d4962c07af967b3133cc73ea2c9fff080c91e5a65f1cf4b8aa97a79c3"
+          "sha256": "cadb53e0eba2eb4e9f921d72bf9897053cb16e8ea741e7f7f7dddf04fd0bba8e"
         },
         {
           "path": "src/generated/device_state_unity.rs",
           "model": "DeviceState",
           "codec": "unity",
           "fingerprint": "sha256:4811419f2da07dfe59905a8375e58d32885a1c229ac202f3f621f1b45175b3ae",
-          "sha256": "405fe81fdc91fbe42e3948a754357e4970e84f63ad164c07b8ff2cda8d373542"
+          "sha256": "bf2ee728235e7187f01d99cac42879708853b4fb4ceb2f133730f9e79e14d275"
         },
         {
           "path": "src/generated/telemetry_edge.rs",
           "model": "Telemetry",
           "codec": "edge",
           "fingerprint": "sha256:6c195d481f875b06724cca44354fa1e278c6a1dc077c0ca72622cee44f475ef5",
-          "sha256": "4833c985175358d153b881977a8f956953f8151bc9497787244c00945c37e47d"
+          "sha256": "834de8daf720d55658393cb86e2c51965a4b3d742f2a12cbb1430734fe699ecc"
         },
         {
           "path": "src/generated/telemetry_orange_pi.rs",
           "model": "Telemetry",
           "codec": "orange_pi",
           "fingerprint": "sha256:795e4aaf9379b5fef010061b70469a498b522a0856b080be6dfa6cde562b3998",
-          "sha256": "cff740038b746d1b303b315f203d2018bd166c74b133714970ca4f3c00a5c2de"
+          "sha256": "999d3c9313340c5374387ad6064a50a69b94f4a8ec85f485edb2c09a60ff2cd7"
         }
       ]
     },
@@ -50,7 +50,7 @@
           "model": "EveryPrimitive",
           "codec": "edge",
           "fingerprint": "sha256:2ec0c98895e5a4e1eb31bbd973766c1907415b625e8fb0228fc4d843535a6512",
-          "sha256": "9dce5c5729d4aa80196e07cd2a1dbc62d5aaf6bfa4e9dc5edec7afe61322deba"
+          "sha256": "c51a0967f04298ef9b372b17a09838c1cc7688b3af26b274c5c266144a6d80c9"
         }
       ]
     },
@@ -66,21 +66,21 @@
           "model": "Player",
           "codec": "edge",
           "fingerprint": "sha256:19d8f679a9bb419fad6a11350c111bf9616b8f2e3bf281fb5c9be837216ca2fa",
-          "sha256": "821c8ce5792e5ac441765c9402d97228dcb7eba4f96de8e5783c7e8fe2f42e91"
+          "sha256": "f33fe9479bd4b3f98e5ac1c9a63faca62e7bee0d5719836c7c12f5ce15b0fd43"
         },
         {
           "path": "src/generated/player_info_edge.rs",
           "model": "PlayerInfo",
           "codec": "edge",
           "fingerprint": "sha256:b87a1c88c5b6e0ddeff880c1b11d61633d4c0cfc7fcd31a10bbea40d6c3fbbcd",
-          "sha256": "cda14e23f15d281248a258ba8c494281d6eb8123fe0d27e79a7faf05d70b6b8e"
+          "sha256": "e1bf332df26fc57ae2a229667c61223e8bd0c75455a2a845e2540633cc2e5d5c"
         },
         {
           "path": "src/generated/team_edge.rs",
           "model": "Team",
           "codec": "edge",
           "fingerprint": "sha256:f79fa59bf3400d19999deaf42322718ad97dd114c5aa2f616c3536372f548e9b",
-          "sha256": "ef4124f635e06d39a06438abe35374c826c1ed21a2c777adac06dda93aca4211"
+          "sha256": "82f536851bbcaafffaf1895984334653268d0394bafdcd577fe4223fe925bbd5"
         }
       ]
     }
@@ -89,22 +89,22 @@
     {
       "path": "src/generated/runtime.rs",
       "kind": "runtime",
-      "sha256": "69b03edd711e0e0c1c4b9270ee65ac26dd3d072cb3acd6449d83bba3aae27a2b"
+      "sha256": "7912a0ef49061dbc119c67a136dc500180aa1bb6711ef22e6abab89f7d3acd55"
     },
     {
       "path": "src/generated/handshake.rs",
       "kind": "handshake",
-      "sha256": "8d74a302bb03e4aeb3cd100b6eb2a26f2efd8bfbc830414809b2ae96f7f8354e"
+      "sha256": "1431bb83bb99cd310763482780d7e65200e0418c53b54a2cf7899f0922d5b24d"
     },
     {
       "path": "src/generated/net_schema.rs",
       "kind": "net_schema",
-      "sha256": "95850710cc72405e7dc9b07e5a222c20f31454ee85ed8f5fcf7c67eeaae3d293"
+      "sha256": "abd9aa324ea05f65bdb39a7f3cf80c6f64181b3b817ab28d63c61a32a7aa3ed9"
     },
     {
       "path": "src/generated/mod.rs",
       "kind": "root",
-      "sha256": "35e02d719e0a0d237465378d662f0cbce8455e60ace788d6bcca678044c421e0"
+      "sha256": "c0f1444d19184e89d19c92a7f4d621eb1cfcf64166631858a9e7cf2ff29d8539"
     }
   ]
 }

@@ -298,7 +298,7 @@ function fomoxaCopy(source: Uint8Array, offset: number, target: Uint8Array, len:
         return;
     }
     for (let index = 0; index < len; index++) {
-        target[index] = source[offset + index];
+        target[index] = source[offset + index]!;
     }
 }
 
