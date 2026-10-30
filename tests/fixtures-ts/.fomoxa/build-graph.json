@@ -96,17 +96,17 @@
     {
       "path": "src/generated/runtime.ts",
       "kind": "runtime",
-      "sha256": "756437760ae089829445c6ca3f039234a530b07717b3f90c4ae13d6797ad35f9"
+      "sha256": "7ba48dadefc628836fd6a87db9f40beeeed88273e2155247ababc26645b72ce5"
     },
     {
       "path": "src/generated/handshake.ts",
       "kind": "handshake",
-      "sha256": "96c5f9e824f0721884a9d24b11ebea8c0ac13d420f13d49073b9ae7f0901ced9"
+      "sha256": "31e115795ef3e75a2ccdd23c7cb98dec97a3576938d7e1b2457146c97f9c03a4"
     },
     {
       "path": "src/generated/net_schema.ts",
       "kind": "net_schema",
-      "sha256": "617df87f1761163e95a68a6ac5a293f3f6432da859bfa22592b99b16708440b7"
+      "sha256": "32fed3119f966a014b4e8a4d9b6743f6aabaa50955c562c98e47def85fc01745"
     }
   ]
 }

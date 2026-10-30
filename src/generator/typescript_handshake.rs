@@ -206,7 +206,7 @@ export function fomoxaMessage(id: number): FomoxaMessage | undefined {
     let high = FOMOXA_MESSAGES.length;
     while (low < high) {
         const middle = (low + high) >>> 1;
-        if (FOMOXA_MESSAGES[middle].id < id) {
+        if (FOMOXA_MESSAGES[middle]!.id < id) {
             low = middle + 1;
         } else {
             high = middle;

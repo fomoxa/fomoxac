@@ -85,7 +85,7 @@ impl Options {
             root,
             model_path: paths.model_path.clone().or(config.model_path),
             validate_message_fingerprint: config.validate_message_fingerprint.unwrap_or(false),
-            net_schema: config.net_schema.unwrap_or(false),
+            net_schema: paths.net_schema || config.net_schema.unwrap_or(false),
         })
     }
 
@@ -654,6 +654,7 @@ fn csharp_runtime_file(namespace: &str) -> String {
              verbatim from RFC-0002. Identical in every project fomoxac generates\n\
              for: nothing in it is derived from your models.",
         ),
+        auto_generated: true,
         ..generator::Header::default()
     }
     .render();

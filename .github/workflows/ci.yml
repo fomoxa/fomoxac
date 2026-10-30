@@ -91,6 +91,10 @@ jobs:
         working-directory: tests/fixtures-cs
         run: dotnet build --nologo
 
+      - name: the committed C# fixture builds clean with nullable reference types on
+        working-directory: tests/fixtures-cs
+        run: dotnet build --nologo -p:Nullable=enable -p:TreatWarningsAsErrors=true
+
       - name: the committed C# vector tree is current
         working-directory: tests/vectors-cs
         run: cargo run --quiet --bin fomoxac -- generate --check
@@ -174,6 +178,10 @@ jobs:
           npx tsc -p tsconfig.json
           node dist/smoke_test.js
           node dist/vectors_test.js
+
+      - name: the committed TypeScript tree type-checks under noUncheckedIndexedAccess
+        working-directory: tests/fixtures-ts
+        run: npx tsc -p tsconfig.strict.json
 
       # JavaScript needs no build step at all - the generated tree is run
       # directly by Node's own ESM loader, which is also why every relative

@@ -99,7 +99,7 @@
     {
       "path": "src/generated/net_schema.rs",
       "kind": "net_schema",
-      "sha256": "95850710cc72405e7dc9b07e5a222c20f31454ee85ed8f5fcf7c67eeaae3d293"
+      "sha256": "02fcfc170fbe7f43356b6a93f054e7b98d67861ba8b50991d583746bb5bed3ba"
     },
     {
       "path": "src/generated/mod.rs",

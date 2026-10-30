@@ -163,6 +163,7 @@ mod tests {
             src: vec![directory.join("src")],
             out: Some(directory.join("generated")),
             model_path: None,
+            net_schema: false,
         };
         let options = Options {
             src: paths.src,

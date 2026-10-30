@@ -190,6 +190,7 @@ pub fn codec_file(
         codec: Some(&message.codec),
         fingerprint: Some(message.fingerprint.tagged()),
         note: None,
+        auto_generated: false,
     }
     .render();
     out.push_str("#pragma once\n\n");

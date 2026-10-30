@@ -72,7 +72,7 @@
     {
       "path": "src/generated/net_schema.go",
       "kind": "net_schema",
-      "sha256": "773bed40d308629e0a61ba08defd794da80e49fc3aaf6d3c97f6fb823571b7c1"
+      "sha256": "8fcf15403ef74d3489d99a011f335ef74552da0ef59ec17d1976f61e3e7b0ef3"
     }
   ]
 }

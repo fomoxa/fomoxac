@@ -2,12 +2,13 @@
 // DO NOT EDIT MANUALLY
 // fingerprint: sha256:9622e96b1c562c0c0e2f36c250555a86aa93f005eb03c91bd8d68137bdc6db88
 // fomoxac-version: 0.2.2
-// generated-at: 2026-09-23T15:58:02Z
+// generated-at: 2026-10-30T05:07:42Z
 //
 // The fomoxa-net schema this tree declares: every message in the handshake
 // table, under the schema fingerprint. Pass `fomoxa_net_schema()`
 // to a connection or a server instead of listing messages by hand.
-// Written because fomoxa.toml sets `net_schema = true`.
+// Written because fomoxa.toml sets `net_schema = true` or fomoxac ran
+// with `--net-schema`.
 
 #![allow(dead_code, unused_imports)]
 

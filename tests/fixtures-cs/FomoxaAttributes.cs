@@ -28,6 +28,7 @@ public sealed class NetworkAttribute : Attribute
 
     public NetworkAttribute()
     {
+        WireType = string.Empty;
     }
 
     public NetworkAttribute(string wireType)

@@ -10,7 +10,7 @@ codec file per model per codec, plus the schema, fingerprints and build graph
 that go with them.
 
 USAGE:
-    fomoxac generate [--src <PATH>]... [--out <PATH>] [--check] [--watch] [-q]
+    fomoxac generate [--src <PATH>]... [--out <PATH>] [--net-schema] [--check] [--watch] [-q]
     fomoxac compat --base <SCHEMA> [--head <SCHEMA>] [--src <PATH>]...
     fomoxac ci --base-ref <REF> [--src <PATH>]... [--out <PATH>]
 
@@ -62,6 +62,10 @@ OPTIONS:
                          module (a barrel re-exporting each of them) in place
                          of the default, which computes a relative `import`
                          straight from each model's own source path.
+        --net-schema     Also write the file that builds the Fomoxa runtime's
+                         schema from the handshake table, as
+                         `net_schema = true` in fomoxa.toml does. Either one
+                         turns it on.
         --check          Write nothing; exit 1 if anything on disk is out of
                          date. For CI, and for a pre-commit hook. Not
                          combined with --watch.
@@ -196,6 +200,7 @@ pub struct Paths {
     pub src: Vec<PathBuf>,
     pub out: Option<PathBuf>,
     pub model_path: Option<String>,
+    pub net_schema: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -266,6 +271,7 @@ pub fn parse(argv: impl IntoIterator<Item = OsString>) -> Result<Command, String
             "--src" => paths.src.push(PathBuf::from(value()?)),
             "-o" | "--out" => paths.out = Some(PathBuf::from(value()?)),
             "--model-path" => paths.model_path = Some(value()?),
+            "--net-schema" => paths.net_schema = true,
             "--base" => base = Some(PathBuf::from(value()?)),
             "--head" => head = Some(PathBuf::from(value()?)),
             "--base-ref" => base_ref = Some(value()?),
@@ -346,6 +352,19 @@ mod tests {
             arguments.paths.src,
             [PathBuf::from("a"), PathBuf::from("b")]
         );
+    }
+
+    #[test]
+    fn net_schema_is_parsed_and_defaults_to_off() {
+        let Command::Generate(arguments) = command(&[]) else {
+            panic!("not generate");
+        };
+        assert!(!arguments.paths.net_schema);
+
+        let Command::Generate(arguments) = command(&["generate", "--net-schema"]) else {
+            panic!("not generate");
+        };
+        assert!(arguments.paths.net_schema);
     }
 
     #[test]

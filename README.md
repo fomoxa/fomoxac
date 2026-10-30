@@ -247,7 +247,7 @@ net_schema = true                       # optional, default false
 | `out` | string | `"generated"` | Where generated files are written. |
 | `model_path` | string | (computed per language; see the flag table below) | Overrides how a generated codec locates a model type. |
 | `validate_message_fingerprint` | boolean | `false` | If `true`, every generated frame gains a `[MessageId: u32][MessageFingerprint: u64]` prefix, and `fomoxa_write_envelope`/`fomoxa_read_envelope` are generated to write and check it. |
-| `net_schema` | boolean | `false` | If `true`, one more file builds the Fomoxa runtime's schema object from the handshake table; see [The runtime schema](#the-runtime-schema). |
+| `net_schema` | boolean | `false` | If `true`, one more file builds the Fomoxa runtime's schema object from the handshake table; see [The runtime schema](#the-runtime-schema). `--net-schema` on the command line turns it on as well. |
 
 Keys may sit at the top level of the file or under a `[fomoxa]` table; other tables are ignored. A line starting with `#` outside a quoted string is a comment.
 
@@ -256,7 +256,7 @@ The generated code has to be able to reach the models. A Rust struct must be `pu
 ## CLI reference
 
 ```text
-fomoxac generate [--src <PATH>]... [--out <PATH>] [--check] [--watch] [-q]
+fomoxac generate [--src <PATH>]... [--out <PATH>] [--net-schema] [--check] [--watch] [-q]
 fomoxac compat --base <SCHEMA> [--head <SCHEMA>] [--src <PATH>]...
 fomoxac ci --base-ref <REF> [--src <PATH>]... [--out <PATH>]
 ```
@@ -282,6 +282,7 @@ Meant for CI, in three steps. It first checks that the committed `.fomoxa/schema
 | `--src <PATH>` | all | A directory (scanned recursively) or a single file to read models from. Repeatable. Default: `fomoxa.toml`'s `src`, else `src`. Every file found must have the extension of one single language (`.rs`; `.go`; `.cs`; `.hpp`/`.cpp`/`.cc`/`.cxx` for C++; `.c`/`.h` for C; or `.ts`/`.js` for TypeScript/JavaScript). A mix in one `--src` set is an error. |
 | `-o`, `--out <PATH>` | all | Where generated source is written. Default: `fomoxa.toml`'s `out`, else `generated`. |
 | `--model-path <PATH>` | all | Overrides how a generated codec locates a model type. Its meaning depends on the backend (see below). Default: `fomoxa.toml`'s `model_path`, else computed from the source layout. |
+| `--net-schema` | all | Also writes the runtime schema file, as `net_schema = true` in `fomoxa.toml` does; either one turns it on. See [The runtime schema](#the-runtime-schema). |
 | `--check` | `generate` | Writes nothing. Exits with a non-zero status if anything on disk differs from what would be generated. Cannot be combined with `--watch`. |
 | `--watch` | `generate` | Generates once, then keeps rereading `--src` and regenerates when it changes, until the process is terminated. Cannot be combined with `--check`. |
 | `--base <SCHEMA>` | `compat` | Required. Path to the `schema.json` to compare against. |
@@ -418,7 +419,7 @@ By default no frame carries a fingerprint. Setting `validate_message_fingerprint
 
 ### The runtime schema
 
-A Fomoxa runtime needs the schema fingerprint and, for every message, its id, fingerprint and prefix chain before it can handshake. The handshake file already holds all of them in `FOMOXA_MESSAGES`, but the runtime takes them as its own schema type, and copying them across by hand is how a message ends up missing from the handshake. Setting `net_schema = true` in `fomoxa.toml` generates that copy: one file that builds the runtime's schema from every message in `FOMOXA_MESSAGES`, under the schema fingerprint.
+A Fomoxa runtime needs the schema fingerprint and, for every message, its id, fingerprint and prefix chain before it can handshake. The handshake file already holds all of them in `FOMOXA_MESSAGES`, but the runtime takes them as its own schema type, and copying them across by hand is how a message ends up missing from the handshake. Setting `net_schema = true` in `fomoxa.toml`, or passing `--net-schema`, generates that copy: one file that builds the runtime's schema from every message in `FOMOXA_MESSAGES`, under the schema fingerprint.
 
 | Language | Runtime | File | Entry point |
 |---|---|---|---|
@@ -531,7 +532,7 @@ Go compiles by package. Every file `fomoxac` writes in one run shares one `packa
 
 ### C#
 
-C# compiles by project. A generated codec never writes a `using` directive. It writes a fully qualified reference (e.g. `Models.Player`) when the model lives outside the run's own namespace, which is the directory name of `--out` in PascalCase, and a bare reference otherwise. `Decode` takes `ref Reader` and throws `DecodeException` on failure. A C# property cannot be passed by `ref`, so a nested model field is decoded through a local variable: read it out, decode into it by `ref`, and assign it back. The field must therefore already hold an instance before `Decode` runs. `Writer` writes into one `byte[]` that `Clear()` keeps, so a writer reused across messages stops allocating once its buffer has grown to the largest message; `WrittenSpan` and `WrittenMemory` expose the written bytes without copying, and `ToArray()` copies them.
+C# compiles by project. Every generated C# file carries `// <auto-generated/>` under the `// GENERATED BY fomoxac` marker, so the compiler treats it as generated code: the nullable context is off in it whatever the project sets, and a project with `<Nullable>enable</Nullable>` and `TreatWarningsAsErrors` builds the tree without warnings. A generated codec never writes a `using` directive. It writes a fully qualified reference (e.g. `Models.Player`) when the model lives outside the run's own namespace, which is the directory name of `--out` in PascalCase, and a bare reference otherwise. `Decode` takes `ref Reader` and throws `DecodeException` on failure. A C# property cannot be passed by `ref`, so a nested model field is decoded through a local variable: read it out, decode into it by `ref`, and assign it back. The field must therefore already hold an instance before `Decode` runs. `Writer` writes into one `byte[]` that `Clear()` keeps, so a writer reused across messages stops allocating once its buffer has grown to the largest message; `WrittenSpan` and `WrittenMemory` expose the written bytes without copying, and `ToArray()` copies them.
 
 A `string` field is read with `ReadString(ref string)`, which compares the incoming UTF-8 with the string the field already holds and keeps that instance when they match. The host type of a `bytes` field decides how it is decoded, because the generated call is resolved by overload:
 
@@ -643,7 +644,7 @@ Every other backend is checked against the same vectors, byte for byte, in CI: e
 
 Every runner also builds the runtime schema from the generated `net_schema` file, against a copy of that runtime's schema type kept in `tests/sdk/` (`Fomoxa.Net`, `github.com/fomoxa/go`, `fomoxa-net`, Fomoxa C, `@fomoxa/net`) so that CI never fetches another repository, and checks that it declares every message of the handshake table with the same fingerprint and prefix chain. The C#, Go, TypeScript and JavaScript runners also compare each prefix chain with the vectors. `tests/generated.rs` does the same for Rust, with `tests/sdk/rust/` as a dev-dependency.
 
-`.github/workflows/ci.yml` runs on every push and pull request. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test`, then for each of the seven fixture trees a freshness check (`generate --check`) and, where CI has the toolchain, a real build and run. It provisions Rust (`stable`), Go `1.21`, .NET `8.0.x`, and Node `22`.
+`.github/workflows/ci.yml` runs on every push and pull request. It runs `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test`, then for each of the seven fixture trees a freshness check (`generate --check`) and, where CI has the toolchain, a real build and run. The C# fixture is built a second time with nullable reference types on and warnings as errors, and the TypeScript fixture's `src/` is type-checked again under `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` (`tsconfig.strict.json`), so a generated tree stays clean in a project that turns these on. It provisions Rust (`stable`), Go `1.21`, .NET `8.0.x`, and Node `22`.
 
 `.github/workflows/schema.yml` runs on pull requests. It fetches the target branch, builds `fomoxac`, and runs `fomoxac ci --base-ref origin/<base-ref>` against the Rust fixture, so the check fails when a pull request contains a breaking schema change relative to its target branch.
 

@@ -2,7 +2,7 @@
 // DO NOT EDIT MANUALLY
 // fingerprint: sha256:bf32c8e0dd47fb9fd24a2f56ac986e5ab447520fbfe6af6dba12a23f0da4c74f
 // fomoxac-version: 0.2.2
-// generated-at: 2026-09-23T15:58:02Z
+// generated-at: 2026-10-30T05:07:42Z
 //
 // Every fingerprint this schema publishes, and the handshake that compares
 // them. Generated - never edit, and never hand-maintain a copy of these
@@ -242,7 +242,7 @@ export function fomoxaMessage(id: number): FomoxaMessage | undefined {
     let high = FOMOXA_MESSAGES.length;
     while (low < high) {
         const middle = (low + high) >>> 1;
-        if (FOMOXA_MESSAGES[middle].id < id) {
+        if (FOMOXA_MESSAGES[middle]!.id < id) {
             low = middle + 1;
         } else {
             high = middle;
