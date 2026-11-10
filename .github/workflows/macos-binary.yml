@@ -1,0 +1,64 @@
+name: macos binary
+
+on:
+  push:
+    branches: [macos-binary]
+
+env:
+  CARGO_TERM_COLOR: always
+  FOMOXAC_TAG: v0.2.2
+
+jobs:
+  osx:
+    name: universal osx/fomoxac
+    runs-on: macos-latest
+    steps:
+      - name: check out the tag being packaged
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FOMOXAC_TAG }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+
+      - name: build aarch64-apple-darwin
+        run: cargo build --release --locked --bin fomoxac --target aarch64-apple-darwin
+
+      - name: build x86_64-apple-darwin
+        run: cargo build --release --locked --bin fomoxac --target x86_64-apple-darwin
+
+      - name: join both into one universal binary
+        run: |
+          mkdir -p dist/osx
+          lipo -create -output dist/osx/fomoxac \
+            target/aarch64-apple-darwin/release/fomoxac \
+            target/x86_64-apple-darwin/release/fomoxac
+          chmod 755 dist/osx/fomoxac
+
+      - name: the binary holds arm64 and x86_64
+        run: |
+          lipo -info dist/osx/fomoxac
+          test "$(lipo -archs dist/osx/fomoxac | tr ' ' '\n' | sort | xargs)" = "arm64 x86_64"
+
+      - name: the binary reports the version of the tag
+        run: test "$(dist/osx/fomoxac --version)" = "fomoxac ${FOMOXAC_TAG#v}"
+
+      - name: the binary regenerates the committed Rust fixture unchanged
+        working-directory: tests/fixtures
+        run: ../../dist/osx/fomoxac generate --check
+
+      - name: record the tag, the commit and the checksum
+        run: |
+          printf '%s %s\n' "$FOMOXAC_TAG" "$(git rev-parse --short HEAD)" > dist/VERSION
+          (cd dist && shasum -a 256 osx/fomoxac > SHA256SUMS)
+          cat dist/VERSION dist/SHA256SUMS
+
+      - name: pack with the executable bit kept
+        run: tar -czf "fomoxac-osx-$FOMOXAC_TAG.tar.gz" -C dist osx VERSION SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fomoxac-osx-${{ env.FOMOXAC_TAG }}
+          path: fomoxac-osx-${{ env.FOMOXAC_TAG }}.tar.gz
+          if-no-files-found: error
