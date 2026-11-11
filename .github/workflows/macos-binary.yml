@@ -6,7 +6,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  FOMOXAC_TAG: v0.2.2
+  FOMOXAC_TAG: v0.2.3
 
 jobs:
   osx:
